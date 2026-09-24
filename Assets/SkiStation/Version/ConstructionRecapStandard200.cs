@@ -1,0 +1,1 @@
+namespace SkiStation { public static class ConstructionRecapStandard200 { public const string Version = "2.00"; public const string Principle = "Preview -> recap -> confirm/modify/cancel -> commit"; } }

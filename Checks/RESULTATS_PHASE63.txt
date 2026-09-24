@@ -1,0 +1,18 @@
+PASS: C# syntax, 398 files. Not a Unity compilation.
+PASS: baseline preserved outside reviewed runtime files; arcade, station placement, terrain and scenes byte-identical.
+PASS: phase63 boarding approach and lift/slope motion methods unchanged.
+Modified original files:
+Assets/SkiStation/Scripts/Skiers/SkierRuntime.cs
+Assets/SkiStation/Scripts/Skiers/SkierMountainTransferRuntime.cs
+Assets/SkiStation/Scripts/Skiers/SkierRouteAgent.cs
+Assets/SkiStation/Scripts/Playable/SkierDiagnosticTrackerRuntime.cs
+Assets/SkiStation/Scripts/Playable/VisibleSkiLoopAuthorityRuntime.cs
+Assets/SkiStation/Scripts/Playable/StationVisitorDemandRuntime.cs
+Assets/SkiStation/Scripts/Playable/StationVisitorRoadArrival248.cs
+Assets/SkiStation/Scripts/Playable/VisitorLifecycleRuntime.cs
+Assets/SkiStation/Scripts/Lifts/LiftPostArrivalRoutingRuntime.cs
+Assets/SkiStation/Scripts/Lifts/LiftVehicleRuntime.cs
+Assets/SkiStation/Scripts/Lifts/LiftPhysicalPassengerFlowRuntime.cs
+Assets/SkiStation/Scripts/Lifts/LiftQueueRuntime.cs
+Assets/SkiStation/Scripts/Lifts/LiftStationLogic.cs
+Assets/SkiStation/Scripts/Slopes/SkierTerminalDecisionRuntime.cs

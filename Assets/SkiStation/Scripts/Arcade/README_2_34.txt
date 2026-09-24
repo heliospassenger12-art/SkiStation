@@ -1,0 +1,1 @@
+2.34 arcade: H grab, F/G rotations, both can combine; valid aligned landings earn variable boost. Full meter unlocks 30 seconds boost, timer decreases only while holding Left Shift. Green/cyan tracks for regular boost, vivid red for unlimited. Bottom trick-name toggle stored via PlayerPrefs. Prototype, not Unity-tested.

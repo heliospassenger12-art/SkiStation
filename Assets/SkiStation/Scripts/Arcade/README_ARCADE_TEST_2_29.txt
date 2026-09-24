@@ -1,0 +1,1 @@
+SkiStation 2.29: visual lean in turns, ski tracks, powder spray, landing compression. Separate arcade scene; no visitor AI changes. Untested in Unity. Menu SkiStation > Arcade > Creer et ouvrir la scene de glisse 2.29.

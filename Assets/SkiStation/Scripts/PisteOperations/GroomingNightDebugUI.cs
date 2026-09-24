@@ -1,0 +1,2 @@
+using UnityEngine;
+namespace SkiStation { public class GroomingNightDebugUI:MonoBehaviour { void OnGUI(){if(GroomingPolicyRuntime.I==null)return;var p=GroomingPolicyRuntime.I;GUI.Box(new Rect(10,10,350,105),"DAMAGE — POLITIQUE");GUI.Label(new Rect(20,35,330,22),"Fenêtre : "+p.nightWindowStart.ToString("00")+"h → "+p.nightWindowEnd.ToString("00")+"h");GUI.Label(new Rect(20,57,330,22),"État : "+(p.IsPreferredWindow?"DAMAGE NOCTURNE":"ATTENTE / JOURNÉE"));GUI.Label(new Rect(20,79,330,22),"Piste fermée pendant le damage");}}}

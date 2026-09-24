@@ -1,0 +1,1 @@
+2.39: opt-in replaceable primitive humanoid with constrained local limb pose, charged jump: hold Space to crouch, release to jump. No 360-degree head joint. No management/visitor AI changes. Unity compilation and feel NOT TESTED.\n

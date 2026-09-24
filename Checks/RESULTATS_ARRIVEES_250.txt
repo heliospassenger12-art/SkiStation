@@ -1,0 +1,5 @@
+PASS syntax: 402 C# files (not compilation)
+PASS unchanged: arcade, scenes, phase63 proof motion, lift construction, lift vehicles, ski routing, access checks
+PASS 12 car / 3 bus envelopes inside parking, no parked body overlap
+PASS sidewalk walker / bus-width lane containment on 65 curved-road samples
+Unity movement, serialization, visuals, queues and economy must still be tested in Play.

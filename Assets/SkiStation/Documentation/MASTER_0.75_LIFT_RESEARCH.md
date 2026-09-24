@@ -1,0 +1,13 @@
+# MASTER 0.75 — Recherche technologique des remontées
+- Freinage amélioré
+- Pinces débrayables
+- Motorisation haute vitesse
+- Véhicules grande capacité
+- Câble nouvelle génération
+- Résistance au vent
+- Motorisation éco-énergétique
+- Sécurité avancée
+- Portées longues
+- Déverrouillage par paliers
+- Application individuelle aux remontées
+- Modificateurs vitesse/capacité/usure/sécurité/portée

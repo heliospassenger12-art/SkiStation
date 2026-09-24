@@ -1,0 +1,1 @@
+SkiStation 2.38 - Arcade Playtest Ready\nConsolidation before first Unity test. F2 readiness checklist; F1 diagnostics. Fixes 2.38 test-scene filename. No management/visitor AI changes. UNTESTED IN UNITY.\n

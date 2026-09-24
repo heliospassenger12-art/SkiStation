@@ -1,0 +1,1 @@
+2.36: Third-person camera eases back on large airborne elevation; landed trick combo and boost summary at bottom (obeys trick-name visibility setting); visual non-colliding crater rim; updated test scene menu. Untested in Unity. No changes to visitor AI or main management scene.

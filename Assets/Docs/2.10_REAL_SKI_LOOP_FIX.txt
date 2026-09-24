@@ -1,0 +1,5 @@
+SkiStation 2.10 REAL SKI LOOP FIX
+- Real lift arrival now prioritizes player-built Piste_* routes over bootstrap/demo slopes.
+- Visitor departure lifecycle cannot interrupt an active ski run.
+- Console logs the exact lift -> player piste handoff and top gap for validation.
+- Keeps 2.09 real-skier diagnostic visuals.
