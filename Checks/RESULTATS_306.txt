@@ -1,0 +1,8 @@
+SkiStation 3.06 — contrôles de livraison
+PASS : syntaxe de 451 fichiers C# analysée par tree-sitter.
+PASS : les 1 000 fichiers de la base 3.05 sont byte-identiques.
+PASS : les 4 nouveaux scripts C# sont tous dans des dossiers Editor.
+PASS : absence de GUID dupliqué.
+PASS : FastNoiseLite et licence identiques à la révision amont fixée (voir THIRD_PARTY_306.md).
+La vérification d'intégrité et des contenus ZIP accompagne la création de l'archive.
+NON EXÉCUTÉS : compilation Unity, tests numériques MountainLabChecks306, génération de scène et rendu dans Unity, Play Mode et profilage.
