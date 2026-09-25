@@ -101,6 +101,7 @@ namespace SkiStation
             var arrival = visitor.GetComponent<StationVisitorRoadArrival248>();
             if (arrival != null && arrival.IsArriving) return arrival.DiagnosticGoal;
             var route = visitor.GetComponent<SkierRouteAgent>();
+            if (route != null && route.IsGpsWalking) return "Liaison vers la prochaine etape";
             if (route != null && route.IsApproachingLift) return "Rejoint la remontee";
             switch (visitor.State)
             {
@@ -121,6 +122,11 @@ namespace SkiStation
             var journey = selected.GetComponent<SkierMountainJourneyRuntime>();
             GUILayout.Label(selected.name, heading);
             Row("Objectif", StateLabel(selected));
+            var planner = MultiLiftDestinationPlanner301.I;
+            if (planner != null && planner.Targets.TryGetValue(selected, out var destinationSlope))
+                Row("Piste souhaitee", destinationSlope != null ? destinationSlope.name : "Aucune");
+            if (route != null && !string.IsNullOrEmpty(route.GpsItinerary))
+                Row("GPS du domaine", route.enabled ? route.GpsItinerary : "Suspendu : boucle temoin ou autre activite");
             Row("Arrivee", identity == null ? "Non renseignee" : identity.Mode == ArrivalMode250.Car ? "Voiture" : identity.Mode == ArrivalMode250.Bus ? "Autocar" : "A pied");
             Row("Materiel", arrival != null ? (arrival.HasEquipment ? "Equipe" : "Location necessaire") : identity != null ? (identity.OwnEquipment ? "Equipe" : "Sans equipement") : "Non renseigne");
             Row("Forfait du jour", VisitorSkiAdmission.HasPass(selected) ? "Valide" : "Aucun forfait valide enregistre");

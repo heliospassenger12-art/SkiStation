@@ -55,6 +55,9 @@ namespace SkiStation
             if (skier == null) return;
             if (agent == null) agent = GetComponent<SkierRouteAgent>() ?? gameObject.AddComponent<SkierRouteAgent>();
 
+            // Real unloading has completed: execute the first planned action, including another lift.
+            State = LiftPostArrivalState.None;
+            if (agent.TryFollowDomainPlan()) { Changed?.Invoke(); return; }
             var network = ResortRouteNetwork.I;
             var existingDecision = SkiDomainRouteDecisionRuntime.I != null
                 ? SkiDomainRouteDecisionRuntime.I.Decisions.TryGetValue(skier, out var routeDecision) ? routeDecision.nextSlope : null

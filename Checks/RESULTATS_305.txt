@@ -1,0 +1,18 @@
+SkiStation 3.05 : contrôles hors Unity
+
+PASS : syntaxe des 447 fichiers C# (tree-sitter, pas une compilation).
+PASS : aucun fichier 3.04 supprimé.
+PASS : scènes, Arcade, boucle témoin, construction des gares, véhicules et accès terrain conservés.
+991 fichiers de base inchangés avant ajout de ce rapport.
+
+Fichiers modifiés/ajoutés :
+Assets/SkiStation/Scripts/Lifts/LiftPostArrivalRoutingRuntime.cs
+Assets/SkiStation/Scripts/Playable/VisitorDetailsPanel255.cs
+Assets/SkiStation/Scripts/Skiers/SkierRouteAgent.cs
+Assets/SkiStation/Scripts/Skiers/SkierRuntime.cs
+Assets/SkiStation/Scripts/Slopes/IntegratedSkiDomainNetworkRuntime.cs
+Assets/SkiStation/Scripts/Slopes/MultiLiftDestinationPlanner301.cs
+COMMENCER_ICI_WORK_3_05.md
+TEST_305.md
+
+NON EXÉCUTÉS : compilation Unity, Play Mode, tests de trajectoire/fermeture, mesure du Profiler. Voir TEST_305.md.

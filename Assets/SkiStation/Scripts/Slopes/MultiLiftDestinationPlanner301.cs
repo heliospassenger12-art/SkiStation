@@ -71,6 +71,8 @@ namespace SkiStation
                 }
             }
 
+            // Drop stale closed/deleted objectives even when no replacement exists.
+            targets.Remove(skier); targetTimes.Remove(skier);
             SlopeRuntime selected = SelectDestination(skier, from);
             if (selected != null)
             {
@@ -86,7 +88,7 @@ namespace SkiStation
             lift = null;
             SlopeRuntime target = GetTarget(skier, from);
             if (target == null) return false;
-            return TryPlan(skier, from, target, out lift, out _);
+            return TryPlan(skier, from, target, out lift, out _) && lift != null;
         }
 
         public bool TryGetNextSlope(SkierRuntime skier, LiftRuntime justRidden, out SlopeRuntime slope)
@@ -95,12 +97,7 @@ namespace SkiStation
             if (skier == null || justRidden == null) return false;
             SlopeRuntime target = GetTarget(skier, justRidden.Top);
             if (target == null) return false;
-            if (Vector3.Distance(justRidden.Top, target.TopPoint) <= startRadius && IsAllowed(skier, target))
-            {
-                slope = target;
-                return true;
-            }
-            return TryPlan(skier, justRidden.Top, target, out _, out slope);
+            return TryPlan(skier, justRidden.Top, target, out _, out slope) && slope != null;
         }
 
         public void RegisterCompletedSlope(SkierRuntime skier, SlopeRuntime slope)
@@ -124,7 +121,7 @@ namespace SkiStation
                 var s = slopes[i];
                 if (!IsUsable(s) || !IsAllowed(skier, s)) continue;
                 float distance = Vector3.Distance(from, s.TopPoint);
-                if (distance < 55f) continue; // local choices already work well; 3.01 targets the wider domain.
+                // Local pistes remain valid goals for a small or newly opened domain.
                 float score = Mathf.Clamp(distance / 450f, 0f, 2.2f);
                 score += Mathf.Clamp01(s.Length / 1800f) * .55f;
                 score -= s.TrafficDensity * 18f;
@@ -143,9 +140,33 @@ namespace SkiStation
             return TryPlan(skier, from, target, out _, out _);
         }
 
+        public bool TryGetNextStep(SkierRuntime skier, Vector3 from, out SkiDomainLink next, out string itinerary)
+        {
+            next = default; itinerary = "Aucun itineraire accessible";
+            var target = GetTarget(skier, from);
+            if (target == null || !TryBuildPlan(skier, from, target, out var chain) || chain.Count == 0) return false;
+            next = chain[0];
+            var labels = new List<string>();
+            foreach (var link in chain)
+                labels.Add(link.kind == SkiDomainLinkKind.Lift ? "Remontee : " + link.lift.name :
+                    link.kind == SkiDomainLinkKind.Slope ? "Piste : " + link.slope.name : "Liaison a pied");
+            itinerary = string.Join("\n", labels);
+            return true;
+        }
+        public void Forget(SkierRuntime skier)
+        { if (skier == null) return; targets.Remove(skier); targetTimes.Remove(skier); lastTargets.Remove(skier); }
         private bool TryPlan(SkierRuntime skier, Vector3 from, SlopeRuntime target, out LiftRuntime firstLift, out SlopeRuntime firstSlope)
         {
             firstLift = null; firstSlope = null;
+            if (!TryBuildPlan(skier, from, target, out var chain)) return false;
+            // Legacy callers may only use the immediate action, never a later lift or piste.
+            if (chain.Count > 0 && chain[0].kind == SkiDomainLinkKind.Lift) firstLift = chain[0].lift;
+            if (chain.Count > 0 && chain[0].kind == SkiDomainLinkKind.Slope) firstSlope = chain[0].slope;
+            return chain.Count > 0;
+        }
+        private bool TryBuildPlan(SkierRuntime skier, Vector3 from, SlopeRuntime target, out List<SkiDomainLink> ordered)
+        {
+            ordered = new List<SkiDomainLink>();
             var network = IntegratedSkiDomainNetworkRuntime.I;
             if (network == null || target == null || network.Links == null || network.Links.Count == 0) return false;
 
@@ -154,14 +175,27 @@ namespace SkiStation
             float[] dist = new float[n];
             int[] prev = new int[n];
             bool[] used = new bool[n];
-            for (int i = 0; i < n; i++) { dist[i] = float.PositiveInfinity; prev[i] = -1; }
-
+            bool[] allowed = new bool[n];
+            float[] costs = new float[n];
+            // Evaluate live restrictions and queues once per search, not for every relaxation.
             for (int i = 0; i < n; i++)
             {
-                if (!links[i].usable || !AllowedLink(skier, links[i])) continue;
-                Vector3 d = links[i].from - from;
-                if (new Vector2(d.x, d.z).magnitude <= startRadius && d.y <= network.maxTransferClimb)
-                    dist[i] = d.magnitude + DynamicLinkCost(links[i]);
+                dist[i] = float.PositiveInfinity; prev[i] = -1;
+                allowed[i] = links[i].usable && AllowedLink(skier, links[i]);
+                if (allowed[i]) costs[i] = DynamicLinkCost(links[i]);
+            }
+
+            var agent = skier != null ? skier.GetComponent<SkierRouteAgent>() : null;
+            bool firstRide = skier != null && skier.GetComponent<StationVisitorRoadArrival248>() != null &&
+                (agent == null || !agent.HasCompletedLiftRide);
+            for (int i = 0; i < n; i++)
+            {
+                if (!allowed[i]) continue;
+                if (firstRide && links[i].kind != SkiDomainLinkKind.Lift) continue;
+                if (links[i].kind == SkiDomainLinkKind.Transfer && Vector3.Distance(from, links[i].to) <= 1.5f) continue;
+                float radius = links[i].kind == SkiDomainLinkKind.Lift ? ManagementJourneyAccess.LiftApproachRadius : startRadius;
+                if (ManagementJourneyAccess.CanWalk(from, links[i].from, radius))
+                    dist[i] = Vector3.Distance(from, links[i].from) / 6f + costs[i];
             }
 
             int goal = -1;
@@ -176,10 +210,11 @@ namespace SkiStation
                 Vector3 end = links[u].to;
                 for (int v = 0; v < n; v++)
                 {
-                    if (used[v] || !links[v].usable || !AllowedLink(skier, links[v])) continue;
+                    if (used[v] || !allowed[v]) continue;
                     Vector3 delta = links[v].from - end;
                     if (delta.sqrMagnitude > nodeMergeRadius * nodeMergeRadius || delta.y > network.maxTransferClimb) continue;
-                    float nd = dist[u] + delta.magnitude * network.transferCostMultiplier + DynamicLinkCost(links[v]);
+                    if (!ManagementJourneyAccess.CanWalk(end, links[v].from, nodeMergeRadius)) continue;
+                    float nd = dist[u] + delta.magnitude / 6f + costs[v];
                     if (nd < dist[v]) { dist[v] = nd; prev[v] = u; }
                 }
             }
@@ -188,19 +223,18 @@ namespace SkiStation
             var chain = new List<int>();
             for (int p = goal; p >= 0; p = prev[p]) chain.Add(p);
             chain.Reverse();
-            for (int i = 0; i < chain.Count; i++)
-            {
-                var link = links[chain[i]];
-                if (firstLift == null && link.kind == SkiDomainLinkKind.Lift) firstLift = link.lift;
-                if (firstSlope == null && link.kind == SkiDomainLinkKind.Slope) firstSlope = link.slope;
-                if (firstLift != null && firstSlope != null) break;
-            }
-            return firstLift != null || firstSlope != null;
+            for (int i = 0; i < chain.Count; i++) ordered.Add(links[chain[i]]);
+            return ordered.Count > 0;
         }
 
         private float DynamicLinkCost(SkiDomainLink link)
         {
-            float cost = link.cost;
+            // One unit throughout the graph: estimated elapsed seconds.
+            float cost = link.kind == SkiDomainLinkKind.Slope && link.slope != null ?
+                Mathf.Max(1f, link.slope.Length / 12f) * (1f + Mathf.Max(0, link.slope.TrafficDensity)) :
+                link.kind == SkiDomainLinkKind.Lift && link.lift != null ?
+                Mathf.Max(1f, link.lift.Length / Mathf.Max(.1f, link.lift.EffectiveSpeedKmh / 3.6f)) :
+                Mathf.Max(.01f, Vector3.Distance(link.from, link.to) / 6f);
             if (link.kind != SkiDomainLinkKind.Lift || link.lift == null) return cost;
 
             LiftRuntime lift = link.lift;
@@ -227,18 +261,20 @@ namespace SkiStation
 
         private static bool AllowedLink(SkierRuntime skier, SkiDomainLink link)
         {
-            if (link.kind == SkiDomainLinkKind.Lift) return link.lift != null && link.lift.Open && !link.lift.Faulted;
+            if (link.kind == SkiDomainLinkKind.Lift) return link.lift != null && link.lift.Definition != null &&
+                link.lift.Open && !link.lift.Faulted && link.lift.EffectiveSpeedKmh > .01f &&
+                link.lift.LiftId != "starter_panorama_6seat" && !link.lift.name.Contains("Demonstration") && !link.lift.name.Contains("Démonstration");
             if (link.kind == SkiDomainLinkKind.Slope) return link.slope != null && IsAllowed(skier, link.slope);
-            return true;
+            return ManagementJourneyAccess.CanWalk(link.from, link.to, 90f);
         }
 
         private static bool IsAllowed(SkierRuntime skier, SlopeRuntime slope)
         {
-            if (!IsUsable(slope)) return false;
+            if (!IsUsable(slope) || !slope.name.StartsWith("Piste_")) return false;
             if (skier == null) return true;
             CustomerProfile profile = skier.PopulationProfile != null ? skier.PopulationProfile.ToCustomerProfile() : CustomerProfile.Tourist;
             int ability = SlopeVisitorExperienceRuntime.MaxDifficulty(profile);
-            return (int)slope.Difficulty <= ability + 1;
+            return (int)slope.Difficulty <= ability;
         }
     }
 }

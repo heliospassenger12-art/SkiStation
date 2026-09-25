@@ -30,12 +30,62 @@ namespace SkiStation
         private LiftRuntime approachingLift;
         // Phase 29: an arriving road visitor must board a lift before the first descent.
         private bool hasBoardedLift;
+        public bool HasCompletedLiftRide => hasBoardedLift;
+        public bool IsGpsWalking => gpsWalking;
+        public string GpsItinerary { get; private set; } = "";
+        private bool gpsWalking, gpsApproachedStart, gpsQueued;
+        private SkiDomainLink gpsStep;
+        public bool TryFollowDomainPlan()
+        {
+            var planner = MultiLiftDestinationPlanner301.I;
+            if (planner == null || !isActiveAndEnabled || skier == null || !VisitorSkiAdmission.CanSki(skier)) return false;
+            var life = GetComponent<VisitorLifecycleRuntime>();
+            if (life != null && life.OwnsMovement) return false;
+            if (skier.State == SkierState.RidingLift || skier.State == SkierState.WaitingForLift) return false;
+            gpsWalking = false; gpsQueued = false; approachingLift = null;
+            skier.StopMoving(); skier.SetState(SkierState.Resting); retryTimer = retryDelay;
+            string itinerary;
+            bool found = planner.TryGetNextStep(skier, transform.position, out gpsStep, out itinerary);
+            GpsItinerary = itinerary;
+            if (!found) return true;
+            if (gpsStep.kind == SkiDomainLinkKind.Lift)
+            {
+                approachingLift = gpsStep.lift;
+                skier.MoveTo(approachingLift.Bottom);
+            }
+            else
+            {
+                gpsWalking = true; gpsApproachedStart = false;
+                skier.MoveTo(gpsStep.from);
+            }
+            return true;
+        }
+        private void UpdateGpsWalk()
+        {
+            if (gpsStep.kind == SkiDomainLinkKind.Slope && (gpsStep.slope == null || !gpsStep.slope.Open))
+            { gpsWalking = false; TryFollowDomainPlan(); return; }
+            Vector3 target = gpsApproachedStart ? gpsStep.to : gpsStep.from;
+            Vector3 delta = target - transform.position;
+            if (new Vector2(delta.x, delta.z).magnitude > 1.5f) return;
+            if (gpsStep.kind == SkiDomainLinkKind.Slope)
+            {
+                gpsWalking = false; skier.StopMoving(); BeginFromReroute(gpsStep.slope); return;
+            }
+            if (!gpsApproachedStart)
+            {
+                if (!ManagementJourneyAccess.CanWalk(transform.position, gpsStep.to, 90f))
+                { gpsWalking = false; TryFollowDomainPlan(); return; }
+                gpsApproachedStart = true; skier.MoveTo(gpsStep.to); return;
+            }
+            gpsWalking = false; skier.StopMoving(); TryFollowDomainPlan();
+        }
+
 
         // Called only by the actual lift unloading controller, never by a route request.
         public void ConfirmCompletedLiftRide(LiftRuntime lift)
         {
             if (lift == null) return;
-            hasBoardedLift = true;
+            hasBoardedLift = true; gpsWalking = false; gpsQueued = false;
             // A completed ride invalidates any previously registered slope occupancy.
             // ClearRoute alone does not unregister it.
             if (currentSlope != null) currentSlope.UnregisterSkier();
@@ -53,6 +103,7 @@ namespace SkiStation
         private void OnDestroy()
         {
             if (currentSlope != null) currentSlope.UnregisterSkier();
+            MultiLiftDestinationPlanner301.I?.Forget(skier);
         }
 
         public void BeginFromLift(LiftRuntime lift)
@@ -122,6 +173,10 @@ namespace SkiStation
             var terminalDecision = GetComponent<SkierTerminalDecisionRuntime>();
             if (terminalDecision != null && terminalDecision.Active) return;
 
+            if (gpsQueued && skier.State == SkierState.WaitingForLift && lastLift == null)
+            { gpsQueued = false; skier.StopMoving(); skier.SetState(SkierState.Resting); TryFollowDomainPlan(); return; }
+            if (gpsWalking) { UpdateGpsWalk(); return; }
+
             if (approachingLift != null)
             {
                 UpdateLiftApproach();
@@ -141,6 +196,7 @@ namespace SkiStation
                     var closedSlope = currentSlope;
                     currentSlope.UnregisterSkier();
                     ClearRoute();
+                    if (TryFollowDomainPlan()) return;
                     if (alternateRoute == null) alternateRoute = GetComponent<SkierAlternateRouteRuntime>() ?? gameObject.AddComponent<SkierAlternateRouteRuntime>();
                     if (!alternateRoute.TryRerouteToOpenSlope(transform.position, closedSlope))
                         QueueNearestLift(transform.position);
@@ -153,7 +209,7 @@ namespace SkiStation
                 }
 
                 var connector = SlopeLiftConnectorNetwork.I != null ? SlopeLiftConnectorNetwork.I.FindUsable(transform.position, 4f) : null;
-                if (connector != null && connector.SourceSlope == currentSlope && connector.TargetLift != null)
+                if (MultiLiftDestinationPlanner301.I == null && connector != null && connector.SourceSlope == currentSlope && connector.TargetLift != null)
                 {
                     ActivateConnector(connector);
                     return;
@@ -235,6 +291,8 @@ namespace SkiStation
             if (VisitorIntentRuntime.I != null) VisitorIntentRuntime.I.RegisterSlopeCompleted(skier, completedSlope);
             ClearRoute();
             MultiLiftDestinationPlanner301.I?.RegisterCompletedSlope(skier, completedSlope);
+            // Continue the same destination through the ordered graph before legacy local choices.
+            if (TryFollowDomainPlan()) return;
             if (alternateRoute == null) alternateRoute = GetComponent<SkierAlternateRouteRuntime>() ?? gameObject.AddComponent<SkierAlternateRouteRuntime>();
             if (alternateRoute.TryRerouteToOpenSlope(bottom, completedSlope)) return;
             var terminal = SlopeTerminalAreaRuntime.FindForSlope(completedSlope, SlopeTerminalEndpointKind.Bottom, bottom);
@@ -292,6 +350,7 @@ namespace SkiStation
         {
             if (!isActiveAndEnabled || !VisitorSkiAdmission.CanSki(skier) || skier.State == SkierState.WaitingForLift || skier.State == SkierState.RidingLift) return;
 
+            if (TryFollowDomainPlan()) return;
             LiftRuntime best = null;
             if (MultiLiftDestinationPlanner301.I != null)
                 MultiLiftDestinationPlanner301.I.TryGetNextLift(skier, from, out best);
@@ -383,6 +442,7 @@ namespace SkiStation
                 journey.BindLift(target);
                 skier.SetState(SkierState.WaitingForLift);
                 lastLift = target;
+                gpsQueued = MultiLiftDestinationPlanner301.I != null;
             }
             else
             {

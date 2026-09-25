@@ -78,6 +78,12 @@ namespace SkiStation
         private void BuildTransfers(SlopeRuntime[] slopes, LiftRuntime[] lifts)
         {
             float r2 = endpointRadius * endpointRadius;
+            // Consecutive lifts can have a short, walkable interchange without an intervening piste.
+            for (int a = 0; a < lifts.Length; a++)
+                for (int b = 0; b < lifts.Length; b++)
+                    if (a != b && lifts[a] != null && lifts[b] != null)
+                        TryAddTransfer(lifts[a].Top, lifts[b].Bottom, r2);
+
             for (int s = 0; s < slopes.Length; s++)
             {
                 SlopeRuntime slope = slopes[s];
@@ -103,6 +109,7 @@ namespace SkiStation
         {
             Vector3 delta = to - from;
             if (delta.sqrMagnitude > radiusSquared || delta.y > maxTransferClimb) return;
+            if (!ManagementJourneyAccess.CanWalk(from, to, endpointRadius)) return;
             float distance = delta.magnitude;
             links.Add(new SkiDomainLink
             {
