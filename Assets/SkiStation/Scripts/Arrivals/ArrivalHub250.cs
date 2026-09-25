@@ -158,6 +158,7 @@ namespace SkiStation
             Box("Guichet",kiosk.transform,new Vector3(0,1.8f,-2.05f),new Vector3(3,1.2f,.12f),Mat(new Color(.24f,.5f,.62f)));
             Office=kiosk.AddComponent<ArrivalTicketOffice250>();Office.Access=new[]{Entrance,Point(10,4),Point(18,4),Point(18,23),Point(25,24)};
             Label("FORFAITS",Point(25,28,4.2f));Label("P  VOITURES",Point(72,24,3));Label("P  AUTOCARS",Point(65,-49,3));
+            ArrivalWelcomeVisuals256.Install(this);
         }
         private void OnDestroy(){if(I==this)I=null;foreach(var m in materials.Values)if(m!=null)Destroy(m);}
     }
