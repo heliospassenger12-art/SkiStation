@@ -234,6 +234,10 @@ namespace SkiStation
             CreateBox(name + "FrontGlass", center + rotation * (Vector3.forward * (depth * .5f + .03f)) + Vector3.up * (height * .55f), new Vector3(width * .82f, height * .68f, .08f), glassMaterial, rotation);
             CreateBox(name + "Platform", center + Vector3.up * .55f + rotation * Vector3.forward * 1.2f, new Vector3(width + 2.5f, 1.1f, depth + 2.5f), metalMaterial, rotation);
             CreateBox(name + "Canopy", center + Vector3.up * (height + 1.0f) + rotation * Vector3.forward * 2.0f, new Vector3(width + 3f, .16f, 3.5f), metalMaterial, rotation);
+            // 2.66 visual pass: alpine terminal details only. No lift gameplay/placement changes.
+            CreateBox(name + "SnowCap", center + Vector3.up * (height + .58f), new Vector3(width + 1.45f, .18f, depth + 1.35f), snowMaterial != null ? snowMaterial : metalMaterial, rotation);
+            CreateBox(name + "StonePlinth", center + Vector3.up * .18f, new Vector3(width + .7f, .36f, depth + .7f), concreteMaterial != null ? concreteMaterial : darkMaterial, rotation);
+            CreateBox(name + "Fascia", center + rotation * (Vector3.forward * (depth * .5f + .12f)) + Vector3.up * (height - .18f), new Vector3(width * .72f, .42f, .12f), darkMaterial, rotation);
             BuildStationLights(center, rotation, width, height);
         }
 
@@ -439,6 +443,9 @@ namespace SkiStation
             CreateBox("Seat",root.transform.position+Vector3.up*.2f,new Vector3(width,.12f,.65f),darkMaterial,Quaternion.identity,root.transform);
             CreateBox("Backrest",root.transform.position+Vector3.up*.7f,new Vector3(width,.85f,.1f),darkMaterial,Quaternion.identity,root.transform);
             CreateBox("Footrest",root.transform.position+Vector3.down*.15f,new Vector3(width,.08f,.65f),metalMaterial,Quaternion.identity,root.transform);
+            CreateBox("SafetyBar", root.transform.position + Vector3.up * .62f + Vector3.forward * .36f, new Vector3(width + .08f,.07f,.07f), metalMaterial, Quaternion.identity, root.transform);
+            CreateBox("SafetyBarLeft", root.transform.position + new Vector3(-width*.42f,.30f,.36f), new Vector3(.07f,.65f,.07f), metalMaterial, Quaternion.identity, root.transform);
+            CreateBox("SafetyBarRight", root.transform.position + new Vector3(width*.42f,.30f,.36f), new Vector3(.07f,.65f,.07f), metalMaterial, Quaternion.identity, root.transform);
             if(d.type==LiftType.BubbleChair || d.windProtection) CreateBox("Bubble",root.transform.position+Vector3.up*.75f,new Vector3(width,.95f,.04f),glassMaterial,Quaternion.Euler(15,0,0),root.transform);
         }
 
@@ -481,6 +488,8 @@ namespace SkiStation
             height=Mathf.Max(height,p.y-ground);
             CreateCylinder("Tower",p+Vector3.down*height*.5f,.18f,height,metalMaterial,Quaternion.identity,root.transform);
             CreateBox("Crossarm",p+Vector3.up*.1f,new Vector3(4f,.22f,.35f),metalMaterial,Quaternion.LookRotation(dir,Vector3.up),root.transform);
+            CreateCylinder("ConcreteFoot", new Vector3(p.x, ground + .18f, p.z), .42f, .36f, concreteMaterial != null ? concreteMaterial : darkMaterial, Quaternion.identity, root.transform);
+            CreateBox("PylonSnowCollar", new Vector3(p.x, ground + .38f, p.z), new Vector3(1.15f,.10f,1.15f), snowMaterial != null ? snowMaterial : metalMaterial, Quaternion.identity, root.transform);
             Quaternion orientation = Quaternion.LookRotation(dir.sqrMagnitude > .001f ? dir.normalized : Vector3.forward, Vector3.up);
             // Two mirrored sheave batteries: one for the uphill strand, one for the return strand.
             for (int side = -1; side <= 1; side += 2)

@@ -76,11 +76,14 @@ namespace SkiStation
 
             var network = ResortRouteNetwork.I;
             var integratedNavigator = skier != null ? (skier.GetComponent<IntegratedSkierDomainNavigator>() ?? skier.gameObject.AddComponent<IntegratedSkierDomainNavigator>()) : null;
-            SlopeRuntime integratedChoice = forcedSlope == null && integratedNavigator != null ? integratedNavigator.ChooseSlopeFromLift(lift) : null;
-            currentSlope = forcedSlope != null ? forcedSlope : (integratedChoice != null ? integratedChoice :
+            SlopeRuntime plannedChoice = null;
+            if (forcedSlope == null && MultiLiftDestinationPlanner301.I != null)
+                MultiLiftDestinationPlanner301.I.TryGetNextSlope(skier, lift, out plannedChoice);
+            SlopeRuntime integratedChoice = forcedSlope == null && plannedChoice == null && integratedNavigator != null ? integratedNavigator.ChooseSlopeFromLift(lift) : null;
+            currentSlope = forcedSlope != null ? forcedSlope : (plannedChoice != null ? plannedChoice : (integratedChoice != null ? integratedChoice :
                 (VisitorBehaviorRuntime.I != null ? VisitorBehaviorRuntime.I.ChooseSlope(skier, lift) :
                 (network != null ? network.FindSlopeFromLift(lift) :
-                (SlopeNetwork.I != null && lift != null ? SlopeNetwork.I.FindBestSlope(lift.Top, lift.Bottom) : null))));
+                (SlopeNetwork.I != null && lift != null ? SlopeNetwork.I.FindBestSlope(lift.Top, lift.Bottom) : null)))));
 
             if (currentSlope != null)
             {
@@ -231,6 +234,7 @@ namespace SkiStation
             if (SlopeVisitorExperienceRuntime.I != null) SlopeVisitorExperienceRuntime.I.RecordCompletion(skier, completedSlope);
             if (VisitorIntentRuntime.I != null) VisitorIntentRuntime.I.RegisterSlopeCompleted(skier, completedSlope);
             ClearRoute();
+            MultiLiftDestinationPlanner301.I?.RegisterCompletedSlope(skier, completedSlope);
             if (alternateRoute == null) alternateRoute = GetComponent<SkierAlternateRouteRuntime>() ?? gameObject.AddComponent<SkierAlternateRouteRuntime>();
             if (alternateRoute.TryRerouteToOpenSlope(bottom, completedSlope)) return;
             var terminal = SlopeTerminalAreaRuntime.FindForSlope(completedSlope, SlopeTerminalEndpointKind.Bottom, bottom);
@@ -289,8 +293,10 @@ namespace SkiStation
             if (!isActiveAndEnabled || !VisitorSkiAdmission.CanSki(skier) || skier.State == SkierState.WaitingForLift || skier.State == SkierState.RidingLift) return;
 
             LiftRuntime best = null;
+            if (MultiLiftDestinationPlanner301.I != null)
+                MultiLiftDestinationPlanner301.I.TryGetNextLift(skier, from, out best);
             var network = ResortRouteNetwork.I;
-            if (network != null)
+            if (best == null && network != null)
             {
                 best = VisitorBehaviorRuntime.I != null
                     ? VisitorBehaviorRuntime.I.ChooseLift(skier, from, lastLift != null ? lastLift.Top : from)

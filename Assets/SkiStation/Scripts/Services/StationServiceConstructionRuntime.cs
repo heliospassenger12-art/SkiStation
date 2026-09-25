@@ -39,7 +39,7 @@ namespace SkiStation
                 go.transform.SetParent(serviceRoot, true);
             go.SetActive(true);
             // Detailed placeholder is generated after confirmation; never modify the working lift flow.
-            StationServiceVisual253.Apply(go, type, go.name);
+            StationServiceVisual278.Apply(go, type, go.name);
             Debug.Log("[SkiStation Restaurant Visibilite] Batiment cree : " + go.name +
                       " | position=" + go.transform.position + " | actif=" + go.activeInHierarchy);
 

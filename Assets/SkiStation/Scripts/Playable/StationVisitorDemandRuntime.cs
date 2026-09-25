@@ -126,43 +126,64 @@ namespace SkiStation
 
         private static void ApplyVisitorLook(GameObject go, CustomerProfile profile)
         {
-            var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            body.name = "Veste";
-            body.transform.SetParent(go.transform, false);
-            body.transform.localPosition = Vector3.up * .95f;
-            body.transform.localScale = new Vector3(.65f, .8f, .55f);
-            UnityEngine.Object.Destroy(body.GetComponent<Collider>());
-            var renderer = body.GetComponent<Renderer>();
-            if (renderer != null)
+            Color jacket = new Color(.25f,.38f,.65f);
+            switch (profile)
             {
-                var mat = RuntimeMaterialFactory.Create(Color.white);
-                if (mat != null)
-                {
-                    switch (profile)
-                    {
-                        case CustomerProfile.Family: mat.color = new Color(.95f,.45f,.12f); break;
-                        case CustomerProfile.Youth: mat.color = new Color(.15f,.55f,.92f); break;
-                        case CustomerProfile.Athlete: mat.color = new Color(.85f,.12f,.18f); break;
-                        case CustomerProfile.Beginner: mat.color = new Color(.25f,.72f,.32f); break;
-                        default: mat.color = new Color(.25f,.38f,.65f); break;
-                    }
-                    renderer.sharedMaterial = mat;
-                    var helmet = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                    helmet.name = "Casque"; helmet.transform.SetParent(go.transform, false);
-                    helmet.transform.localPosition = Vector3.up * 1.85f;
-                    helmet.transform.localScale = Vector3.one * .42f;
-                    helmet.GetComponent<Renderer>().sharedMaterial = mat;
-                    UnityEngine.Object.Destroy(helmet.GetComponent<Collider>());
-                    for (int side = -1; side <= 1; side += 2)
-                    {
-                        var ski = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                        ski.name = "Ski"; ski.transform.SetParent(go.transform, false);
-                        ski.transform.localPosition = new Vector3(side * .22f, .08f, .15f);
-                        ski.transform.localScale = new Vector3(.13f, .08f, 1.9f);
-                        ski.GetComponent<Renderer>().sharedMaterial = mat;
-                        UnityEngine.Object.Destroy(ski.GetComponent<Collider>());
-                    }
-                }
+                case CustomerProfile.Family: jacket = new Color(.92f,.34f,.10f); break;
+                case CustomerProfile.Youth: jacket = new Color(.08f,.48f,.88f); break;
+                case CustomerProfile.Athlete: jacket = new Color(.82f,.08f,.12f); break;
+                case CustomerProfile.Beginner: jacket = new Color(.18f,.62f,.28f); break;
+            }
+            Color pants = Color.Lerp(jacket, new Color(.035f,.045f,.06f), .72f);
+            Color skin = new Color(.83f,.64f,.49f);
+            Color gear = new Color(.055f,.065f,.08f);
+            Material jacketMat = RuntimeMaterialFactory.Create(jacket);
+            Material pantsMat = RuntimeMaterialFactory.Create(pants);
+            Material skinMat = RuntimeMaterialFactory.Create(skin);
+            Material gearMat = RuntimeMaterialFactory.Create(gear);
+            // 2.70: visual-only individuality. No visitor state, route or decision is changed.
+            Color accent = Color.Lerp(jacket, Color.white, .28f);
+            Material accentMat = RuntimeMaterialFactory.Create(accent);
+            bool hasBackpack = UnityEngine.Random.value < .42f;
+            bool hasScarf = UnityEngine.Random.value < .30f;
+            bool hasBeanie = UnityEngine.Random.value < .24f;
+            bool hasBrightGloves = UnityEngine.Random.value < .55f;
+
+            System.Func<string, PrimitiveType, Vector3, Vector3, Material, GameObject> part = (name,type,pos,scale,mat) => {
+                var x=GameObject.CreatePrimitive(type); x.name=name; x.transform.SetParent(go.transform,false);
+                x.transform.localPosition=pos; x.transform.localScale=scale; var c=x.GetComponent<Collider>(); if(c!=null) UnityEngine.Object.Destroy(c);
+                var r=x.GetComponent<Renderer>(); if(r!=null && mat!=null) r.sharedMaterial=mat; return x; };
+
+            // More human management avatar: torso, head, articulated-looking limbs and winter gear.
+            part("Veste",PrimitiveType.Capsule,new Vector3(0,1.12f,0),new Vector3(.55f,.58f,.42f),jacketMat);
+            part("Pantalon",PrimitiveType.Capsule,new Vector3(0,.55f,0),new Vector3(.43f,.38f,.36f),pantsMat);
+            part("Tete",PrimitiveType.Sphere,new Vector3(0,1.82f,0),Vector3.one*.34f,skinMat);
+            part("Casque",PrimitiveType.Sphere,new Vector3(0,1.96f,0),new Vector3(.39f,.24f,.39f),gearMat);
+            part("Masque",PrimitiveType.Cube,new Vector3(0,1.91f,.285f),new Vector3(.34f,.12f,.055f),accentMat);
+            part("BandeCasque",PrimitiveType.Cube,new Vector3(0,1.965f,.325f),new Vector3(.40f,.055f,.035f),accentMat);
+            part("ZipVeste",PrimitiveType.Cube,new Vector3(0,1.18f,.225f),new Vector3(.035f,.48f,.025f),accentMat);
+            if(hasBackpack){
+                part("SacADos",PrimitiveType.Cube,new Vector3(0,1.16f,-.245f),new Vector3(.38f,.48f,.18f),gearMat);
+                part("SacAccent",PrimitiveType.Cube,new Vector3(0,1.18f,-.345f),new Vector3(.22f,.16f,.025f),accentMat);
+            }
+            if(hasScarf) part("Echarpe",PrimitiveType.Cylinder,new Vector3(0,1.58f,0),new Vector3(.23f,.07f,.23f),accentMat);
+            if(hasBeanie){
+                part("Bonnet",PrimitiveType.Sphere,new Vector3(0,2.06f,0),new Vector3(.31f,.16f,.31f),accentMat);
+                part("Pompon",PrimitiveType.Sphere,new Vector3(0,2.19f,0),Vector3.one*.10f,accentMat);
+            }
+            // 2.71: extra readable details from the management camera, still visual-only.
+            part("ColVeste",PrimitiveType.Cylinder,new Vector3(0,1.55f,0),new Vector3(.25f,.055f,.25f),gearMat);
+            for(int side=-1;side<=1;side+=2){
+                part("Bras",PrimitiveType.Capsule,new Vector3(side*.39f,1.13f,.02f),new Vector3(.16f,.42f,.16f),jacketMat).transform.localRotation=Quaternion.Euler(0,0,side*12f);
+                part("Gant",PrimitiveType.Sphere,new Vector3(side*.50f,.83f,.02f),Vector3.one*.15f,hasBrightGloves ? accentMat : gearMat);
+                part("Jambe",PrimitiveType.Capsule,new Vector3(side*.18f,.35f,0),new Vector3(.18f,.42f,.18f),pantsMat);
+                part("Chaussure",PrimitiveType.Cube,new Vector3(side*.18f,.10f,.08f),new Vector3(.24f,.16f,.48f),gearMat);
+                var ski=part("Ski",PrimitiveType.Cube,new Vector3(side*.20f,.025f,.18f),new Vector3(.105f,.045f,1.85f),jacketMat);
+                ski.transform.localRotation=Quaternion.Euler(0,side*1.5f,0);
+                part("Fixation",PrimitiveType.Cube,new Vector3(side*.20f,.075f,.10f),new Vector3(.13f,.07f,.26f),gearMat);
+                part("Spatule",PrimitiveType.Cube,new Vector3(side*.20f,.065f,1.08f),new Vector3(.11f,.055f,.18f),accentMat).transform.localRotation=Quaternion.Euler(-10f,side*1.5f,0);
+                var pole=part("Baton",PrimitiveType.Cylinder,new Vector3(side*.55f,.70f,-.03f),new Vector3(.025f,.62f,.025f),gearMat);
+                pole.transform.localRotation=Quaternion.Euler(8f,0,side*7f);
             }
         }
 

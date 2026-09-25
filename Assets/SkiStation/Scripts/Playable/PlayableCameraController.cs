@@ -7,7 +7,9 @@ namespace SkiStation
     public sealed class PlayableCameraController : MonoBehaviour
     {
         [SerializeField] private Camera targetCamera;
-        [SerializeField] private float panSpeed = 95f;
+        [SerializeField] private float panSpeed = 190f;
+        [SerializeField] private float edgePanSpeed = 150f;
+        [SerializeField] private float edgePanSize = 24f;
         [SerializeField] private float rotationSpeed = 65f;
         [SerializeField] private float zoomFractionPerNotch = .18f;
         [SerializeField] private float minimumDistance = 18f;
@@ -138,11 +140,30 @@ namespace SkiStation
             float dt = Time.unscaledDeltaTime;
             Vector3 forward = Vector3.ProjectOnPlane(cam.forward, Vector3.up).normalized;
             Vector3 right = Vector3.ProjectOnPlane(cam.right, Vector3.up).normalized;
-            Vector3 movement = forward * Input.GetAxisRaw("Vertical") + right * Input.GetAxisRaw("Horizontal");
-            if (movement.sqrMagnitude > 1f) movement.Normalize();
+            // Fleches/WASD : deplacement volontairement plus vif pour parcourir un grand domaine.
+            Vector3 keyboardMovement = forward * Input.GetAxisRaw("Vertical") + right * Input.GetAxisRaw("Horizontal");
+            if (keyboardMovement.sqrMagnitude > 1f) keyboardMovement.Normalize();
+
+            // Edge scrolling type jeu de gestion : haut=avance, bas=recule, gauche/droite=translation.
+            // Desactive lorsque le pointeur survole les controles camera du HUD.
+            Vector3 edgeMovement = Vector3.zero;
+            if (!PlayableGameHUD.PointerOverCameraControls && Application.isFocused)
+            {
+                Vector3 mouse = Input.mousePosition;
+                if (mouse.x >= 0f && mouse.y >= 0f && mouse.x <= Screen.width && mouse.y <= Screen.height)
+                {
+                    if (mouse.y >= Screen.height - edgePanSize) edgeMovement += forward;
+                    else if (mouse.y <= edgePanSize) edgeMovement -= forward;
+                    if (mouse.x >= Screen.width - edgePanSize) edgeMovement += right;
+                    else if (mouse.x <= edgePanSize) edgeMovement -= right;
+                }
+            }
+            if (edgeMovement.sqrMagnitude > 1f) edgeMovement.Normalize();
+
             float distance = Vector3.Distance(cam.position, focus);
-            float speed = panSpeed * Mathf.Clamp(distance / 350f, .2f, 5f) * (Input.GetKey(KeyCode.LeftShift) ? 2.5f : 1f);
-            Vector3 delta = movement * speed * dt;
+            float distanceFactor = Mathf.Clamp(distance / 350f, .25f, 5f);
+            float boost = Input.GetKey(KeyCode.LeftShift) ? 2.5f : 1f;
+            Vector3 delta = (keyboardMovement * panSpeed + edgeMovement * edgePanSpeed) * distanceFactor * boost * dt;
             cam.position += delta;
             focus += delta;
             if (Input.GetKey(KeyCode.Q)) cam.RotateAround(focus, Vector3.up, -rotationSpeed * dt);

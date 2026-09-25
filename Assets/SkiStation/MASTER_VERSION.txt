@@ -1,3 +1,1 @@
-SkiStation 2.50 — Arrivees pietons / voitures / bus
-Base : phase63 FIX2. Voir COMMENCER_ICI_2_50_ARRIVEES.md.
-Validation hors Unity uniquement.
+2.58

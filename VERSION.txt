@@ -1,0 +1,4 @@
+SkiStation 3.04 — base de relais Work
+Date de préparation : 2026-09-25
+Point d'entrée : COMMENCER_ICI_WORK_3_04.md
+Test principal : TEST_304.md
