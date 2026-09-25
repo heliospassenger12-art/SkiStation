@@ -24,6 +24,7 @@ namespace SkiStation
             if (planner != null && planner.IsActive) return;
 
             if (Input.GetMouseButtonDown(0) && !PlayableGameHUD.PointerOverCameraControls) SelectAtMouse();
+            if (VisitorDetailsPanel255.HasSelectedVisitor) { Selected = null; return; }
             if (Input.GetKeyDown(KeyCode.Delete) || Input.GetKeyDown(KeyCode.Backspace)) RemoveSelected();
             if (Input.GetKeyDown(KeyCode.Escape)) Selected = null;
         }

@@ -90,7 +90,7 @@ namespace SkiStation
         }
         private void OnGUI()
         {
-            if (!visible || SkiStation.Arcade.ArcadeSceneIsolation.IsActive) return;
+            if (!visible || VisitorDetailsPanel255.IsOpen || SkiStation.Arcade.ArcadeSceneIsolation.IsActive) return;
             Styles();
             float width = Mathf.Min(430f, Screen.width - 24f);
             Rect area = new Rect(Screen.width - width - 12f, 75f, width, Mathf.Min(580f, Screen.height - 90f));

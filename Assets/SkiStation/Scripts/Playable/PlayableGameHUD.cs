@@ -19,7 +19,7 @@ namespace SkiStation
         private GUIStyle titleStyle, sectionStyle, smallStyle, mutedStyle;
         private GUISkin stationSkin;
         private PlayableCameraController managementCamera;
-        public static bool PointerOverCameraControls => new Rect(12f, 170f, Mathf.Min(560f, Screen.width - 24f), 72f)
+        public static bool PointerOverCameraControls => VisitorDetailsPanel255.BlocksWorldPointer || new Rect(12f, 170f, Mathf.Min(560f, Screen.width - 24f), 72f)
             .Contains(new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y));
 
         private void Start()

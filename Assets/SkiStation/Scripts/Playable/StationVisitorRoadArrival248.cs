@@ -21,6 +21,27 @@ namespace SkiStation
         private bool ownsEquipment;
         private bool roadCompleted;
         private bool arrivalCancelled;
+        // Read-only diagnostics: never advance a visit or grant an admission from the UI.
+        public bool HasEquipment => ownsEquipment;
+        public string DiagnosticGoal => arrivalCancelled ? "Journee terminee" :
+            phase == 0 ? "Rejoindre le front de neige" : phase == 6 ? "Trouver une location accessible" :
+            phase == 4 || phase == 5 ? "Rejoindre le front de neige" :
+            mandatoryEquipmentStop ? "Louer du materiel" : mandatoryTicketStop ? "Obtenir un forfait" : "Rejoindre le service";
+        public string DiagnosticDestination => visitBuilding != null ? visitBuilding.name : "Front de neige";
+        public string DiagnosticWait
+        {
+            get
+            {
+                if (arrivalCancelled) return "Arrivee interrompue a la fermeture";
+                if (!IsArriving) return "";
+                if (roadPath == null || roadPath.Length < 2) return "Route d'arrivee invalide";
+                if (phase == 6) return "Aucune location ouverte et accessible trouvee a proximite";
+                if (phase == 3) return mandatoryTicketStop ? "File ou service au guichet" : "Service de location en cours";
+                if (roadCompleted && ownsEquipment && skier != null && !VisitorSkiAdmission.HasPass(skier)
+                    && (ArrivalHub250.I == null || ArrivalHub250.I.Office == null)) return "Guichet forfaits indisponible";
+                return "";
+            }
+        }
         public bool ReadyToSki => !IsArriving && roadCompleted && ownsEquipment && !arrivalCancelled;
         public string ArrivalStage => !IsArriving ? "Arrivee terminee" : phase == 0 ? "Sur la route" : phase == 6 ? "Attend un magasin de ski" : phase == 3 ? (mandatoryTicketStop ? "Au guichet forfaits" : "Dans le commerce") : phase == 5 ? "Retour au front de neige" : "Vers le commerce";
         private bool mandatoryEquipmentStop;

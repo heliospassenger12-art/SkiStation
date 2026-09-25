@@ -15,6 +15,7 @@ namespace SkiStation
         [SerializeField] private float retryDelay = 2f;
 
         public SlopeRuntime CurrentSlope => currentSlope;
+        public LiftRuntime ApproachingLift => approachingLift;
         public bool IsApproachingLift => approachingLift != null;
         public float SlopeProgress01 => currentSlope == null || route.Count <= 1 ? 0f : Mathf.Clamp01(index / (float)(route.Count - 1));
 

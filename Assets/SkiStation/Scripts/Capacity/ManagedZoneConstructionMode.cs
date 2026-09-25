@@ -11,6 +11,7 @@ namespace SkiStation
         [SerializeField] private float rayDistance = 5000f;
         private readonly List<Vector3> points = new List<Vector3>();
         private LineRenderer preview;
+        public bool IsDrawing => active;
         private bool active;
 
         private void Update()

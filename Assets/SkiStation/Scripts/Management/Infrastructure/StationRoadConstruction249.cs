@@ -6,6 +6,7 @@ namespace SkiStation
     public sealed class StationRoadConstruction249 : MonoBehaviour
     {
         private static StationRoadConstruction249 instance;
+        public static bool IsDrawing => instance != null && instance.active;
         private bool active, hasStart, confirming;
         private Vector3 start, end;
         private string status = "Cliquez sur une route existante pour commencer.";

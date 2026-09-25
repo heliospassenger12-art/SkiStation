@@ -7,6 +7,7 @@ namespace SkiStation
     public sealed class PiouPiouConstructionMode : MonoBehaviour
     {
         private readonly List<Vector3> points = new();
+        public bool IsDrawing => drawing;
         private bool drawing;
         private void Update()
         {
