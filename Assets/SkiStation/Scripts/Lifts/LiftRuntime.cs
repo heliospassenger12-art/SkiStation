@@ -111,6 +111,14 @@ namespace SkiStation
 
         public void SetFaulted(bool value) { Faulted = value; RefreshPerformance(); }
         public float TravelSeconds => CurrentSpeedKmh <= 0.01f ? float.PositiveInfinity : Length / (CurrentSpeedKmh / 3.6f);
+        public float TravelGameMinutes
+        {
+            get
+            {
+                if (float.IsInfinity(TravelSeconds)) return float.PositiveInfinity;
+                return GameClock.I != null ? GameClock.I.RealSecondsToGameMinutes(TravelSeconds) : TravelSeconds / 60f;
+            }
+        }
 
         public LiftStationLogic StationLogic => GetComponent<LiftStationLogic>();
 

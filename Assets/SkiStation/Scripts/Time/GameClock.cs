@@ -11,7 +11,10 @@ namespace SkiStation
         public static GameClock Instance => I;
 
         public static GameClock Find() => I != null ? I : FindObjectOfType<GameClock>();
-        [SerializeField] private float realSecondsPerGameDay = 180f;
+        [SerializeField, Min(600f)] private float realSecondsPerGameDay = 14400f;
+        [SerializeField, HideInInspector] private int clockBalanceVersion;
+        private const int CurrentClockBalanceVersion = 327;
+        private const float BalancedRealSecondsPerGameDay = 14400f; // 4 h réelles à x1 pour 06:00 -> 24:00.
         [SerializeField] private float dayStartHour = 6f;
         [SerializeField] private float dayEndHour = 24f;
 
@@ -19,7 +22,9 @@ namespace SkiStation
         public float GameHour { get; private set; } = 6f;
         // Compatibility alias used by management runtimes.
         public float CurrentHour => GameHour;
-        public float RealSecondsPerGameHour => realSecondsPerGameDay / 18f;
+        public float RealSecondsPerGameHour => realSecondsPerGameDay / Mathf.Max(1f, dayEndHour - dayStartHour);
+        public float RealSecondsPerGameMinute => RealSecondsPerGameHour / 60f;
+        public float GameMinutesPerRealSecond => 60f / Mathf.Max(.01f, RealSecondsPerGameHour);
         public int CurrentDay { get; private set; } = 1;
         public bool IsNight => GameHour < dayStartHour || GameHour >= dayEndHour;
         public GameTimePhase Phase => GetPhase(GameHour);
@@ -29,7 +34,19 @@ namespace SkiStation
         public event Action MorningStarted;
         private bool wasNight;
 
-        private void Awake() { I = this; GameHour = dayStartHour; wasNight = false; }
+        private void Awake()
+        {
+            I = this;
+            // 3.27 migration: old scenes serialized a 180 s day, which made a normal lift ride
+            // consume several in-game hours. Move legacy clocks to the new observation-friendly scale.
+            if (clockBalanceVersion < CurrentClockBalanceVersion)
+            {
+                realSecondsPerGameDay = BalancedRealSecondsPerGameDay;
+                clockBalanceVersion = CurrentClockBalanceVersion;
+            }
+            GameHour = dayStartHour;
+            wasNight = false;
+        }
 
         private void OnDestroy() { if (I == this) I = null; }
 
@@ -52,6 +69,11 @@ namespace SkiStation
             if (night && !wasNight) NightStarted?.Invoke();
             wasNight = night;
             TimeChanged?.Invoke(GameHour);
+        }
+
+        public float RealSecondsToGameMinutes(float realSeconds)
+        {
+            return Mathf.Max(0f, realSeconds) * GameMinutesPerRealSecond;
         }
 
         public float MinutesUntil(float targetHour)

@@ -90,7 +90,9 @@ namespace SkiStation
 
         private void Decide()
         {
-            bool late = GameClock.I != null && GameClock.I.CurrentHour >= leaveAtHour;
+            var dayPlan = VisitorDayPlan328.Ensure(skier);
+            bool late = (dayPlan != null && dayPlan.ShouldHeadHomeNow()) ||
+                        (GameClock.I != null && GameClock.I.CurrentHour >= leaveAtHour);
             if (area != null && area.IsBaseArea && ManagementJourneyAccess.CanExitToVillage(transform.position) && (late || UnityEngine.Random.value < baseLeaveChance))
             {
                 choice = Choice.Leave;

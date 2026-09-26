@@ -18,8 +18,8 @@ namespace SkiStation
             { this.id=id; this.name=name; this.type=type; this.tier=tier; this.seats=seats; this.maxLength=maxLength; this.speed=speed; this.cost=cost; this.detachable=detachable; maintenancePerDay=Mathf.Round(cost * .0025f); }
         }
         private static readonly Model[] Models = {
-            new Model("tow_classic", "Téléski classique", LiftType.Platter, 0, 1, 1000f, 7f, 65000f),
-            new Model("chair_fixed_2", "Télésiège fixe 2 places", LiftType.FixedChair, 0, 2, 1500f, 8f, 125000f),
+            new Model("tow_classic", "Téléski classique", LiftType.Platter, 0, 1, 1000f, 12.6f, 65000f),
+            new Model("chair_fixed_2", "Télésiège fixe 2 places", LiftType.FixedChair, 0, 2, 1500f, 14.4f, 125000f),
             new Model("tow_tbar", "Téléski à archet 2 places", LiftType.TBar, 1, 2, 850f, 9f, 125000f),
             new Model("chair_fixed_4", "Télésiège fixe 4 places", LiftType.FixedChair, 1, 4, 1100f, 9f, 240000f),
             new Model("carpet", "Tapis roulant débutants", LiftType.MagicCarpet, 1, 1, 180f, 2f, 70000f),

@@ -11,6 +11,10 @@ namespace SkiStation
         [SerializeField] private float edgePanSpeed = 150f;
         [SerializeField] private float edgePanSize = 24f;
         [SerializeField] private float rotationSpeed = 65f;
+        [SerializeField] private float middleMouseYawSpeed = 0.24f;
+        [SerializeField] private float middleMousePitchSpeed = 0.20f;
+        [SerializeField] private float minimumOrbitPitch = 12f;
+        [SerializeField] private float maximumOrbitPitch = 78f;
         [SerializeField] private float zoomFractionPerNotch = .18f;
         [SerializeField] private float minimumDistance = 18f;
         [SerializeField] private float maximumDistance = 18000f;
@@ -168,6 +172,24 @@ namespace SkiStation
             focus += delta;
             if (Input.GetKey(KeyCode.Q)) cam.RotateAround(focus, Vector3.up, -rotationSpeed * dt);
             if (Input.GetKey(KeyCode.E)) cam.RotateAround(focus, Vector3.up, rotationSpeed * dt);
+
+            // 3.11 : rotation libre type jeu de gestion. Maintenir la molette puis glisser la souris.
+            // Horizontal = orbite autour du massif ; vertical = inclinaison, avec garde-fous anti-retournement.
+            if (Input.GetMouseButton(2) && !PlayableGameHUD.PointerOverCameraControls)
+            {
+                float yaw = Input.GetAxisRaw("Mouse X") * middleMouseYawSpeed * 100f;
+                float pitchDelta = -Input.GetAxisRaw("Mouse Y") * middleMousePitchSpeed * 100f;
+                cam.RotateAround(focus, Vector3.up, yaw);
+
+                Vector3 offset = cam.position - focus;
+                float horizontal = new Vector2(offset.x, offset.z).magnitude;
+                float currentPitch = Mathf.Atan2(offset.y, Mathf.Max(.01f, horizontal)) * Mathf.Rad2Deg;
+                float targetPitch = Mathf.Clamp(currentPitch + pitchDelta, minimumOrbitPitch, maximumOrbitPitch);
+                float allowedPitch = targetPitch - currentPitch;
+                Vector3 pitchAxis = Vector3.Cross(Vector3.up, offset).normalized;
+                if (pitchAxis.sqrMagnitude > .5f) cam.RotateAround(focus, pitchAxis, allowedPitch);
+                cam.LookAt(focus);
+            }
             float wheel = Input.mouseScrollDelta.y;
             if (Mathf.Abs(wheel) > .01f && !PlayableGameHUD.PointerOverCameraControls)
             {

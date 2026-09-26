@@ -376,8 +376,21 @@ namespace SkiStation
                 }
             }
 
+            // 3.28: before committing to a new uphill cycle, check the visitor's remaining day.
+            // At the base, a visitor whose return window has started leaves instead of boarding.
+            // Higher on the mountain we keep routing authority intact so nobody gets stranded.
             if (best != null)
             {
+                var dayPlan = VisitorDayPlan328.Ensure(skier);
+                SlopeRuntime likelySlope = ResortRouteNetwork.I != null ? ResortRouteNetwork.I.FindSlopeFromLift(best) : null;
+                bool atBase = ManagementJourneyAccess.CanExitToVillage(transform.position);
+                if (atBase && dayPlan != null && !dayPlan.CanStartLiftCycle(best, likelySlope))
+                {
+                    approachingLift = null;
+                    skier.StopMoving();
+                    skier.SetState(SkierState.Leaving);
+                    return;
+                }
                 // Do not send a skier straight up a cliff to a remote lower
                 // station. Wait for an accessible lift rather than climbing.
                 Vector3 deltaToStation = best.Bottom - transform.position;
