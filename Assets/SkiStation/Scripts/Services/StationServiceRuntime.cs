@@ -71,6 +71,13 @@ namespace SkiStation
 
         public bool Contains(SkierRuntime skier) => skier != null && (queue.Contains(skier) || startHour.ContainsKey(skier));
 
+        public void CancelVisit(SkierRuntime skier)
+        {
+            queue.Remove(skier); queueHour.Remove(skier);
+            if (startHour.Remove(skier)) activeCustomers = Mathf.Max(0, activeCustomers - 1);
+            Changed?.Invoke();
+        }
+
         public bool TryComplete(SkierRuntime skier)
         {
             if (skier == null || definition == null || !startHour.ContainsKey(skier)) return false;
@@ -119,23 +126,31 @@ namespace SkiStation
             float satisfactionDelta = (quality - 65f) * .035f - waitingPenalty * .03f;
             skier.ChangeSatisfaction(satisfactionDelta);
 
-            if (StationRuntime.I != null) StationRuntime.I.Earn(price, ToFinanceCategory(), profile, GetId(), definition.serviceName);
+            if (VisitorServiceConsumptionRuntime.I == null && StationRuntime.I != null) StationRuntime.I.Earn(price, ToFinanceCategory(), profile, GetId(), definition.serviceName);
             if (VisitorServiceConsumptionRuntime.I != null) VisitorServiceConsumptionRuntime.I.RecordServiceTransaction(skier, ToVisitorServiceType(), GetId(), definition.serviceName, price, quality);
             if (VisitorDayPlanRuntime.I != null) VisitorDayPlanRuntime.I.RegisterServiceCompleted(skier, definition.type, definition.serviceMinutes);
 
+            skier.GetComponent<VisitorDayDecision329>()?.ServiceCompleted(this);
             stats.served++; stats.revenue += price; stats.satisfaction += quality; stats.satisfactionSamples++;
             int pi = Mathf.Clamp((int)profile, 0, 8);
             if (stats.servedByProfile == null || stats.servedByProfile.Length != 9) stats.servedByProfile = new int[9];
             if (stats.revenueByProfile == null || stats.revenueByProfile.Length != 9) stats.revenueByProfile = new float[9];
             if (stats.satisfactionByProfile == null || stats.satisfactionByProfile.Length != 9) stats.satisfactionByProfile = new float[9];
             stats.servedByProfile[pi]++; stats.revenueByProfile[pi] += price; stats.satisfactionByProfile[pi] += quality;
-            if (queue.Count > 0)
+            AdmitWaiting();
+            Changed?.Invoke();
+        }
+
+        private void AdmitWaiting()
+        {
+            if (!IsOpen()) return;
+            while (queue.Count > 0 && activeCustomers < EffectiveCapacity)
             {
-                SkierRuntime next = queue[0]; queue.RemoveAt(0);
-                float waited = WaitMinutes(next); stats.waitingMinutes += Mathf.Max(0f, waited);
+                var next = queue[0]; queue.RemoveAt(0);
+                if (next == null || next.State == SkierState.Leaving) continue;
+                stats.waitingMinutes += Mathf.Max(0f, WaitMinutes(next));
                 BeginService(next);
             }
-            Changed?.Invoke();
         }
 
         private void ProcessClock()
@@ -153,6 +168,7 @@ namespace SkiStation
             {
                 if (queue[i] == null || queue[i].State == SkierState.Leaving) { if (queue[i] != null) queueHour.Remove(queue[i]); queue.RemoveAt(i); }
             }
+            AdmitWaiting();
         }
 
         private float WaitMinutes(SkierRuntime skier)

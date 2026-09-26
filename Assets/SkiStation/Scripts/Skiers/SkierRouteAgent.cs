@@ -40,13 +40,19 @@ namespace SkiStation
             var planner = MultiLiftDestinationPlanner301.I;
             if (planner == null || !isActiveAndEnabled || skier == null || !VisitorSkiAdmission.CanSki(skier)) return false;
             var life = GetComponent<VisitorLifecycleRuntime>();
-            if (life != null && life.OwnsMovement) return false;
+            if (life != null && life.OwnsMovement) return true;
+            if (GetComponent<VisitorDayDecision329>() == null)
+                foreach (var service in StationServiceRuntime.All)
+                    if (service != null && service.Contains(skier)) return true;
+            var dayChoice = VisitorDayDecision329.Ensure(skier);
+            if (dayChoice != null && dayChoice.OwnsMovement) return true;
             if (skier.State == SkierState.RidingLift || skier.State == SkierState.WaitingForLift) return false;
             gpsWalking = false; gpsQueued = false; approachingLift = null;
             skier.StopMoving(); skier.SetState(SkierState.Resting); retryTimer = retryDelay;
             string itinerary;
             bool found = planner.TryGetNextStep(skier, transform.position, out gpsStep, out itinerary);
             GpsItinerary = itinerary;
+            if (dayChoice != null && dayChoice.TryChooseAtBase(found ? planner.EstimatePlannedGameMinutes(skier, transform.position) : float.PositiveInfinity)) return true;
             if (!found) return true;
             if (gpsStep.kind == SkiDomainLinkKind.Lift)
             {
@@ -86,6 +92,7 @@ namespace SkiStation
         {
             if (lift == null) return;
             hasBoardedLift = true; gpsWalking = false; gpsQueued = false;
+            GetComponent<IntelligentSkiDayRuntime>()?.RegisterLiftCompleted(lift);
             // A completed ride invalidates any previously registered slope occupancy.
             // ClearRoute alone does not unregister it.
             if (currentSlope != null) currentSlope.UnregisterSkier();
@@ -155,6 +162,8 @@ namespace SkiStation
         private void Update()
         {
             if (skier == null || skier.State == SkierState.Leaving) return;
+            var choice = GetComponent<VisitorDayDecision329>();
+            if (choice != null && choice.OwnsMovement) return;
             if (skier.State == SkierState.RidingLift) { hasBoardedLift = true; return; }
             // The unloading animation and post-arrival transfer own movement until
             // the visitor has physically exited the upper station.
@@ -291,6 +300,7 @@ namespace SkiStation
             if (VisitorIntentRuntime.I != null) VisitorIntentRuntime.I.RegisterSlopeCompleted(skier, completedSlope);
             ClearRoute();
             MultiLiftDestinationPlanner301.I?.RegisterCompletedSlope(skier, completedSlope);
+            GetComponent<IntelligentSkiDayRuntime>()?.RegisterSlopeCompleted(completedSlope);
             // Continue the same destination through the ordered graph before legacy local choices.
             if (TryFollowDomainPlan()) return;
             if (alternateRoute == null) alternateRoute = GetComponent<SkierAlternateRouteRuntime>() ?? gameObject.AddComponent<SkierAlternateRouteRuntime>();

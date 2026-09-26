@@ -236,6 +236,9 @@ namespace SkiStation
             FinanceCategory category = type switch
             {
                 VisitorServiceType.Restaurant => FinanceCategory.Food,
+                VisitorServiceType.Bar => FinanceCategory.Food,
+                VisitorServiceType.EquipmentRental => FinanceCategory.Rentals,
+                VisitorServiceType.SkiSchool => FinanceCategory.Lessons,
                 VisitorServiceType.Shop => FinanceCategory.Shops,
                 VisitorServiceType.Hotel => FinanceCategory.Hotel,
                 _ => FinanceCategory.Leisure

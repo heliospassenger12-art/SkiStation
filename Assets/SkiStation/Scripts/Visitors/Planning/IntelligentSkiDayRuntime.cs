@@ -49,6 +49,7 @@ namespace SkiStation
         public SkiDayMindSnapshot Mind { get; private set; }
         public event Action Changed;
         private float timer;
+        private float lastClockMinute = -1f;
 
         private void Awake()
         {
@@ -148,15 +149,21 @@ namespace SkiStation
                 liftsToday = 0,
                 day = day
             };
+            lastClockMinute = GameClock.I != null ? GameClock.I.ElapsedGameMinutes : -1f;
             Changed?.Invoke();
         }
 
         private void UpdateNeeds()
         {
             SkiDayMindSnapshot m = Mind;
-            float dtHours = Time.unscaledDeltaTime / 3600f;
-            m.hunger01 = Mathf.Clamp01(m.hunger01 + dtHours * .30f);
-            if (skier != null && skier.State == SkierState.Resting)
+            if (GameClock.I == null) { lastClockMinute = -1f; return; }
+            float now = GameClock.I.ElapsedGameMinutes;
+            float dtHours = lastClockMinute < 0f ? 0f : Mathf.Max(0f, now - lastClockMinute) / 60f;
+            lastClockMinute = now;
+            var profile = skier != null ? skier.PopulationProfile : null;
+            float hungerRate = profile != null && profile.IsChild ? 1.15f : 1f;
+            m.hunger01 = Mathf.Clamp01(m.hunger01 + dtHours * .30f * hungerRate);
+            if (GetComponent<VisitorDayDecision329>() != null && GetComponent<VisitorDayDecision329>().IsResting)
                 m.energy01 = Mathf.Clamp01(m.energy01 + dtHours * .45f);
             Mind = m;
         }
@@ -170,7 +177,7 @@ namespace SkiStation
             VisitorIntent intent = VisitorIntentRuntime.I != null && skier != null
                 ? VisitorIntentRuntime.I.GetIntent(skier) : VisitorIntent.SkiDay;
 
-            if (hour >= returnToBaseHour) m.goal = SkiDayGoal.ReturnToBase;
+            if (VisitorDayPlan328.Ensure(skier)?.ShouldHeadHomeNow() == true) m.goal = SkiDayGoal.ReturnToBase;
             else if (m.hunger01 >= .66f && hour >= lunchStartHour && hour <= lunchEndHour) m.goal = SkiDayGoal.Lunch;
             else if (m.energy01 <= .30f) m.goal = SkiDayGoal.Recover;
             else if (m.runsToday < 2) m.goal = SkiDayGoal.WarmUp;

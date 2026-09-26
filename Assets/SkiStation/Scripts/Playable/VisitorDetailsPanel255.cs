@@ -100,6 +100,8 @@ namespace SkiStation
         {
             var arrival = visitor.GetComponent<StationVisitorRoadArrival248>();
             if (arrival != null && arrival.IsArriving) return arrival.DiagnosticGoal;
+            var dayChoice = visitor.GetComponent<VisitorDayDecision329>();
+            if (dayChoice != null && dayChoice.OwnsMovement) return dayChoice.IsWalkingToMeal ? "Rejoint le restaurant" : dayChoice.Label;
             var route = visitor.GetComponent<SkierRouteAgent>();
             if (route != null && route.IsGpsWalking) return "Liaison vers la prochaine etape";
             if (route != null && route.IsApproachingLift) return "Rejoint la remontee";
@@ -122,6 +124,12 @@ namespace SkiStation
             var journey = selected.GetComponent<SkierMountainJourneyRuntime>();
             GUILayout.Label(selected.name, heading);
             Row("Objectif", StateLabel(selected));
+            var choice = selected.GetComponent<VisitorDayDecision329>();
+            var mind = selected.GetComponent<IntelligentSkiDayRuntime>();
+            if (choice != null) { Row("Journee", choice.Label); Row("Pourquoi", choice.Reason); }
+            if (mind != null) { Row("Faim", (mind.Mind.hunger01 * 100f).ToString("0") + " / 100"); Row("Energie", (mind.Mind.energy01 * 100f).ToString("0") + " / 100"); }
+            var budget = selected.GetComponent<VisitorDayPlan328>();
+            if (budget != null) Row("Temps restant", budget.MinutesRemaining.ToString("0") + " min de jeu");
             var planner = MultiLiftDestinationPlanner301.I;
             if (planner != null && planner.Targets.TryGetValue(selected, out var destinationSlope))
                 Row("Piste souhaitee", destinationSlope != null ? destinationSlope.name : "Aucune");

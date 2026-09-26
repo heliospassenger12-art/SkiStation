@@ -50,8 +50,7 @@ namespace SkiStation
             timer = 0f;
             if (hasDestination && Vector3.Distance(transform.position, current.position) <= arrivalRadius)
             {
-                if (dayMind != null && (current.kind == SkiDestinationKind.MountainRestaurant || current.kind == SkiDestinationKind.Service))
-                    dayMind.RegisterMealOrRest(current.kind == SkiDestinationKind.MountainRestaurant);
+                // Arrival near an advisory marker is not a completed meal or rest.
                 hasDestination = false;
                 DestinationChanged?.Invoke();
             }

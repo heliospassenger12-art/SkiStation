@@ -227,11 +227,25 @@ namespace SkiStation
             return ordered.Count > 0;
         }
 
+        public float EstimatePlannedGameMinutes(SkierRuntime skier, Vector3 from)
+        {
+            if (GameClock.I == null) return float.PositiveInfinity;
+            var target = GetTarget(skier, from);
+            if (target == null || !TryBuildPlan(skier, from, target, out var links)) return float.PositiveInfinity;
+            float seconds = 0f;
+            foreach (var link in links)
+            {
+                seconds += Vector3.Distance(from, link.from) / 6f + DynamicLinkCost(link);
+                from = link.to;
+            }
+            return GameClock.I.RealSecondsToGameMinutes(seconds);
+        }
+
         private float DynamicLinkCost(SkiDomainLink link)
         {
             // One unit throughout the graph: estimated elapsed seconds.
             float cost = link.kind == SkiDomainLinkKind.Slope && link.slope != null ?
-                Mathf.Max(1f, link.slope.Length / 12f) * (1f + Mathf.Max(0, link.slope.TrafficDensity)) :
+                Mathf.Max(1f, link.slope.Length / 6f) * (1f + Mathf.Max(0, link.slope.TrafficDensity)) :
                 link.kind == SkiDomainLinkKind.Lift && link.lift != null ?
                 Mathf.Max(1f, link.lift.Length / Mathf.Max(.1f, link.lift.EffectiveSpeedKmh / 3.6f)) :
                 Mathf.Max(.01f, Vector3.Distance(link.from, link.to) / 6f);

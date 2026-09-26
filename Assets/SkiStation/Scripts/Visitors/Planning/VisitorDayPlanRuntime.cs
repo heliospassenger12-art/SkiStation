@@ -69,6 +69,17 @@ namespace SkiStation
         private void Reevaluate(SkierRuntime skier)
         {
             var p=plans[skier];
+            var choice = skier.GetComponent<VisitorDayDecision329>();
+            if (choice != null)
+            {
+                p.next = choice.Action == VisitorDayAction329.Eat ? VisitorPlanActivity.Restaurant :
+                    choice.Action == VisitorDayAction329.Rest ? VisitorPlanActivity.Rest :
+                    choice.Action == VisitorDayAction329.Home ? VisitorPlanActivity.Leave : VisitorPlanActivity.Ski;
+                p.current = choice.OwnsMovement ? p.next : skier.State == SkierState.RidingLift || skier.State == SkierState.WaitingForLift ? VisitorPlanActivity.Lift :
+                    skier.State == SkierState.Leaving ? VisitorPlanActivity.Leave : skier.State == SkierState.Skiing ? VisitorPlanActivity.Ski : VisitorPlanActivity.Rest;
+                p.remainingMinutes = VisitorDayPlan328.Ensure(skier).MinutesRemaining;
+                p.day = GetDay(); plans[skier] = p; return;
+            }
             if(p.day!=GetDay()){p.day=GetDay();p.completedSteps=0;p.current=VisitorPlanActivity.Ski;p.remainingMinutes=defaultActivityMinutes;}
             var intent=VisitorIntentRuntime.I!=null?VisitorIntentRuntime.I.GetIntent(skier):VisitorIntent.SkiDay;
             if(p.current==VisitorPlanActivity.Leave) return;
@@ -82,10 +93,10 @@ namespace SkiStation
         }
         private void TickPlans()
         {
-            float minutes=Time.unscaledDeltaTime/60f;
+            float minutes=GameClock.I != null ? GameClock.I.RealSecondsToGameMinutes(Time.deltaTime) : 0f;
             if(minutes<=0) return;
             var keys=new List<SkierRuntime>(plans.Keys);
-            foreach(var skier in keys){ if(skier==null||!plans.ContainsKey(skier))continue; var p=plans[skier]; p.remainingMinutes-=minutes; if(p.remainingMinutes<=0){p.completedSteps++;p.current=p.next;p.next=ChooseNext(VisitorIntentRuntime.I!=null?VisitorIntentRuntime.I.GetIntent(skier):VisitorIntent.SkiDay,p.completedSteps);p.remainingMinutes=defaultActivityMinutes; } plans[skier]=p; }
+            foreach(var skier in keys){ if(skier==null||!plans.ContainsKey(skier)||skier.GetComponent<VisitorDayDecision329>()!=null)continue; var p=plans[skier]; p.remainingMinutes-=minutes; if(p.remainingMinutes<=0){p.completedSteps++;p.current=p.next;p.next=ChooseNext(VisitorIntentRuntime.I!=null?VisitorIntentRuntime.I.GetIntent(skier):VisitorIntent.SkiDay,p.completedSteps);p.remainingMinutes=defaultActivityMinutes; } plans[skier]=p; }
         }
         private static VisitorPlanActivity MapIntentToFirst(VisitorIntent i){ switch(i){case VisitorIntent.FamilyDay:return VisitorPlanActivity.Explore;case VisitorIntent.Relaxation:return VisitorPlanActivity.Rest;case VisitorIntent.ApresSki:return VisitorPlanActivity.Rest;default:return VisitorPlanActivity.Ski;} }
         private static VisitorPlanActivity ChooseNext(VisitorIntent i,int steps){ if(steps>=6)return VisitorPlanActivity.Leave; switch(i){case VisitorIntent.FamilyDay:return steps%3==1?VisitorPlanActivity.Rest:steps%3==2?VisitorPlanActivity.Leisure:VisitorPlanActivity.Ski;case VisitorIntent.Relaxation:return steps%2==0?VisitorPlanActivity.Rest:VisitorPlanActivity.Leisure;case VisitorIntent.PremiumExperience:return steps%3==0?VisitorPlanActivity.Rest:VisitorPlanActivity.Ski;case VisitorIntent.ApresSki:return steps>=4?VisitorPlanActivity.Rest:VisitorPlanActivity.Ski;case VisitorIntent.SportPerformance:case VisitorIntent.Training:return VisitorPlanActivity.Ski;default:return steps%4==3?VisitorPlanActivity.Rest:VisitorPlanActivity.Ski;} }

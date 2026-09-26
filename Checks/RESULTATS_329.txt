@@ -1,0 +1,21 @@
+SkiStation 3.29 : contrôles hors Unity
+PASS syntaxe : 512 fichiers C# (pas une compilation).
+PASS : aucun fichier de base 3.28 supprimé.
+PASS : terrain, scènes, Arcade, placement des gares, véhicules et boucle témoin identiques à la base.
+NON EXECUTES : compilation Unity, menu des 9 tests de décision, Play Mode, mesures CPU.
+
+Fichiers existants modifiés :
+README.md
+Assets/SkiStation/Scripts/Management/VisitorServiceConsumptionRuntime.cs
+Assets/SkiStation/Scripts/Slopes/MultiLiftDestinationPlanner301.cs
+Assets/SkiStation/Scripts/Playable/VisitorDetailsPanel255.cs
+Assets/SkiStation/Scripts/Playable/VisitorLifecycleRuntime.cs
+Assets/SkiStation/Scripts/Visitors/VisitorServicePlannerRuntime.cs
+Assets/SkiStation/Scripts/Services/StationServiceRuntime.cs
+Assets/SkiStation/Scripts/Time/GameClock.cs
+Assets/SkiStation/Scripts/Skiers/VisitorDayPlan328.cs
+Assets/SkiStation/Scripts/Skiers/SkierRuntime.cs
+Assets/SkiStation/Scripts/Skiers/SkierRouteAgent.cs
+Assets/SkiStation/Scripts/Skiers/SkiDestinationRuntime.cs
+Assets/SkiStation/Scripts/Visitors/Planning/IntelligentSkiDayRuntime.cs
+Assets/SkiStation/Scripts/Visitors/Planning/VisitorDayPlanRuntime.cs

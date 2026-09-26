@@ -41,7 +41,8 @@ namespace SkiStation
 
             Vector3 next = Vector3.MoveTowards(transform.position, destination, moveSpeed * Time.deltaTime);
             var route = GetComponent<SkierRouteAgent>();
-            if ((State == SkierState.Arriving || State == SkierState.Leaving || (route != null && (route.IsApproachingLift || route.IsGpsWalking))) && ManagementSurface.TryGet(next, out var ground)) next = ground + (State == SkierState.Arriving && GetComponent<ArrivalIdentity250>() != null ? Vector3.up * .36f : Vector3.zero);
+            var dayChoice = GetComponent<VisitorDayDecision329>();
+            if ((State == SkierState.Arriving || State == SkierState.Leaving || (dayChoice != null && dayChoice.IsWalkingToMeal) || (route != null && (route.IsApproachingLift || route.IsGpsWalking))) && ManagementSurface.TryGet(next, out var ground)) next = ground + (State == SkierState.Arriving && GetComponent<ArrivalIdentity250>() != null ? Vector3.up * .36f : Vector3.zero);
             transform.position = next;
             if (delta.sqrMagnitude > 0.1f)
                 transform.forward = Vector3.Slerp(transform.forward, delta.normalized, 8f * Time.deltaTime);

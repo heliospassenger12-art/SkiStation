@@ -62,7 +62,7 @@ namespace SkiStation
 
         private void Decide(SkierRuntime skier, bool force)
         {
-            if (skier == null) return;
+            if (skier == null || skier.GetComponent<VisitorDayDecision329>() != null) return;
             VisitorIntent intent = VisitorIntentRuntime.I != null ? VisitorIntentRuntime.I.GetIntent(skier) : VisitorIntent.SkiDay;
             CustomerProfile profile = skier.PopulationProfile != null ? skier.PopulationProfile.ToCustomerProfile() : CustomerProfile.Tourist;
             VisitorPlanActivity planActivity = VisitorDayPlanRuntime.I != null ? VisitorDayPlanRuntime.I.GetPlan(skier).next : VisitorPlanActivity.Ski;
@@ -95,7 +95,7 @@ namespace SkiStation
         {
             foreach (var pair in new List<KeyValuePair<SkierRuntime, VisitorServicePlanSnapshot>>(plans))
             {
-                var skier = pair.Key; var p = pair.Value; if (skier == null || string.IsNullOrEmpty(p.targetId)) continue;
+                var skier = pair.Key; var p = pair.Value; if (skier == null || skier.GetComponent<VisitorDayDecision329>() != null || string.IsNullOrEmpty(p.targetId)) continue;
                 StationServiceRuntime target = FindService(p.targetId); if (target == null) continue;
                 if (p.inService)
                 {

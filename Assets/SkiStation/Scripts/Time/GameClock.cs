@@ -26,6 +26,7 @@ namespace SkiStation
         public float RealSecondsPerGameMinute => RealSecondsPerGameHour / 60f;
         public float GameMinutesPerRealSecond => 60f / Mathf.Max(.01f, RealSecondsPerGameHour);
         public int CurrentDay { get; private set; } = 1;
+        public float ElapsedGameMinutes => ((CurrentDay - 1) * (dayEndHour - dayStartHour) + GameHour - dayStartHour) * 60f;
         public bool IsNight => GameHour < dayStartHour || GameHour >= dayEndHour;
         public GameTimePhase Phase => GetPhase(GameHour);
         public event Action<float> TimeChanged;

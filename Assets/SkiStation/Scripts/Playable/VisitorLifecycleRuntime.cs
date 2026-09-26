@@ -42,6 +42,8 @@ namespace SkiStation
         private void Update()
         {
             if (skier == null || GameClock.I == null) return;
+            var dayChoice = GetComponent<VisitorDayDecision329>();
+            if (dayChoice != null && dayChoice.OwnsMovement) return;
 
             // The road-arrival controller owns movement until the visitor reaches the resort.
             var arrival = GetComponent<StationVisitorRoadArrival248>();
@@ -124,6 +126,15 @@ namespace SkiStation
             }
         }
 
+        public void RequestDayReturn329()
+        {
+            departureRequested = true;
+            if (!ManagementJourneyAccess.CanExitToVillage(transform.position)) return;
+            if (stay != null && stay.HasReservation && GameClock.I != null && GameClock.I.CurrentDay < stay.CheckoutDay)
+                BeginLodgingReturn();
+            else BeginDeparture();
+        }
+
         private void BeginLodgingReturn()
         {
             if (Time.time < nextLodgingAttempt) return;
@@ -140,6 +151,7 @@ namespace SkiStation
             lodgingPath = path;
             lodgingWaypoint = 0;
             goingToLodging = true;
+            departureRequested = false;
             SuspendSkiRouting();
             skier.SetState(SkierState.Resting);
             skier.MoveTo(lodgingPath[lodgingWaypoint]);
@@ -174,6 +186,7 @@ namespace SkiStation
         private void ResumeSkiDay()
         {
             lifetimeMinutes = 0f;
+            departureRequested = false;
             skier.SetState(SkierState.Resting);
             var agent = GetComponent<SkierRouteAgent>();
             if (agent != null) { agent.enabled = routeAgentWasEnabled; if (agent.enabled) agent.QueueNextAvailableLift(transform.position); }

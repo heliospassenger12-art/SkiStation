@@ -18,6 +18,7 @@ namespace SkiStation
         public float PlannedDepartureHour => plannedDepartureHour;
         public float MinutesRemaining => GameClock.I == null ? 9999f : Mathf.Max(0f, (plannedDepartureHour - GameClock.I.CurrentHour) * 60f);
         public bool ReturnWindowStarted => MinutesRemaining <= returnReserveMinutes;
+        public float ReservedMinutes => returnReserveMinutes + decisionMarginMinutes;
 
         private void Awake()
         {
