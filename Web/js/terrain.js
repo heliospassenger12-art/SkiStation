@@ -31,7 +31,8 @@
       e *= apron;
       const rid = noise.ridged(nx * 2.3 + 40, nz * 2.3 + 8, 4) - 0.5;                       // crêtes et combes (grande échelle)
       const rid2 = noise.ridged((nx + 0.15 * noise.fbm(nx * 3 + 5, nz * 3, 2)) * 4.8 + 13, nz * 4.8 + 57, 4) - 0.45;    // éperons, combes et replats (1 à 2 km)
-      f[iz * N + ix] = e * 2250 + rid * 560 * (0.25 + Math.min(1, e)) * apron + rid2 * 470 * Math.min(1, 0.25 + e * 1.1) * apron + noise.fbm(nx * 8 + 3, nz * 8 + 77, 3) * 26 * (0.3 + Math.min(1, e)) * apron + noise.fbm(nx * 3.4 + 90, nz * 3.4 + 12, 3) * 140 * apron;
+      const calm = SS.smooth(0.62, 0.28, nz);              // près du village le terrain reste doux : pistes vertes et bleues pour les débutants
+      f[iz * N + ix] = e * 2250 + (rid * 560 * (0.25 + Math.min(1, e)) + rid2 * 470 * Math.min(1, 0.25 + e * 1.1) + noise.fbm(nx * 8 + 3, nz * 8 + 77, 3) * 26 * (0.3 + Math.min(1, e)) + noise.fbm(nx * 3.4 + 90, nz * 3.4 + 12, 3) * 140) * apron * calm;
     }
     return f;
   }

@@ -65,6 +65,7 @@
         state: 'pending', node: Net.hub.id, x: home.x, z: home.z, y: 0, hx: 0, hz: 1, lat: Math.random() * 6.28, decision: 'Arrive', reason: '', thoughts: [], did: {}
       };
       v.seg = v.spend < 0.85 ? 0 : v.spend < 1.4 ? 1 : 2;
+      if (lodger && Math.random() < [0.5, 0.3, 0.06][D.building(home.type).seg || 0] && !(home.opts && home.opts.hb)) v.dined = true;      // séjours en autonomie (cuisine du chalet, de la résidence)
       if (lodger && home.opts && home.opts.shuttle) { v.x = SS.HUB.x + (Math.random() - 0.5) * 30; v.z = SS.HUB.z + 40 + Math.random() * 20; v.sat += 0.02; }
       if (v.lesson) v.lessonAt = (arrive < 9.4 * 3600 ? 9.75 : 14) * 3600;
       if (G.summer) {                                   // l'été : vététistes (rapides) et randonneurs (lents, tous sentiers)
@@ -665,7 +666,7 @@
     Mg.dailyResearch(report);
     Mg.dailyLoans(report);
     // bilan du damage : ce qui était prévu et n'a pas pu être fait
-    if (!G.summer && Sim.groomPlanned) { const missed = Sim.groomPlanned.filter(p => !p.groomedTonight && G.pistes.indexOf(p) >= 0); G.groomReport = { done: Sim.groomPlanned.length - missed.length, missed: missed.map(p => p.name), km: Sim.groomPlanned.filter(p => p.groomedTonight).reduce((a, p) => a + p.len, 0) / 1000 }; if (missed.length && Mg.groomerCount()) report.notes.push('🚜 Damage incomplet : ' + missed.length + ' piste(s) non préparée(s) faute de capacité (' + missed.slice(0, 3).join(', ') + (missed.length > 3 ? '…' : '') + ').'); }
+    if (!G.summer && Sim.groomPlanned) { const missed = Sim.groomPlanned.filter(p => !p.groomedTonight && G.pistes.indexOf(p) >= 0); G.groomReport = { done: Sim.groomPlanned.length - missed.length, missed: missed.map(p => p.name), km: Sim.groomPlanned.filter(p => p.groomedTonight).reduce((a, p) => a + p.len, 0) / 1000 }; if (missed.length && Mg.groomerCount()) report.notes.push('🚜 Damage incomplet : ' + missed.length + ' piste(s) non préparée(s) faute de capacité (' + missed.slice(0, 3).map(p => p.name).join(', ') + (missed.length > 3 ? '…' : '') + ').'); }
     Mg.closeDay(G.ledger, G.visitorsToday);
     G.ledger0 = G.ledger.inc; G.ledger = { inc: {}, exp: {} };
     W.night();

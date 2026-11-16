@@ -109,3 +109,5 @@ p.tag{float:none;background:none;padding:0;font-size:14px}
 textarea{width:100%;min-height:74px;margin:8px 0;padding:8px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.07);color:var(--tx);font:11px/1.3 ui-monospace,monospace;resize:vertical;user-select:text;-webkit-user-select:text}
 .achs{display:grid;grid-template-columns:1fr 1fr;gap:6px}.ach{padding:7px 9px;border-radius:10px;background:var(--bg2);opacity:.55;font-size:12.5px}
 .ach.on{opacity:1;outline:1px solid rgba(255,178,56,.5)}.ach small{display:block;color:var(--mut);font-size:11px}
+.jrow.li2{grid-template-columns:1.6fr 1fr 1fr 1.1fr;cursor:pointer}.jrow.li2:hover{background:rgba(255,255,255,.05)}
+.li .chips{margin-top:6px}.li .btn.small{margin-top:4px;margin-right:4px}

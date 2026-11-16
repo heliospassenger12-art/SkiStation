@@ -267,7 +267,8 @@
   };
   // A* : meilleure descente d'un point de départ vers le front de neige (ou un point d'arrivée donné).
   // Descente continue, pentes douces, détours autour des forêts denses. Renvoie des points de contrôle ou une erreur.
-  SS.autoPiste = function (start, goal, width) {
+  SS.autoPiste = function (start, goal, width, ease) {
+    const thr = [0.085, 0.14, 0.24, 0.17][ease === undefined ? 3 : ease], wt = ease === 0 ? 30 : ease === 1 ? 22 : 14;
     const N = SS.N, C = SS.CELL, H = T.H, S = 2, M = Math.ceil(N / S);
     const to = i => ({ x: -SS.HALF + (i % M) * S * C, z: -SS.HALF + ((i / M) | 0) * S * C });
     const gx0 = goal || SS.HUB, ci = (x, z) => Math.round((z + SS.HALF) / C / S) * M + Math.round((x + SS.HALF) / C / S);
@@ -277,6 +278,7 @@
     const open = [[0, si]], cost = new Map([[si, 0]]), prev = new Map(), done = new Set();
     const nbs = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]];
     const hg = to(gi); let iter = 0, reached = -1;
+    const tows = G.lifts.filter(l => D.lift(l.type).kind === 'tow').map(l => { const dx = l.b.x - l.a.x, dz = l.b.z - l.a.z, n = Math.hypot(dx, dz) || 1, m = 45; return { a: { x: l.a.x + dx / n * m, z: l.a.z + dz / n * m }, b: { x: l.b.x - dx / n * m, z: l.b.z - dz / n * m } }; });
     const push = (f, i) => { open.push([f, i]); let k = open.length - 1; while (k > 0) { const p = (k - 1) >> 1; if (open[p][0] <= open[k][0]) break; [open[p], open[k]] = [open[k], open[p]]; k = p; } };
     const pop = () => { const t = open[0], l = open.pop(); if (open.length) { open[0] = l; let k = 0; for (; ;) { let a = k * 2 + 1, b = a + 1, m = k; if (a < open.length && open[a][0] < open[m][0]) m = a; if (b < open.length && open[b][0] < open[m][0]) m = b; if (m === k) break; [open[m], open[k]] = [open[k], open[m]]; k = m; } } return t; };
     while (open.length && iter++ < 60000) {
@@ -288,10 +290,11 @@
         const nx = (i % M) + dx, nz = ((i / M) | 0) + dz; if (nx < 1 || nz < 1 || nx >= M - 1 || nz >= M - 1) continue;
         const j = nz * M + nx; if (done.has(j)) continue;
         const q = to(j); if (!T.inside(q.x, q.z, 80)) continue;
+        if (tows.length && tows.some(t => SS.segCross(p, q, t.a, t.b))) continue;               // une piste ne traverse jamais un téléski
         const hj = T.getH(q.x, q.z), len = stepL * (dx && dz ? 1.414 : 1), along = (hi - hj) / len;
         if (along < -0.003) continue;                                    // jamais de remontée
         T.grad(q.x, q.z, g); const cross = Math.hypot(g.x, g.z), eff = Math.max(along, 0.26 * cross);
-        let pen = 1 + 14 * Math.max(0, eff - 0.17) + 3 * Math.max(0, along < 0.03 ? 0.03 - along : 0) * 10 + 4 * Math.max(0, cross - 0.5);
+        let pen = 1 + wt * Math.max(0, eff - thr) + 3 * Math.max(0, along < 0.03 ? 0.03 - along : 0) * 10 + 4 * Math.max(0, cross - 0.5);
         if (T.slope(q.x, q.z) > 1.0) pen += 30;
         const nc = cost.get(i) + len * pen; if (nc >= (cost.has(j) ? cost.get(j) : 1e18)) continue;
         cost.set(j, nc); prev.set(j, i); push(nc + Math.hypot(q.x - hg.x, q.z - hg.z), j);

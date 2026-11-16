@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   const SS = window.SS, D = SS.Data, B = SS.Build, R = SS.R, Sim = SS.Sim, W = SS.Weather, Net = SS.Net;
-  const UI = SS.UI = { panel: null, arg: null, sel: null };
+  const UI = SS.UI = { panel: null, arg: null, sel: null, acts: {} };
   const $ = id => document.getElementById(id), esc = SS.esc, eur = SS.eur;
   let G, acc = 0;
 
@@ -11,6 +11,7 @@
   const btn = (label, act, arg, cls, dis) => '<button class="btn ' + (cls || '') + '" data-act="' + act + '"' + (arg !== undefined ? ' data-arg="' + esc(arg) + '"' : '') + (dis ? ' disabled' : '') + '>' + label + '</button>';
   const pct = v => Math.round(v * 100) + ' %';
   const stars = p => { const n = Math.round(p / 20); let s = ''; for (let i = 1; i <= 5; i++) s += '<i class="st' + (n >= i ? ' on' : '') + '">★</i>'; return s; };
+  UI.H = { row, btn, dot, eur, esc, pct, stars };
   const OPEX = o => Object.keys(o).filter(k => k !== 'Construction' && k !== 'Recherche').reduce((a, k) => a + o[k], 0);
 
   // ---------------- initialisation ----------------
@@ -71,6 +72,7 @@
       case 'modalClose': $('modal').hidden = true; break;
       case 'tab': UI.tab = arg; UI.refresh(); break;
       case 'tool': { const [k, t] = arg.split(':'); B.start(k, t); if (R.coarse || innerWidth < 800) UI.close(); break; }
+      case 'ease': B.setEase(+arg); break;
       case 'reach': R.showReach = !R.showReach; R.drawOverlay(); UI.refresh(); break;
       case 'width': B.setWidth(+arg); break;
       case 'b_confirm': B.confirm(); break;
@@ -94,6 +96,7 @@
       case 'research': { const r = D.RESEARCH.find(x => x.id === arg); if (G.research.cur) { toast('Une recherche est déjà en cours.', 'warn'); break; } if (SS.spend(r.cost, 'Recherche')) { G.research.cur = { id: r.id, left: r.days }; toast('Recherche lancée : ' + r.name + ' (' + r.days + ' jours).', 'good'); } else toast('Fonds insuffisants.', 'bad'); UI.refresh(); break; }
       case 'event': { const ev = D.EVENTS.find(x => x.id === arg); if (G.event) { toast('Un événement est déjà programmé.', 'warn'); break; } if (!ev.need(SS.stats())) { toast('Prérequis manquants : ' + ev.needTxt + '.', 'warn'); break; } if (SS.spend(ev.cost, 'Événements')) { G.event = { id: ev.id, day: G.day + 3, left: ev.days }; toast(ev.name + ' programmé(e) dans 3 jours. Préparez la station !', 'good'); } else toast('Fonds insuffisants.', 'bad'); UI.refresh(); break; }
       case 'view': if (arg === 'slope') { SS.Terrain.setViewMode(SS.Terrain.viewMode === 'slope' ? 'normal' : 'slope'); } else if (arg === 'map' || arg === 'crowd' || arg === 'snow') { R.mapMode = R.mapMode === arg ? false : arg; R.drawOverlay(); } else if (arg === 'labels') R.labelsOn = !R.labelsOn; UI.refresh(); break;
+      default: if (UI.acts[a]) UI.acts[a](arg, el); else if (UI.act) UI.act(a, arg, el); break;
       case 'sound': SS.Audio.setOn(!SS.Audio.on); UI.refresh(); break;
       case 'minimap': SS.Minimap.on = !SS.Minimap.on; UI.refresh(); break;
       case 'skipSummer': if (!sure(el)) break; if (!SS.skipSummer()) toast('Attendez que la station soit vide (le soir) pour abréger l\'été.', 'warn'); UI.refresh(true); break;
@@ -147,7 +150,7 @@
     if (!G.summer && !s.rental) return ['🎿', 'Sans location de matériel, un quart des clients potentiels ne vient pas.'];
     if (!G.summer && !s.garage && G.pistes.length > 1) return ['🚜', 'Sans garage à dameuses, vos pistes se dégradent chaque jour.'];
     if (!s.rescue && G.visitorsToday > 80) return ['🚑', 'Aucun poste de secours : un accident ruinerait votre réputation.'];
-    if (G.mode === 'career' && !G.research.cur && G.tier < 6 && G.money > 150000) return ['🔬', 'Pensez à lancer une recherche pour débloquer de nouvelles remontées et équipements.'];
+    if (G.mode === 'career' && !G.research.active.length && G.tier < 6 && G.money > 150000) return ['🔬', 'Pensez à lancer une recherche pour débloquer de nouvelles remontées et équipements.'];
     return null;
   }
 
@@ -159,6 +162,7 @@
     const an = B.an || B.live; let title = '', help = '', body = '', canOk = !!(B.an && B.an.ok);
     if (t.kind === 'piste') {
       title = t.auto ? '🧭 Tracé assisté' : '⛷️ Tracé de piste'; help = t.auto && !t.ctrl.length ? 'Cliquez le point de départ (en haut, idéalement l\'arrivée d\'une remontée) : la descente jusqu\'au front de neige est calculée pour vous.' : t.ctrl.length ? (t.auto ? 'Tracé proposé : validez, ou « Annuler le point » pour recommencer.' : 'Ajoutez des points en descendant, puis validez.') : 'Cliquez le départ (en haut), puis descendez point par point. Les zones vertes mènent au front de neige.';
+      if (t.auto) body += '<div class="chips">Difficulté visée ' + ['Verte', 'Bleue', 'Rouge', 'Libre'].map((n, i) => btn(n, 'ease', i, 'chip' + (t.ease === i ? ' on' : ''))).join('') + '</div>';
       if (B.autoMsg) body += '<div class="msg warn">🧭 ' + B.autoMsg + '</div>';
       body += '<div class="chips">Largeur ' + [20, 30, 40].map(w => btn(w + ' m', 'width', w, 'chip' + (t.width === w ? ' on' : ''))).join('') + '</div>';
       if (an && an.pts) {
@@ -184,7 +188,7 @@
   }
 
   // ---------------- panneaux ----------------
-  const TITLES = { journal: 'Journal de la station', build: 'Construire', domain: 'Domaine skiable', finance: 'Finances', visitors: 'Visiteurs', research: 'Recherche', career: 'Carrière & événements', weather: 'Météo & neige', options: 'Options', inspect: 'Fiche', help: 'Bienvenue' };
+  const TITLES = { exploit: 'Exploitation', journal: 'Journal de la station', build: 'Construire', domain: 'Domaine skiable', finance: 'Finances', visitors: 'Visiteurs', research: 'Recherche', career: 'Carrière & événements', weather: 'Météo & neige', options: 'Options', inspect: 'Fiche', help: 'Bienvenue' };
   UI.open = function (id) { UI.panel = id; $('panel').hidden = false; UI.refresh(true); document.querySelectorAll('#toolbar .tb').forEach(b => b.classList.toggle('on', b.dataset.arg === id)); };
   UI.close = function () { UI.panel = null; $('panel').hidden = true; document.querySelectorAll('#toolbar .tb').forEach(b => b.classList.remove('on')); };
   UI.refresh = function (force) {
@@ -226,7 +230,7 @@
         for (const def of D.BUILDINGS) {
           if (def.cat !== cat) { cat = def.cat; h += '<h4>' + cat + '</h4>'; }
           const ok = SS.buildingUnlocked(def), rs = def.research && D.RESEARCH.find(r => r.id === def.research);
-          h += '<div class="card' + (ok ? '' : ' locked') + '" ' + (ok ? 'data-act="tool" data-arg="building:' + def.id + '"' : '') + '><div class="ctitle"><b>' + def.name + '</b><span>' + (ok ? eur(def.cost) : '🔒 ' + (rs ? rs.name : '')) + '</span></div><div class="cmeta">' + def.desc + ' <i>Charges ' + eur(def.upkeep) + '/j.</i></div></div>';
+          h += '<div class="card' + (ok ? '' : ' locked') + '" ' + (ok ? 'data-act="tool" data-arg="building:' + def.id + '"' : '') + '><div class="ctitle"><b>' + def.name + '</b><span>' + (ok ? eur(def.cost) : '🔒 ' + (rs ? rs.name : '')) + '</span></div><div class="cmeta">' + def.desc + (def.seg !== undefined ? ' <b>Clientèle ' + D.SEG[def.seg].toLowerCase() + '.</b>' : '') + ' <i>Charges ' + eur(def.upkeep) + '/j.</i></div></div>';
         }
       } else {
         h += '<p>Les routes desservent parkings et hébergements hors du village.</p>' + btn('🛣️ Tracer une route', 'tool', 'road:', 'primary') + '<h4>Démolition</h4><p class="fine">Une infrastructure ne peut être démolie que vide : fermez-la d\'abord.</p>' + btn('🧨 Outil démolition', 'tool', 'demolish:');
@@ -331,7 +335,7 @@
         if (def.type === 'ticket') h += row('Forfaits vendus', o.visits) + row('File', o.queue.length);
         if (def.type === 'rescue') h += row('En intervention', o.busy || 0);
         h += row('Raccordé à', o.node >= 0 ? (o.node === Net.hub.id ? 'Front de neige' : 'Domaine d\'altitude') : '<em class="warn">rien : inaccessible</em>') + '</div>';
-        if (def.price) h += '<h4>Tarif</h4><div class="slider"><input type="range" min="' + Math.round(def.price * 0.5) + '" max="' + Math.round(def.price * 2) + '" step="1" value="' + o.price + '" data-in="bprice"><b id="bpriceOut">' + o.price + ' €</b></div><p class="fine">Tarif conseillé : ' + def.price + ' €. Trop cher, les clients renoncent.</p>';
+        h += UI.mgmtBuilding(o, def);
         if (def.type === 'school') h += '<h4>Moniteurs</h4><div class="actions">' + btn('−', 'staff', -1) + '<b class="count">' + o.staff + '</b>' + btn('+', 'staff', 1) + '</div><p class="fine">8 élèves par moniteur en cours collectif (9 h 45 et 14 h). 190 € par moniteur et par jour. Les clients aisés demandent des cours individuels.</p>';
         h += '<div class="actions">' + btn(o.open ? 'Fermer' : 'Ouvrir', 'toggleOpen') + (def.cap && o.level < 3 ? btn('Agrandir — ' + eur(SS.upgradeCost(o)), 'upgrade') : '') + (o.starter && def.type === 'ticket' ? '' : btn('Démolir', 'demolish', undefined, 'danger')) + '</div>';
         return h;
@@ -373,6 +377,7 @@
     }
     return h ? '<h4>Moderniser sur la même ligne</h4>' + h : '';
   }
+  UI.PANELS = PANELS;
   function drawChart() {
     const c = $('chart'); if (!c) return; const x = c.getContext('2d'), hs = G.history.slice(-45), Wd = c.width, H = c.height;
     x.clearRect(0, 0, Wd, H); x.font = '12px system-ui'; x.fillStyle = '#9fb0c3';

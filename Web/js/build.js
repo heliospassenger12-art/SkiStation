@@ -23,14 +23,20 @@
 
   B.start = function (kind, type) {
     B.cancel(true);
-    B.tool = { kind: kind === 'autopiste' ? 'piste' : kind, auto: kind === 'autopiste', type, ctrl: [], width: B.width || 30, rot: 0 };
+    B.tool = { kind: kind === 'autopiste' ? 'piste' : kind, auto: kind === 'autopiste', type, ctrl: [], width: B.width || 30, rot: 0, ease: B.ease === undefined ? 1 : B.ease };
     R.showReach = B.tool.kind === 'piste'; R.drawOverlay();
     R.select(null); update(); SS.emit('build');
   };
-  B.cancel = function (silent) { B.tool = null; B.an = null; B.autoMsg = null; R.clearPreview(); if (R.showReach) { R.showReach = false; R.drawOverlay(); } if (!silent) SS.emit('build'); };
+  B.cancel = function (silent) { B.tool = null; B.autoStart = null; B.an = null; B.autoMsg = null; R.clearPreview(); if (R.showReach) { R.showReach = false; R.drawOverlay(); } if (!silent) SS.emit('build'); };
   B.undo = function () { const t = B.tool; if (!t) return; if (t.kind === 'lift') { if (t.b) t.b = null; else t.a = null; } else if (t.ctrl.length) t.ctrl.pop(); else if (t.kind === 'building') t.pos = null; update(); SS.emit('build'); };
   B.rotate = function () { if (B.tool) { B.tool.rot += Math.PI / 4; update(); } };
-  B.setWidth = function (w) { B.width = w; if (B.tool) { B.tool.width = w; update(); SS.emit('build'); } };
+  function autoCompute(t) {
+    const r = SS.autoPiste(t.start, null, t.width, t.ease);
+    if (r.err) { B.autoMsg = r.err; t.ctrl = []; SS.emit('toast', '🧭 ' + r.err, 'warn'); update(); SS.emit('build'); return; }
+    B.autoMsg = r.bad ? 'Tracé assisté trouvé, mais il enfreint une règle : ' + (r.an.err || '') : null; t.ctrl = r.ctrl; update(); SS.emit('build');
+  }
+  B.setEase = function (i) { B.ease = i; const t = B.tool; if (t && t.auto) { t.ease = i; if (t.start) autoCompute(t); else SS.emit('build'); } };
+  B.setWidth = function (w) { B.width = w; if (B.tool) { B.tool.width = w; if (B.tool.auto && B.tool.start) autoCompute(B.tool); else { update(); SS.emit('build'); } } };
 
   function update(hover) {
     const t = B.tool; if (!t) return;
@@ -54,9 +60,7 @@
   B.click = function (g) {
     const t = B.tool; if (!t || !g) return;
     if (t.kind === 'piste' && t.auto && !t.ctrl.length) {
-      const st = snap(g), r = SS.autoPiste(st, null, t.width);
-      if (r.err) { B.autoMsg = r.err; SS.emit('toast', '🧭 ' + r.err, 'warn'); update(); SS.emit('build'); return; }
-      B.autoMsg = r.bad ? 'Tracé assisté trouvé, mais il enfreint une règle : ' + (r.an.err || '') : null; t.ctrl = r.ctrl; update(); SS.emit('build'); return;
+      t.start = snap(g); autoCompute(t); return;
     }
     if (t.kind === 'piste') t.ctrl.push(snap(g));
     else if (t.kind === 'road') t.ctrl.push({ x: g.x, z: g.z });

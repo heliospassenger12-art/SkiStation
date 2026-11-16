@@ -13,15 +13,20 @@ tout est en JavaScript, three.js est fourni dans `js/three.min.js`.
 | Cahier des charges | Dans la version web |
 |---|---|
 | Modes | Carrière en trois difficultés (6 étapes, du premier téléski aux Jeux Olympiques) et Bac à sable (argent illimité / catalogue libre en option) |
-| Montagne 360° | Quatre choix au départ (Classique, Dents Blanches, Val Perdu, Aléatoire). Massif procédural 8 × 8 km, 1 640 → 4 200 m : alpages, forêts, bancs, crêtes rocheuses, plateau glaciaire |
-| Construction libre | Pistes, remontées, routes, bâtiments. Devis avant validation (prix, longueur, dénivelé, pente, difficulté, arbres). Arbres coupés seulement après validation, terrassement local sous les bâtiments et les gares |
+| Montagne 360° | Quatre choix au départ (Classique, Dents Blanches, Val Perdu, Aléatoire). Massif procédural 8 × 8 km, 1 640 → 4 200 m : vallée d'accès douce au pied du village, replats étagés (alpages, cirques, glaciers) reliés par des faces skiables, aiguilles rocheuses étroites au sommet. 30 à 45 % de la carte peut accueillir une piste reliée au front de neige |
+| Construction libre | Pistes (à la main ou **tracé assisté** : un clic sur l'arrivée d'une remontée et le jeu trouve la descente jusqu'au front de neige, avec difficulté visée), remontées, routes, bâtiments. Carte des zones desservables, front de neige signalé. Devis avant validation (prix, longueur, dénivelé, pente, difficulté, arbres). Arbres coupés seulement après validation, terrassement local sous les bâtiments et les gares |
 | Difficulté des pistes | Calculée sur le relief réellement traversé (pente le long du tracé et dévers) |
 | Remontées | 13 modèles sur 6 paliers de recherche, dont un funiculaire au sol. Modernisation sur la même ligne avec reprise de l'ancien modèle. Portée dépassée refusée, jamais corrigée. Téléski : pas de traversée de piste. Véhicules physiques, embarquement réel |
 | Temps | Horloge unique, pause / x1 / x3 / x8, journée de 07:30 à minuit, cycle jour-nuit |
 | Ski nocturne | Recherche dédiée, éclairage des pistes, remontées ouvertes de 18 h 30 à 21 h, forfait du soir, damage décalé après la nocturne |
 | Visiteurs | Familles et groupes d'amis qui arrivent, skient et déjeunent ensemble (le groupe choisit pour le moins à l'aise). Budget temps, faim, énergie, profil, niveau. Décision Skier / Manger / Repos / Rentrer, fiche en lecture seule |
 | GPS du domaine | Piste cible persistante, trajet par remontées (montée) et pistes (descente), temps de trajet + attente + retour vérifiés, aucune téléportation |
-| Services | Restauration, bar, location, magasin, hébergements, activités : capacité, file, qualité, prix réglable, agrandissement |
+| Services | Restauration (snack à table gastronomique), bar, location, magasin, activités : gamme, personnel, horaires (midi / midi et soir), prix, note des clients, marge, agrandissement |
+| Hébergements | Du gîte (50 lits) au palace et au chalet de prestige : trois segments de clientèle (économique, confort, luxe) avec demande propre, demi-pension, spa, navette, note, occupation, prix de la nuitée |
+| Pisteurs | Effectif par poste de secours, km sécurisés par pisteur, pistes non sécurisées plus accidentées, délais d'intervention, motoneiges, balisage |
+| Dameuses | Parc par garage (jusqu'à 6), équipe de nuit, priorité de damage par piste, capacité en km contre besoin, bilan de la nuit |
+| Finances | Compte de résultat du jour et de la saison, charges fixes, seuil de rentabilité, rentabilité par bâtiment, politique salariale, trois prêts échéancés, plafond d'endettement, crédit d'urgence en cas de découvert |
+| Recherche | 30 projets en 6 catégories, laboratoire à 3 niveaux (projets en parallèle, durée réduite), file d'attente |
 | École / enfants | École de ski (moniteurs, cours collectifs et individuels), Jardin des Piou-Piou, médailles |
 | Neige / météo / sécurité | Prévisions, vent (arrêt des remontées exposées), verglas, soupe, enneigeurs, damage du soir par dameuses visibles, pannes, accidents, pisteurs, hélicoptère, sécurisation avalanche. Option « neige simplifiée » |
 | Activités | Snowpark, luge, patinoire, nordique, chiens de traîneau, parapente, spa, musée, concerts, stade de slalom, stade olympique |
@@ -57,6 +62,8 @@ tout est en JavaScript, three.js est fourni dans `js/three.min.js`.
 - `js/build.js` outils de construction et entrées
 - `js/arcade.js` mode arcade
 - `js/events.js` événements du matin
+- `js/manage.js` règles de gestion (services, hébergements, banque, recherche, pisteurs, dameuses)
+- `js/ui_mgmt.js` panneaux Finances, Recherche, Exploitation et fiche de gestion d'un bâtiment
 - `js/ui.js` interface
 - `js/minimap.js` mini-carte
 - `js/audio.js` ambiance sonore
