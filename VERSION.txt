@@ -1,4 +1,5 @@
-SkiStation 3.04 — base de relais Work
-Date de préparation : 2026-09-25
-Point d'entrée : COMMENCER_ICI_WORK_3_04.md
-Test principal : TEST_304.md
+SkiStation 3.29 — besoins et décisions de journée
+Base : ZIP officiel SkiStation 3.28
+Point d'entrée : COMMENCER_ICI_WORK_3_29.md
+Tests Unity à exécuter : TEST_329.md
+Suivi des travaux récents : ETAT_DU_PROJET_2026-11-16.md
