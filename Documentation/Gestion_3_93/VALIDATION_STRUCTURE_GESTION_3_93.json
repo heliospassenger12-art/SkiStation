@@ -1,0 +1,331 @@
+{
+  "status": "PASS_STRUCTURAL_ONLY",
+  "version": "GESTION 3.93",
+  "base_sha256": "de73e7ad4d8f82bfec3b903dbe3ef4ac8b0c69a2ef340ccb841d15a736855588",
+  "base_files": 4728,
+  "changed_files": [
+    "Assets/Editor/LiftStationTrafficChecks392.cs",
+    "Assets/Editor/StationOperationsChecks390.cs",
+    "Assets/SkiStation/Scripts/Lifts/LiftBoardingVisualAdapter.cs",
+    "Assets/SkiStation/Scripts/Lifts/LiftPostArrivalRoutingRuntime.cs",
+    "Assets/SkiStation/Scripts/Management/Operations390/StationOperationsRuntime390.cs",
+    "Assets/SkiStation/Scripts/Management/Persistence261/LiftTrafficPersistence391.cs",
+    "Assets/SkiStation/Scripts/Management/Persistence261/ManagementDomainPersistence261.cs",
+    "Assets/SkiStation/Scripts/Management/Persistence261/ManagementSaveData261.cs",
+    "Assets/SkiStation/Scripts/Management/Persistence261/MountainManagementCheckpointBridge.cs",
+    "Assets/SkiStation/Scripts/Management/Persistence261/TrafficStateCodec391.cs",
+    "Assets/SkiStation/Scripts/Playable/VisitorDetailsPanel255.cs",
+    "Assets/SkiStation/Scripts/Skiers/SkierMountainTransferRuntime.cs",
+    "Assets/SkiStation/Scripts/Skiers/SkierRouteAgent.cs",
+    "Assets/SkiStation/Scripts/Skiers/SkierRuntime.cs",
+    "Assets/SkiStation/Scripts/Slopes/IntegratedSkiDomainNetworkRuntime.cs",
+    "Assets/SkiStation/Scripts/Slopes/MultiLiftDestinationPlanner301.Operations390.cs",
+    "Assets/SkiStation/Scripts/Slopes/MultiLiftDestinationPlanner301.cs",
+    "Assets/SkiStation/Scripts/Slopes/SkierAlternateRouteRuntime.cs",
+    "ProjectSettings/ProjectSettings.asset"
+  ],
+  "preserved_native_csharp": 1141,
+  "new_csharp": [
+    "Assets/Editor/SkiDescentChecks393.cs",
+    "Assets/SkiStation/Scripts/Management/Persistence261/SkiDescentRoundTrip393.cs",
+    "Assets/SkiStation/Scripts/Skiers/SkiDescentBench393.cs",
+    "Assets/SkiStation/Scripts/Skiers/SkiDescentCampaign393.cs",
+    "Assets/SkiStation/Scripts/Skiers/SkierRouteAgent.Descent393.cs",
+    "Assets/SkiStation/Scripts/Skiers/VisitorSkiDescent393.cs",
+    "Assets/SkiStation/Scripts/Skiers/VisitorSkiDescentPath393.cs",
+    "Assets/SkiStation/Scripts/Skiers/VisitorSkiProfile393.cs",
+    "Assets/SkiStation/Scripts/Skiers/VisitorSkiVisual393.cs",
+    "Assets/SkiStation/Scripts/Slopes/IntegratedSkiDomainNetworkRuntime.Segments393.cs",
+    "Assets/SkiStation/Scripts/Slopes/MultiLiftDestinationPlanner301.Descent393.cs",
+    "Assets/SkiStation/Scripts/Slopes/SlopeTrafficRuntime393.cs"
+  ],
+  "csharp_grammar_files": 1031,
+  "unique_asset_guids": 1580,
+  "independent_python_numeric_scenarios": 10100,
+  "checks": [
+    {
+      "check": "Exact latest user-approved Hybrid Motion 3.92 archive",
+      "pass": true
+    },
+    {
+      "check": "Input archive full CRC",
+      "pass": true
+    },
+    {
+      "check": "Immediate base contains 4728 files",
+      "pass": true
+    },
+    {
+      "check": "Real 3.92 version and inherited unverified Unity status",
+      "pass": true
+    },
+    {
+      "check": "All 4727 input manifest digests",
+      "pass": true
+    },
+    {
+      "check": "No original file removed",
+      "pass": true
+    },
+    {
+      "check": "Exact reviewed 19-file native modification scope",
+      "pass": true
+    },
+    {
+      "check": "All other original C# sources byte-identical",
+      "pass": true
+    },
+    {
+      "check": "Entire protected Arcade files preserved",
+      "pass": true
+    },
+    {
+      "check": "Entire protected Hybrid Motion files preserved",
+      "pass": true
+    },
+    {
+      "check": "Entire protected Economy files preserved",
+      "pass": true
+    },
+    {
+      "check": "Entire protected Needs and GOAP files preserved",
+      "pass": true
+    },
+    {
+      "check": "Native authority unchanged: Lifts/LiftRuntime.cs",
+      "pass": true
+    },
+    {
+      "check": "Native authority unchanged: Lifts/LiftVehicleRuntime.cs",
+      "pass": true
+    },
+    {
+      "check": "Native authority unchanged: Lifts/LiftQueueRuntime.cs",
+      "pass": true
+    },
+    {
+      "check": "Native authority unchanged: Lifts/LiftPassengerDisembarkRuntime.cs",
+      "pass": true
+    },
+    {
+      "check": "Native authority unchanged: Skiers/SkierPopulationProfile.cs",
+      "pass": true
+    },
+    {
+      "check": "Native authority unchanged: Visitors/VisitorPartyRuntime346.cs",
+      "pass": true
+    },
+    {
+      "check": "Native authority unchanged: Slopes/SlopeRuntime.cs",
+      "pass": true
+    },
+    {
+      "check": "Native authority unchanged: Slopes/SlopeVisitorExperienceRuntime.cs",
+      "pass": true
+    },
+    {
+      "check": "All 1031 Assets C# grammar files; NOT compilation/type resolution",
+      "pass": true
+    },
+    {
+      "check": "Legacy actor fields preserved for checkpoint compatibility: Skiers/SkierRuntime.cs",
+      "pass": true
+    },
+    {
+      "check": "Legacy actor fields preserved for checkpoint compatibility: Skiers/SkierRouteAgent.cs",
+      "pass": true
+    },
+    {
+      "check": "Legacy actor fields preserved for checkpoint compatibility: Skiers/SkierMountainTransferRuntime.cs",
+      "pass": true
+    },
+    {
+      "check": "Legacy actor fields preserved for checkpoint compatibility: Lifts/LiftBoardingVisualAdapter.cs",
+      "pass": true
+    },
+    {
+      "check": "Legacy actor fields preserved for checkpoint compatibility: Lifts/LiftPostArrivalRoutingRuntime.cs",
+      "pass": true
+    },
+    {
+      "check": "SkiDomainLink data shape unchanged",
+      "pass": true
+    },
+    {
+      "check": "No duplicate Unity asset GUIDs",
+      "pass": true
+    },
+    {
+      "check": "Stable metadata for every new Unity script",
+      "pass": true
+    },
+    {
+      "check": "Native SkierRuntime is the only descent execution loop",
+      "pass": true
+    },
+    {
+      "check": "Riding and other activity owners cannot become a second descent",
+      "pass": true
+    },
+    {
+      "check": "Day choices, unloading and groups retain their ownership guards",
+      "pass": true
+    },
+    {
+      "check": "Authoritative surface, bounded conservative spatial queries",
+      "pass": true
+    },
+    {
+      "check": "Shared geometry and terrain revision cache",
+      "pass": true
+    },
+    {
+      "check": "No skipped known invalid sample during accelerated steps; discontinuity is refused",
+      "pass": true
+    },
+    {
+      "check": "Native skill/group constraints; deterministic corridor variation",
+      "pass": true
+    },
+    {
+      "check": "Difficulty guard also covers legacy fallback: Slopes/SkierAlternateRouteRuntime.cs",
+      "pass": true
+    },
+    {
+      "check": "Difficulty guard also covers legacy fallback: Lifts/LiftPostArrivalRoutingRuntime.cs",
+      "pass": true
+    },
+    {
+      "check": "Difficulty guard also covers legacy fallback: Skiers/SkierMountainTransferRuntime.cs",
+      "pass": true
+    },
+    {
+      "check": "Partial piste segments do not complete the destination at a branch",
+      "pass": true
+    },
+    {
+      "check": "Same authoritative graph segmented at real touching endpoints",
+      "pass": true
+    },
+    {
+      "check": "Walkable graph adjacency cached at rebuild",
+      "pass": true
+    },
+    {
+      "check": "Precise target retained through intermediate piste segments",
+      "pass": true
+    },
+    {
+      "check": "Passed branches cannot be arbitrarily re-entered",
+      "pass": true
+    },
+    {
+      "check": "Configurable route commitment, significant gain and immediate closure invalidation",
+      "pass": true
+    },
+    {
+      "check": "Read-only optional navigation contract cannot choose a new goal",
+      "pass": true
+    },
+    {
+      "check": "One membership mirror from real visitors, including stationary occupants",
+      "pass": true
+    },
+    {
+      "check": "Bounded rolling observations, local cells and native game clock",
+      "pass": true
+    },
+    {
+      "check": "Measured free speed plus cached local congestion; no duplicate slowdown charge",
+      "pass": true
+    },
+    {
+      "check": "Mean complete-piste duration is not a final-segment duration",
+      "pass": true
+    },
+    {
+      "check": "Persistent measured congestion feeds the existing diagnostics engine",
+      "pass": true
+    },
+    {
+      "check": "Pose runs after existing visual owner, not in a competing loop",
+      "pass": true
+    },
+    {
+      "check": "Visual pose cannot change gameplay position, state or destination",
+      "pass": true
+    },
+    {
+      "check": "Existing model-only pool retained",
+      "pass": true
+    },
+    {
+      "check": "Schema9 migration to10 without old fake traffic",
+      "pass": true
+    },
+    {
+      "check": "Progress saved explicitly; only new derived caches/pose excluded",
+      "pass": true
+    },
+    {
+      "check": "Bounded observations and native descent checkpoint reconstruction",
+      "pass": true
+    },
+    {
+      "check": "Traffic observations participate in failed-load rollback",
+      "pass": true
+    },
+    {
+      "check": "Real-file double-load regression fixture supplied, not executed here",
+      "pass": true
+    },
+    {
+      "check": "Benchmark and campaign do not claim unavailable results",
+      "pass": true
+    },
+    {
+      "check": "No new visitor/transport/financial authority outside opt-in fixtures",
+      "pass": true
+    },
+    {
+      "check": "10100 independent numeric corridor/junction scenarios; NOT C# execution",
+      "pass": true
+    },
+    {
+      "check": "All 60 points explicitly audited once",
+      "pass": true
+    },
+    {
+      "check": "Inherited save limits and pending Unity acceptance explicit",
+      "pass": true
+    },
+    {
+      "check": "All requested topic documents present",
+      "pass": true
+    },
+    {
+      "check": "Single Gestion3.93 version; no intermediate or3.94",
+      "pass": true
+    }
+  ],
+  "unity_compilation": "NOT_RUN",
+  "csharp_type_resolution": "NOT_RUN",
+  "csharp_tests": "NOT_RUN",
+  "play_mode": "NOT_RUN",
+  "real_save_load": "NOT_RUN",
+  "unity_performance": "NOT_RUN",
+  "arcade_play": "NOT_RUN",
+  "tools_found": {
+    "Unity": null,
+    "unity": null,
+    "dotnet": null,
+    "mcs": null,
+    "csc": null
+  },
+  "limits": [
+    "Material/traffic-compatible checkpoint only; services, lessons, stays, roads and unsupported assets may refuse save",
+    "Shared sampled terrain geometry is conservative but not a continuous collision guarantee; inspect physical scenes",
+    "Synchronous native Dijkstra retained; graph adjacency cached; global request scheduler not added",
+    "Unknown rigs use existing animation; no FPS, GPU, PlayMode or complete-day success claimed"
+  ]
+}

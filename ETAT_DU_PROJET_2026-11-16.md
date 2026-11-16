@@ -1,5 +1,7 @@
 # État du projet SkiStation au 16 novembre 2026
 
+> Le ZIP Gestion 3.93 a été reçu après ce bilan. Voir [la comparaison et le plan de reprise](Documentation/Gestion_3_93/REPRISE.md).
+
 Ce document rapproche le contenu du dépôt du [guide de démarrage 3.29](COMMENCER_ICI_WORK_3_29.md) et du bilan SkiStation du 15 novembre. Les essais historiques et le candidat de novembre concernent d'autres versions : ils ne valident pas la branche principale.
 
 ## Ce qui est dans le dépôt
