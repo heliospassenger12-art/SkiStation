@@ -213,10 +213,9 @@
   };
   T.buildTrees = function () {
     const parts = [];
-    const c1 = new THREE.ConeGeometry(4.2, 11, 6); c1.translate(0, 7.5, 0);
-    const c2 = new THREE.ConeGeometry(3.0, 8, 6); c2.translate(0, 12.5, 0);
-    const tr = new THREE.CylinderGeometry(0.7, 0.9, 3, 5); tr.translate(0, 1.5, 0);
-    parts.push({ geo: tr, color: 0x4a3626 }, { geo: c1, color: 0x1f4a36 }, { geo: c2, color: 0xdfeaf2 });
+    const c1 = new THREE.ConeGeometry(4.4, 12, 5, 1, true); c1.translate(0, 7, 0);
+    const c2 = new THREE.ConeGeometry(3.0, 8, 5, 1, true); c2.translate(0, 12.5, 0);
+    parts.push({ geo: c1, color: 0x1f4a36 }, { geo: c2, color: 0xdfeaf2 });
     const geo = SS.mergeParts(parts);
     const mesh = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }), T.trees.length);
     const m = new THREE.Matrix4();

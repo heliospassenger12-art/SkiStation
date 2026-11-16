@@ -6,7 +6,7 @@
 
   function roll(day) {
     const late = SS.smooth(85, 140, day), r = Math.random();
-    const table = [['sun', 0.30], ['cloud', 0.24], ['snow', 0.19 - late * 0.07], ['heavy', 0.07 - late * 0.03], ['storm', 0.05], ['thaw', 0.04 + late * 0.14], ['frost', 0.11 - late * 0.09]];
+    const table = [['sun', 0.30], ['cloud', 0.24], ['snow', 0.23 - late * 0.09], ['heavy', 0.07 - late * 0.03], ['storm', 0.05], ['thaw', 0.04 + late * 0.14], ['frost', 0.11 - late * 0.09]];
     let tot = 0; for (const t of table) tot += t[1];
     let x = r * tot;
     for (const t of table) { x -= t[1]; if (x <= 0) return make(t[0], day); }
@@ -77,7 +77,7 @@
       const mid = p.topAlt - p.drop / 2, tn = W.tempAt(mid, true), td = W.tempAt(mid, false);
       const fall = w.snow * (0.6 + (mid - 1650) / 1000 * 0.5);
       if (td > 2) p.depth -= (td - 2) * 1.3;
-      p.depth -= 0.3 + p.passes * 0.004;
+      p.depth -= 0.25 + p.passes * 0.001;
       if (p.slush > 0.25 && tn < -1) p.ice = Math.max(p.ice, p.slush * (p.groomedTonight ? 0.2 : 0.9));
       p.slush = 0;
       if (fall > 2) { p.depth += fall * 0.6; p.powder = SS.clamp(fall / 22, 0, 1); p.ice *= 0.2; if (!p.groomedTonight) p.groomed = Math.min(p.groomed, 0.45); }
@@ -85,7 +85,7 @@
       if (p.cannons && tn < -2 && p.depth < 110) { p.depth += 9; cannonCost += p.len * 0.9; }
       p.depth = SS.clamp(p.depth, 0, 400);
       if (G.casual) { p.depth = Math.max(p.depth, 60); p.ice = 0; p.slush = 0; }
-      const was = p.snowClosed; p.snowClosed = p.depth < 20;
+      const was = p.snowClosed; p.snowClosed = p.depth < 15;
       if (p.snowClosed && !was) closed.push(p.name);
       p.avaUntil = 0;
       if (!SS.researched('gazex') && w.snow >= 25 && (p.topAlt > 2700 || p.diff === 3)) p.avaUntil = 10.5 * 3600;

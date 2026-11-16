@@ -6,7 +6,7 @@
 
   function describe(x, z) {                       // à quoi ce point se raccorde-t-il ?
     const G = SS.G;
-    if (Math.hypot(x - SS.HUB.x, z - SS.HUB.z) < 130) return 'Front de neige';
+    if (Math.hypot(x - SS.HUB.x, z - SS.HUB.z) < 200) return 'Front de neige';
     for (const l of G.lifts) { if (Math.hypot(x - l.b.x, z - l.b.z) < 75) return 'arrivée ' + l.name; if (Math.hypot(x - l.a.x, z - l.a.z) < 75) return 'départ ' + l.name; }
     for (const p of G.pistes) { const c = SS.closestOnPiste(p, x, z); if (c.d < 60) return 'piste ' + p.name; }
     return null;

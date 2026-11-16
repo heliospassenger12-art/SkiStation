@@ -195,7 +195,7 @@
       if (!bad) break;
       if (it === 8) { r.err = 'Le relief coupe la ligne : le câble ne passe pas. Déplacez une gare.'; if (!force) return r; }
     }
-    for (const p of path) if (p.pylon && p.y - p.g > (def.kind === 'cablecar' || def.big ? 110 : 45)) { r.err = 'Pylône trop haut nécessaire (' + Math.round(p.y - p.g) + ' m). Contournez la crête ou choisissez un modèle à plus grande portée.'; if (!force) return r; }
+    for (const p of path) if (p.pylon && p.y - p.g > (def.kind === 'cablecar' || def.big ? 110 : def.kind === 'gondola' ? 70 : 45)) { r.err = 'Pylône trop haut nécessaire (' + Math.round(p.y - p.g) + ' m). Contournez la crête ou choisissez un modèle à plus grande portée.'; if (!force) return r; }
     let s = 0; path[0].s = 0;
     for (let i = 1; i < path.length; i++) { s += Math.hypot(path[i].x - path[i - 1].x, path[i].y - path[i - 1].y, path[i].z - path[i - 1].z); path[i].s = s; }
     r.path = path; r.L = s; r.a = { x: a.x, z: a.z, y: ay }; r.b = { x: b.x, z: b.z, y: by };
@@ -312,7 +312,7 @@
   Net.rebuild = function () {
     const old = Net.nodes, nodes = Net.nodes = [], edges = Net.edges = [];
     function node(x, z, snap) {
-      for (const n of nodes) if (Math.hypot(n.x - x, n.z - z) < (n.hub ? 130 : snap || 75)) return n;
+      for (const n of nodes) if (Math.hypot(n.x - x, n.z - z) < (n.hub ? 200 : snap || 75)) return n;
       const n = { id: nodes.length, x, z, y: T.getH(x, z), out: [], services: [] }; nodes.push(n); return n;
     }
     const hub = node(SS.HUB.x, SS.HUB.z); hub.hub = true; Net.hub = hub;
@@ -330,8 +330,7 @@
     for (const b of G.buildings) {
       let best = null, bd = 260;
       for (const n of nodes) { const d = Math.hypot(n.x - b.x, n.z - b.z); if (d < bd) { bd = d; best = n; } }
-      if (!best && SS.inVillage(b.x, b.z)) best = hub;
-      if (SS.inVillage(b.x, b.z) && (!best || bd > 150)) best = hub;
+      if (SS.inVillage(b.x, b.z)) best = hub;
       b.node = best ? best.id : -1; if (best) best.services.push(b);
     }
     Net.version++; Net.cache.clear();
@@ -410,7 +409,7 @@
   // attractivité du domaine : sert à la demande et à la « juste valeur » du forfait
   SS.attract = function () {
     const s = SS.stats(); let km = 0; const kinds = [0, 0, 0, 0];
-    for (const p of G.pistes) if (SS.pisteOpen(p) && p.edges.length && Net.from(p.nb.id, 3, 'plan').dist[Net.hub.id] < Infinity && Net.from(Net.hub.id, 3, 'plan').dist[p.na.id] < Infinity) { km += p.len / 1000; kinds[p.diff]++; }
+    for (const p of G.pistes) if (p.open && !p.snowClosed && p.edges.length && Net.from(p.nb.id, 3, 'plan').dist[Net.hub.id] < Infinity && Net.from(Net.hub.id, 3, 'plan').dist[p.na.id] < Infinity) { km += p.len / 1000; kinds[p.diff]++; }
     let a = Math.min(1, km / 22) * 0.55 + kinds.filter(k => k > 0).length * 0.05 + Math.min(0.1, s.vert / 12000);
     for (const b of G.buildings) a += (D.building(b.type).attract || 0);
     return { a: Math.min(1.25, a), km, kinds, s };

@@ -56,7 +56,7 @@
       case 'sm_mode': UI.mode = arg; document.querySelectorAll('.mode').forEach(m => m.classList.toggle('on', m.dataset.arg === arg)); $('sm_opts').hidden = arg !== 'sandbox'; break;
       case 'sm_new': SS.startGame({ mode: UI.mode, name: ($('sm_name').value || 'Mont-Hélios').trim(), unlimited: UI.mode === 'sandbox' && $('sm_unl').checked, allUnlocked: UI.mode === 'sandbox' && $('sm_all').checked, casual: $('sm_casual').checked }); break;
       case 'sm_load': { const d = SS.loadData(); if (d) SS.startGame(null, d); break; }
-      case 'menu': if (confirm('Revenir au menu principal ? La partie est sauvegardée chaque matin.')) { SS.save(); SS.G.paused = true; $('hud').hidden = true; startMenu(); } break;
+      case 'menu': if (sure(el)) { SS.save(); SS.G.paused = true; $('hud').hidden = true; startMenu(); } break;
       case 'speed': if (arg === '0') G.paused = !G.paused; else { G.speed = +arg; G.paused = false; } renderTop(); break;
       case 'skip': if (!SS.skipToEnd()) toast('Des visiteurs sont encore attendus ou présents sur la station.', 'warn'); break;
       case 'panel': if (UI.panel === arg) UI.close(); else { B.highlight(null); UI.open(arg); } break;
@@ -75,7 +75,7 @@
       case 'noGroom': UI.sel.obj.noGroom = !UI.sel.obj.noGroom; UI.refresh(); break;
       case 'upgrade': { const b = UI.sel.obj, c = SS.upgradeCost(b); if (b.level < 3 && SS.spend(c, 'Construction')) { b.level++; toast('Agrandissement terminé : niveau ' + b.level + '.', 'good'); } else toast('Fonds insuffisants.', 'bad'); UI.refresh(); break; }
       case 'staff': { const b = UI.sel.obj; b.staff = SS.clamp(b.staff + (+arg), 1, 14); UI.refresh(); break; }
-      case 'demolish': { const s = UI.sel; if (!confirm('Démolir définitivement ?')) break; const err = SS.demolish(s.kind, s.obj); if (err) toast(err, 'warn'); else { toast('Démolition effectuée.', 'info'); UI.sel = null; UI.close(); } break; }
+      case 'demolish': { const s = UI.sel; if (!sure(el)) break; const err = SS.demolish(s.kind, s.obj); if (err) toast(err, 'warn'); else { toast('Démolition effectuée.', 'info'); UI.sel = null; UI.close(); } break; }
       case 'arcade': UI.close(); B.highlight(null); SS.Arcade.start(UI.sel.obj); break;
       case 'arcadeStop': SS.Arcade.stop(); break;
       case 'loan': { const n = +arg; if (n > 0) { if (G.loan + n > 3000000 + G.prestige * 60000) { toast('La banque refuse : plafond d\'emprunt atteint.', 'warn'); break; } G.loan += n; G.money += n; } else { const r = Math.min(-n, G.loan, Math.max(0, G.money)); G.loan -= r; G.money -= r; } UI.refresh(); break; }
@@ -88,6 +88,8 @@
       case 'vfollow': { const v = UI.sel.obj; SS.Cam.focus(v.x, v.z, 500); break; }
     }
   }
+  // confirmation intégrée à la page : un second clic sur le même bouton valide
+  function sure(el) { if (el.dataset.sure) return true; el.dataset.sure = '1'; el.textContent = 'Confirmer ?'; el.classList.add('danger'); return false; }
   function input(k, val, el) {
     G = SS.G;
     if (k === 'pass') { G.passPrice = +val; const o = $('passOut'); if (o) o.textContent = val + ' €'; }
@@ -360,7 +362,7 @@
     }
     renderTop(); UI.refresh();
   }
-  function arcadeHud() { const on = SS.Arcade.active; $('arcadeHud').hidden = !on; $('toolbar').hidden = on; $('topbar').hidden = on; $('advice').hidden = on || !$('advice').innerHTML; if (on) { $('panel').hidden = true; $('recap').hidden = true; } }
+  function arcadeHud() { const on = SS.Arcade.active; $('arcadeHud').hidden = !on; $('toolbar').hidden = on; $('topbar').hidden = on; $('speed').hidden = on; $('advice').hidden = on || !$('advice').innerHTML; if (on) { $('panel').hidden = true; $('recap').hidden = true; } }
 
   UI.frame = function (dt) {
     G = SS.G; if (!G) return;

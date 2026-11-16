@@ -6,7 +6,7 @@
   let mesh, st, g = {};
 
   A.start = function (piste) {
-    const G = SS.G, p0 = piste.pts[0], p1 = piste.pts[Math.min(4, piste.pts.length - 1)];
+    const G = SS.G, i0 = Math.min(4, piste.pts.length - 2), p0 = piste.pts[i0], p1 = piste.pts[Math.min(i0 + 4, piste.pts.length - 1)];
     if (!mesh) {
       const per = SS.Models.person(); mesh = new THREE.Group();
       mesh.add(new THREE.Mesh(per.jacket, new THREE.MeshLambertMaterial({ color: 0xff5a1f })), new THREE.Mesh(per.rest, new THREE.MeshLambertMaterial({ vertexColors: true })));

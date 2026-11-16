@@ -118,13 +118,13 @@
     if (!b || G.buildings.indexOf(b) < 0 || !b.open) { v.svc = null; return backToNode(v); }
     if (b.occ < SS.bcap(b)) return enter(v, b);
     if (b.queue.length > SS.bcap(b) * 0.8 * v.patience + 4 && def.type !== 'ticket' && def.type !== 'rental') {
-      think(v, 'Trop de monde : ' + def.name, 'Attente aux services', -0.05); v.did[b.id] = 1; v.svc = null; v.skipFood = G.time + 1800; return backToNode(v);
+      if (!v.did[b.id]) think(v, 'Trop de monde : ' + def.name, 'Attente aux services', -0.04); v.did[b.id] = 1; v.svc = null; v.skipFood = G.time + 1800; return backToNode(v);
     }
     b.queue.push(v); v.state = 'queueS'; v.waitStart = G.time;
   }
   function enter(v, b) {
     const def = D.building(b.type);
-    b.occ++; v.state = 'inS'; v.until = G.time + (def.dur || (def.type === 'ticket' ? 3 : 8)) * 60 * SS.range(0.8, 1.2);
+    b.occ++; v.state = 'inS'; v.until = G.time + (def.dur || (def.type === 'ticket' ? 2 : 8)) * 60 * SS.range(0.8, 1.2);
   }
   function finishService(v) {
     const b = v.svc, def = D.building(b.type); b.occ--; b.visits++;
@@ -238,7 +238,7 @@
       const total = t1 + p.len / (SKI_V[v.skill] * M) + t2;
       if (total > remain) continue;
       const dd = p.diff - v.skill;
-      let sc = (dd === 0 ? 1 : dd === -1 ? 0.7 : dd === 1 ? 0.35 : 0.3) + W.quality(p, v.skill) * 0.6 - Math.min(1, p.on / (p.len * p.width / 900)) * 0.5 - t1 / 3600 * 0.7 + Math.random() * 0.55;
+      let sc = (dd === 0 ? 1 : dd === -1 ? 0.7 : dd === 1 ? 0.35 : 0.3) + W.quality(p, v.skill) * 0.6 - Math.min(1, p.on / (p.len * p.width / 500)) * 0.5 - t1 / 3600 * 0.7 + Math.random() * 0.55;
       if (p === v.lastPiste) sc -= 0.25;
       if (v.prof.id === 'contemplatif' || v.prof.id === 'sportif') sc += (p.topAlt - 1650) / 2500 * 0.3;
       if (sc > bs) { bs = sc; best = p; }
@@ -291,7 +291,7 @@
       if (!SS.pisteOpen(p) && !forced) { Net.touch(); v.path = null; v.target = null; return decide(v); }
       v.state = 'ski'; v.edge = e; v.s = e.s0; p.on++;
       const dd = p.diff - v.skill;
-      const risk = 0.0024 * (1 + 2.2 * Math.max(0, dd)) * (1 + 2.5 * p.ice) * (1 + Math.min(1.5, p.on / (p.len * p.width / 700))) * (SS.researched('padding') ? 0.7 : 1) * (p.groomed < 0.3 ? 1.3 : 1) * (G.casual ? 0.5 : 1);
+      const risk = 0.0024 * (1 + 2.2 * Math.max(0, dd)) * (1 + 2.5 * p.ice) * (1 + Math.min(1.5, p.on / (p.len * p.width / 400))) * (SS.researched('padding') ? 0.7 : 1) * (p.groomed < 0.3 ? 1.3 : 1) * (G.casual ? 0.5 : 1);
       v.fallAt = Math.random() < risk * e.len / 1000 ? SS.range(e.s0, e.s1) : -1;
     }
   }
@@ -465,9 +465,9 @@
         if (v.fallAt > 0 && v.s >= v.fallAt) { fall(v); break; }
         if (v.s >= e.s1) {
           p.on--; p.passes++; p.groomed = Math.max(0, p.groomed - 0.25 / (p.len / 1000 * 320)); p.powder = Math.max(0, p.powder - 0.0008);
-          const dd = p.diff - v.skill, q = W.quality(p, v.skill), crowd = Math.min(1, p.on / (p.len * p.width / 800));
+          const dd = p.diff - v.skill, q = W.quality(p, v.skill), crowd = Math.min(1, p.on / (p.len * p.width / 450));
           const fun = (dd === 0 ? 1 : dd === -1 ? 0.6 : dd === 1 ? 0.2 : dd < -1 ? 0.3 : -0.6) * (0.4 + 0.6 * q) - crowd * 0.5;
-          v.sat += fun * e.len / 1000 * 0.022;
+          v.sat += fun * e.len / 1000 * 0.032;
           if (q < 0.3 && Math.random() < 0.3) think(v, W.state(p) + ' sur ' + p.name, 'Qualité de neige', -0.03);
           if (crowd > 0.8 && Math.random() < 0.2) think(v, 'Trop de monde sur ' + p.name, 'Pistes surchargées', -0.02);
           if (dd > 1) think(v, p.name + ' est trop difficile pour moi', 'Pistes inadaptées au niveau', -0.06);
@@ -479,7 +479,7 @@
       }
       case 'queueS': if (G.time - v.waitStart > 1500 * v.patience && D.building(v.svc.type).type !== 'ticket') {
         const b = v.svc, i = b.queue.indexOf(v); if (i >= 0) b.queue.splice(i, 1);
-        think(v, 'J\'abandonne la file : ' + D.building(b.type).name, 'Attente aux services', -0.07); v.did[b.id] = 1; v.svc = null; v.skipFood = G.time + 1800; backToNode(v);
+        if (!v.did[b.id]) think(v, 'J\'abandonne la file : ' + D.building(b.type).name, 'Attente aux services', -0.05); v.did[b.id] = 1; v.svc = null; v.skipFood = G.time + 1800; backToNode(v);
       } break;
       case 'inS': if (G.time >= v.until) finishService(v); break;
       case 'rest': if (G.time >= v.until) { if (v.restGain) { v.energy = Math.min(1, v.energy + v.restGain); v.restGain = 0; } decide(v); } break;

@@ -30,7 +30,7 @@
 
   // type : rôle de simulation. cap = clients simultanés (ou lits / places). dur = minutes de jeu sur place.
   D.BUILDINGS = [
-    { id: 'ticket', name: 'Billetterie', cat: 'Accueil', type: 'ticket', cost: 30000, upkeep: 260, cap: 12, r: 14, look: 'kiosk', desc: 'Vente des forfaits. Plus de guichets = moins d\'attente à l\'arrivée.' },
+    { id: 'ticket', name: 'Billetterie', cat: 'Accueil', type: 'ticket', cost: 30000, upkeep: 260, cap: 16, r: 14, look: 'kiosk', desc: 'Vente des forfaits. Plus de guichets = moins d\'attente à l\'arrivée.' },
     { id: 'parking', name: 'Parking 200 places', cat: 'Accueil', type: 'parking', cost: 45000, upkeep: 120, cap: 200, r: 38, look: 'parking', road: true, desc: 'Accueille 200 visiteurs à la journée. Doit être desservi par une route.' },
     { id: 'bus', name: 'Gare routière', cat: 'Accueil', type: 'parking', cost: 90000, upkeep: 380, cap: 320, r: 26, look: 'bus', road: true, desc: 'Navettes et autocars : 320 visiteurs à la journée.' },
     { id: 'snack', name: 'Snack / crêperie', cat: 'Restauration', type: 'food', cost: 28000, upkeep: 330, cap: 14, price: 9, dur: 18, quality: 0.45, r: 10, look: 'kiosk', alt: true, desc: 'Petite faim, service rapide. Peut être posé en altitude.' },
