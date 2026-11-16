@@ -479,7 +479,22 @@
           else if (v.then === 'exit') finalize(v);
           else if (v.then === 'lesson') { v.state = 'lesson'; v.until = Math.max(G.time + 3600, v.lessonAt + 7200); v.bx = v.x; v.bz = v.z; }
           else decide(v);
-        } else { v.hx = dx / d; v.hz = dz / d; v.x += v.hx * stp; v.z += v.hz * stp; }
+        } else {
+          v.hx = dx / d; v.hz = dz / d; let nx = v.x + v.hx * stp, nz = v.z + v.hz * stp;
+          if (d > 6) {                                   // glisse autour des emprises au lieu de les traverser
+            const obs = Sim.obstacles;
+            for (let i = 0; i < obs.length; i++) {
+              const o = obs[i], ox = nx - o.x, oz = nz - o.z, od = Math.hypot(ox, oz);
+              if (od >= o.r || od < 0.01 || Math.hypot(v.tx - o.x, v.tz - o.z) < o.r + 3) continue;
+              if (Math.hypot(v.x - o.x, v.z - o.z) < o.r - 0.5 || (v.x - o.x) * v.hx + (v.z - o.z) * v.hz > 0) continue;   // on en sort ou on s'en éloigne
+              // tourne autour du centre dans le sens qui rapproche de la cible (stable d'un pas à l'autre)
+              const px = v.x - o.x, pz = v.z - o.z, pd = Math.hypot(px, pz) || 1, tx = v.tx - o.x, tz = v.tz - o.z;
+              const ccw = px * tz - pz * tx > 0 ? 1 : -1, R = Math.max(o.r, pd);
+              nx = o.x + px / pd * R + (-pz / pd) * ccw * stp; nz = o.z + pz / pd * R + (px / pd) * ccw * stp;
+            }
+          }
+          v.x = nx; v.z = nz;
+        }
         v.y = T.getH(v.x, v.z); break;
       }
       case 'ski': {
@@ -515,6 +530,14 @@
       case 'down': if (G.time >= v.until) v.state = 'ski'; break;
     }
   }
+
+  function rebuildObstacles() {
+    const o = Sim.obstacles = [];
+    for (const b of SS.G.buildings) { const def = D.building(b.type); if (def.look === 'parking' || def.look === 'bus' || def.look === 'garden' || def.look === 'snowpark' || def.look === 'luge' || def.look === 'rink') continue; o.push({ x: b.x, z: b.z, r: Math.min(def.r * 0.62, 16) }); }
+    for (const d of SS.DECOR) o.push({ x: d.x, z: d.z, r: d.r * 0.75 });
+  }
+  Sim.obstacles = [];
+  SS.on('network', rebuildObstacles);
 
   // ---------------- boucle principale ----------------
   function step(dt) {
@@ -599,7 +622,9 @@
     G.day++; W.next();
     if (G.day >= SS.SEASON_DAYS) seasonEnd(report);
     G.time = SS.DAY_START; Sim.lastTouch = 0;
+    for (const n of report.notes) { G.log.unshift({ t: SS.DAY_START, d: G.day, msg: n, kind: 'good' }); if (G.log.length > 60) G.log.pop(); }
     Sim.startDay();
+    SS.Events.morning();
     SS.save();
     SS.emit('day:end', report);
   };

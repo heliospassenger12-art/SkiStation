@@ -128,6 +128,10 @@
       const m = M4().makeRotationY(ry); m.setPosition(p.x, p.g - 0.5, p.z);
       for (const q of P2) { q.matrix.premultiply(m); P.push(q); }
     }
+    if (k === 'funi') for (let i = 0; i < l.path.length - 1; i++) {
+      const a = l.path[i], b = l.path[i + 1], len = Math.hypot(b.x - a.x, b.z - a.z), m = M4().makeRotationY(ry); m.multiply(M4().makeRotationX(-Math.atan2(b.y - a.y, len))); m.setPosition((a.x + b.x) / 2, (a.y + b.y) / 2 - 0.9, (a.z + b.z) / 2);
+      P.push({ geo: new THREE.BoxGeometry(7.5, 0.7, Math.hypot(len, b.y - a.y) + 0.5), matrix: m, color: 0x6a6f78 });
+    }
     if (k === 'carpet') {
       const n = Math.max(1, Math.round(Math.hypot(dx, dz) / 12));
       for (let i = 0; i < n; i++) {
@@ -138,8 +142,8 @@
     }
     return { body: SS.mergeParts(P), windows: Wn.length ? SS.mergeParts(Wn) : null };
   };
-  Mo.cableOffset = def => def.kind === 'tow' ? 1.6 : def.kind === 'chair' ? 2.6 : def.kind === 'carpet' ? 0 : def.kind === 'cablecar' || def.big ? 5 : 3.2;
-  Mo.hang = def => def.kind === 'tow' ? 0 : def.kind === 'chair' ? 4.6 : def.kind === 'cablecar' ? 7 : def.big ? 6 : 4.4;
+  Mo.cableOffset = def => def.kind === 'funi' ? 1.7 : def.kind === 'tow' ? 1.6 : def.kind === 'chair' ? 2.6 : def.kind === 'carpet' ? 0 : def.kind === 'cablecar' || def.big ? 5 : 3.2;
+  Mo.hang = def => def.kind === 'tow' || def.kind === 'funi' ? 0 : def.kind === 'chair' ? 4.6 : def.kind === 'cablecar' ? 7 : def.big ? 6 : 4.4;
   // véhicule : origine sur le câble, corps suspendu en dessous
   Mo.vehicle = function (def) {
     const P = [], k = def.kind;
@@ -150,6 +154,7 @@
       if (def.bubble) P.push(box(w + 0.1, 1.5, 1.5, 0, -3.6, 0.1, 0x58a8e0));
     } else if (k === 'gondola') { const s = def.big ? 2 : 1; P.push(box(0.2, 2.2 * s, 0.2, 0, -2.2 * s, 0, DARK), box(2.4 * s, 2.4 * s, 2.8 * s, 0, -4.6 * s, 0, def.big ? 0xe9edf0 : RED), box(2.5 * s, 1 * s, 2.9 * s, 0, -3.6 * s, 0, GLASS)); }
     else if (k === 'cablecar') { P.push(box(0.5, 3, 0.5, 0, -3, 0, DARK), box(4.6, 4.2, 8.4, 0, -7.2, 0, 0xf2c230), box(4.7, 1.6, 8.5, 0, -5.4, 0, GLASS), box(3, 0.5, 2.4, 0, 0, 0, DARK)); }
+    else if (k === 'funi') { P.push(box(2.6, 2.6, 13, 0, 0.2, 0, 0xd8342c), box(2.7, 1.0, 12, 0, 1.5, 0, GLASS), box(2.7, 0.3, 13.2, 0, 2.8, 0, SNOW)); }
     else P.push(box(0.01, 0.01, 0.01, 0, 0, 0, DARK));
     return SS.mergeParts(P);
   };

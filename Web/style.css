@@ -100,3 +100,8 @@ p.tag{float:none;background:none;padding:0;font-size:14px}
 }
 #minimap{position:fixed;left:8px;bottom:74px;width:176px;height:176px;border-radius:14px;border:1px solid var(--line);box-shadow:0 8px 28px rgba(0,0,0,.35);cursor:crosshair;touch-action:none;background:#1a2433}
 @media (max-width:720px){#minimap{width:120px;height:120px;bottom:72px}}
+.jtab{display:flex;flex-direction:column;font-variant-numeric:tabular-nums}
+.jrow{display:grid;grid-template-columns:1.6fr 1fr 1fr 1.3fr;gap:6px;padding:4px 0;border-bottom:1px dashed rgba(255,255,255,.07);font-size:12.5px}
+.jrow span:not(:first-child){text-align:right}.jrow.head{color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.jlog{padding:6px 9px;margin:4px 0;border-radius:9px;background:var(--bg2);font-size:12.5px;border-left:3px solid var(--blue)}
+.jlog small{display:block;color:var(--mut);font-size:11px}.jlog.good{border-color:var(--ok)}.jlog.warn{border-color:var(--warn)}.jlog.bad{border-color:var(--bad)}

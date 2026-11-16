@@ -85,17 +85,21 @@
       case 'marketing': { const c = arg === 'tv' ? 45000 : 8000; if (G.marketing[arg] > 0) break; if (SS.spend(c, 'Marketing')) { G.marketing[arg] = arg === 'tv' ? 7 : 5; toast('Campagne lancée : effet dès demain.', 'good'); } else toast('Fonds insuffisants.', 'bad'); UI.refresh(); break; }
       case 'research': { const r = D.RESEARCH.find(x => x.id === arg); if (G.research.cur) { toast('Une recherche est déjà en cours.', 'warn'); break; } if (SS.spend(r.cost, 'Recherche')) { G.research.cur = { id: r.id, left: r.days }; toast('Recherche lancée : ' + r.name + ' (' + r.days + ' jours).', 'good'); } else toast('Fonds insuffisants.', 'bad'); UI.refresh(); break; }
       case 'event': { const ev = D.EVENTS.find(x => x.id === arg); if (G.event) { toast('Un événement est déjà programmé.', 'warn'); break; } if (!ev.need(SS.stats())) { toast('Prérequis manquants : ' + ev.needTxt + '.', 'warn'); break; } if (SS.spend(ev.cost, 'Événements')) { G.event = { id: ev.id, day: G.day + 3, left: ev.days }; toast(ev.name + ' programmé(e) dans 3 jours. Préparez la station !', 'good'); } else toast('Fonds insuffisants.', 'bad'); UI.refresh(); break; }
-      case 'view': if (arg === 'slope') { SS.Terrain.setViewMode(SS.Terrain.viewMode === 'slope' ? 'normal' : 'slope'); } else if (arg === 'map') { R.mapMode = !R.mapMode; R.drawOverlay(); } else if (arg === 'labels') R.labelsOn = !R.labelsOn; UI.refresh(); break;
+      case 'view': if (arg === 'slope') { SS.Terrain.setViewMode(SS.Terrain.viewMode === 'slope' ? 'normal' : 'slope'); } else if (arg === 'map' || arg === 'crowd' || arg === 'snow') { R.mapMode = R.mapMode === arg ? false : arg; R.drawOverlay(); } else if (arg === 'labels') R.labelsOn = !R.labelsOn; UI.refresh(); break;
       case 'sound': SS.Audio.setOn(!SS.Audio.on); UI.refresh(); break;
       case 'minimap': SS.Minimap.on = !SS.Minimap.on; UI.refresh(); break;
       case 'save': toast(SS.save() ? '💾 Partie sauvegardée.' : 'Sauvegarde impossible dans ce navigateur.', 'info'); break;
-      case 'vfollow': { const v = UI.sel.obj; SS.Cam.focus(v.x, v.z, 500); break; }
+      case 'vfollow': { const v = UI.sel.obj; SS.Cam.focus(v.x, v.z, 500); SS.Cam.follow = v; toast('Caméra attachée à ' + esc(v.name) + '. Déplacez la vue pour la libérer.', 'info'); break; }
+      case 'modern': { const r = SS.modernize(UI.sel.obj, arg); if (r.err) toast(r.err, 'warn'); else toast('✅ Remontée modernisée pour ' + eur(r.cost) + '.', 'good'); UI.refresh(); break; }
+      case 'choice': { SS.Events.choose(+arg); $('modal').hidden = true; G.paused = UI.wasPaused; renderTop(); break; }
     }
   }
   // confirmation intégrée à la page : un second clic sur le même bouton valide
   function sure(el) { if (el.dataset.sure) return true; el.dataset.sure = '1'; el.textContent = 'Confirmer ?'; el.classList.add('danger'); return false; }
   function input(k, val, el) {
     G = SS.G;
+    if (k === 'rename') { const v = String(val).slice(0, 28); if (UI.sel && UI.sel.obj && v.trim()) { UI.sel.obj.name = v; UI.title = v; $('panelTitle').textContent = v; } return; }
+    if (k === 'station') { if (String(val).trim()) G.name = String(val).slice(0, 28); return; }
     if (k === 'night') { G.nightPrice = +val; const o = $('nightOut'); if (o) o.textContent = val + ' €'; }
     else if (k === 'pass') { G.passPrice = +val; const o = $('passOut'); if (o) o.textContent = val + ' €'; }
     else if (k === 'bprice') { UI.sel.obj.price = +val; const o = $('bpriceOut'); if (o) o.textContent = val + ' €'; }
@@ -169,7 +173,7 @@
   }
 
   // ---------------- panneaux ----------------
-  const TITLES = { build: 'Construire', domain: 'Domaine skiable', finance: 'Finances', visitors: 'Visiteurs', research: 'Recherche', career: 'Carrière & événements', weather: 'Météo & neige', options: 'Options', inspect: 'Fiche', help: 'Bienvenue' };
+  const TITLES = { journal: 'Journal de la station', build: 'Construire', domain: 'Domaine skiable', finance: 'Finances', visitors: 'Visiteurs', research: 'Recherche', career: 'Carrière & événements', weather: 'Météo & neige', options: 'Options', inspect: 'Fiche', help: 'Bienvenue' };
   UI.open = function (id) { UI.panel = id; $('panel').hidden = false; UI.refresh(true); document.querySelectorAll('#toolbar .tb').forEach(b => b.classList.toggle('on', b.dataset.arg === id)); };
   UI.close = function () { UI.panel = null; $('panel').hidden = true; document.querySelectorAll('#toolbar .tb').forEach(b => b.classList.remove('on')); };
   UI.refresh = function (force) {
@@ -183,6 +187,12 @@
   };
 
   const PANELS = {
+    journal() {
+      const hs = G.history.slice(-10).reverse();
+      let h = '<h4>Derniers jours</h4>' + (hs.length ? '<div class="jtab"><div class="jrow head"><span>Jour</span><span>Visiteurs</span><span>Satisf.</span><span>Résultat</span></div>' + hs.map(x => '<div class="jrow"><span>' + SS.dateStr(x.day) + '</span><span>' + x.v + '</span><span>' + x.sat + ' %</span><span class="' + (x.inc - x.exp >= 0 ? 'pos' : 'neg') + '">' + eur(x.inc - x.exp) + '</span></div>').join('') + '</div>' : '<p class="fine">Aucune journée terminée pour l\'instant.</p>');
+      h += '<h4>Faits marquants</h4>' + (G.log.length ? G.log.slice(0, 30).map(l => '<div class="jlog ' + l.kind + '"><small>' + SS.dateStr(l.d) + ' · ' + SS.hhmm(l.t) + '</small>' + l.msg + '</div>').join('') : '<p class="fine">Rien à signaler.</p>');
+      return h;
+    },
     help() {
       return '<p>Bienvenue à <b>' + esc(G.name) + '</b> ! La montagne est vierge : à vous de créer le domaine.</p><ol class="steps"><li><b>Remontée</b> — partez du <b>front de neige</b> (zone claire au-dessus du village).</li><li><b>Piste</b> — tracez de l\'arrivée de la remontée jusqu\'au front de neige. La couleur dépend du relief.</li><li><b>Lancez le temps</b> — les visiteurs arrivent, achètent leur forfait, skient, mangent, se reposent et rentrent selon leurs besoins.</li><li><b>Développez</b> — restauration, location, école de ski, dameuses, secours, hébergements, recherche…</li></ol>' +
         '<p class="fine">Astuce : <b>Options › Vue des pentes</b> colore le relief (vert, bleu, rouge, noir) pour repérer les meilleurs tracés. Le conseiller en haut de l\'écran signale la priorité du moment.</p>' + btn('C\'est parti', 'close', undefined, 'primary');
@@ -289,8 +299,8 @@
     },
     options() {
       const T = SS.Terrain;
-      return '<h4>Affichage</h4><div class="actions col">' + btn((T.viewMode === 'slope' ? '☑' : '☐') + ' Vue des pentes (vert / bleu / rouge / noir)', 'view', 'slope') + btn((R.mapMode ? '☑' : '☐') + ' Plan des pistes coloré', 'view', 'map') + btn((R.labelsOn ? '☑' : '☐') + ' Noms des pistes et remontées', 'view', 'labels') + btn((SS.Minimap.on ? '☑' : '☐') + ' Mini-carte', 'minimap') + btn((SS.Audio.on ? '☑' : '☐') + ' Ambiance sonore', 'sound') + '</div>' +
-        '<h4>Partie</h4><div class="actions col">' + btn('💾 Sauvegarder maintenant', 'save') + btn('⏏ Menu principal', 'menu') + btn('❔ Rappel des bases', 'panel', 'help') + '</div>' +
+      return '<h4>Affichage</h4><div class="actions col">' + btn((T.viewMode === 'slope' ? '☑' : '☐') + ' Vue des pentes (vert / bleu / rouge / noir)', 'view', 'slope') + btn((R.mapMode === 'map' ? '☑' : '☐') + ' Plan des pistes coloré', 'view', 'map') + btn((R.mapMode === 'crowd' ? '☑' : '☐') + ' Carte d\'affluence des pistes', 'view', 'crowd') + btn((R.mapMode === 'snow' ? '☑' : '☐') + ' Carte de qualité de neige', 'view', 'snow') + btn((R.labelsOn ? '☑' : '☐') + ' Noms des pistes et remontées', 'view', 'labels') + btn((SS.Minimap.on ? '☑' : '☐') + ' Mini-carte', 'minimap') + btn((SS.Audio.on ? '☑' : '☐') + ' Ambiance sonore', 'sound') + '</div>' +
+        '<h4>Partie</h4><label class="field">Nom de la station<input id="stationName" maxlength="28" value="' + esc(G.name) + '" data-in="station"></label><div class="actions col">' + btn('💾 Sauvegarder maintenant', 'save') + btn('⏏ Menu principal', 'menu') + btn('❔ Rappel des bases', 'panel', 'help') + '</div>' +
         '<h4>Commandes</h4><p class="fine">Glisser : déplacer · clic droit ou Maj + glisser : tourner / incliner · molette : zoom · ZQSD/WASD et flèches : déplacer · A/E ou Q/E : tourner · Espace : pause · 1-2-3 : vitesses · R : tourner un bâtiment · Entrée : valider · Retour arrière : annuler un point · Échap : quitter l\'outil.</p>' +
         '<p class="fine">Mode arcade : ouvrez la fiche d\'une piste puis « Descendre en arcade ».</p><p class="fine">SkiStation ' + SS.VERSION + '</p>';
     },
@@ -314,7 +324,7 @@
         if (G.lifts.indexOf(o) < 0) return null;
         const def = D.lift(o.type); UI.title = o.name;
         const stt = !o.open ? 'Fermée par l\'exploitant' : o.windStop ? 'Arrêtée : vent trop fort' : G.time < o.brokenUntil ? 'En panne jusqu\'à ' + SS.hhmm(o.brokenUntil) : SS.liftBoarding(o) ? 'En service' : 'Hors horaires (9 h – 16 h 45)';
-        return '<p>' + def.name + ' — ' + stt + '</p><div class="grid">' + row('Longueur', SS.num(o.len) + ' m') + row('Dénivelé', SS.num(o.vert) + ' m') + row('Altitudes', SS.num(o.a.y) + ' → ' + SS.num(o.b.y) + ' m') + row('Débit', SS.num(o.capacity) + ' pers./h') + row('File d\'attente', o.queue.length + ' (~' + Math.round(Sim.liftWait(o)) + ' min)') + row('À bord', o.riders || 0) + row('Passages du jour', o.rides) + row('État mécanique', pct(o.cond)) + row('Entretien', eur(o.maint) + ' / j') + row('Vent max.', def.wind + ' km/h') + '</div><div class="actions">' + btn(o.open ? 'Fermer' : 'Ouvrir', 'toggleOpen') + (SS.researched('night') ? btn(o.night ? '🌙 Nocturne : ouverte' : '🌙 Nocturne : fermée', 'nightLift') : '') + btn('Démolir', 'demolish', undefined, 'danger') + '</div>';
+        return '<p>' + def.name + ' — ' + stt + '</p><div class="grid">' + row('Longueur', SS.num(o.len) + ' m') + row('Dénivelé', SS.num(o.vert) + ' m') + row('Altitudes', SS.num(o.a.y) + ' → ' + SS.num(o.b.y) + ' m') + row('Débit', SS.num(o.capacity) + ' pers./h') + row('File d\'attente', o.queue.length + ' (~' + Math.round(Sim.liftWait(o)) + ' min)') + row('À bord', o.riders || 0) + row('Passages du jour', o.rides) + row('État mécanique', pct(o.cond)) + row('Entretien', eur(o.maint) + ' / j') + row('Vent max.', def.wind + ' km/h') + '</div><div class="actions">' + btn(o.open ? 'Fermer' : 'Ouvrir', 'toggleOpen') + (SS.researched('night') ? btn(o.night ? '🌙 Nocturne : ouverte' : '🌙 Nocturne : fermée', 'nightLift') : '') + btn('Démolir', 'demolish', undefined, 'danger') + '</div>' + renameField(o) + modernList(o);
       }
       if (s.kind === 'piste') {
         if (G.pistes.indexOf(o) < 0) return null;
@@ -323,7 +333,7 @@
         return '<p>' + dot(o.diff) + 'Piste ' + D.DIFF[o.diff].name.toLowerCase() + ' — ' + (SS.pisteOpen(o) ? 'ouverte' : o.snowClosed ? 'fermée : neige insuffisante' : o.avaUntil > G.time ? 'sécurisation avalanche jusqu\'à ' + SS.hhmm(o.avaUntil) : 'fermée') + '</p>' +
           (!acc2 ? '<div class="msg warn">Aucune remontée ne mène à son départ.</div>' : '') + (!con ? '<div class="msg warn">Son arrivée ne permet pas de redescendre au front de neige.</div>' : '') +
           '<div class="grid">' + row('Longueur', SS.num(o.len) + ' m') + row('Dénivelé', SS.num(o.drop) + ' m') + row('Pente moy. / forte', Math.round(o.avg * 100) + ' % / ' + Math.round(o.p90 * 100) + ' %') + row('Départ', SS.num(o.topAlt) + ' m') + row('Neige', W.state(o) + ' · ' + Math.round(o.depth) + ' cm') + row('Damage', pct(o.groomed)) + row('Éclairage', o.lit ? 'oui (nocturne)' : 'non') + row('Skieurs', o.on) + row('Passages du jour', o.passes) + '</div>' +
-          '<div class="actions">' + btn(o.open ? 'Fermer' : 'Ouvrir', 'toggleOpen') + btn(o.noGroom ? 'Damage : désactivé (freeride)' : 'Damage : chaque soir', 'noGroom') + (o.lit ? '' : SS.researched('night') ? btn('💡 Éclairer — ' + eur(o.len * 45), 'light') : '') + (o.cannons ? '' : SS.researched('snowmaking') ? btn('Installer des enneigeurs — ' + eur(o.len * 55), 'cannons') : btn('Enneigeurs : recherche requise', 'x', undefined, '', true)) + '</div><div class="actions">' + btn('🎿 Descendre en arcade', 'arcade', undefined, 'primary') + btn('Démolir', 'demolish', undefined, 'danger') + '</div>';
+          '<div class="actions">' + btn(o.open ? 'Fermer' : 'Ouvrir', 'toggleOpen') + btn(o.noGroom ? 'Damage : désactivé (freeride)' : 'Damage : chaque soir', 'noGroom') + (o.lit ? '' : SS.researched('night') ? btn('💡 Éclairer — ' + eur(o.len * 45), 'light') : '') + (o.cannons ? '' : SS.researched('snowmaking') ? btn('Installer des enneigeurs — ' + eur(o.len * 55), 'cannons') : btn('Enneigeurs : recherche requise', 'x', undefined, '', true)) + '</div><div class="actions">' + btn('🎿 Descendre en arcade', 'arcade', undefined, 'primary') + btn('Démolir', 'demolish', undefined, 'danger') + '</div>' + renameField(o);
       }
       if (s.kind === 'road') { UI.title = 'Route'; return '<p>' + (o.fixed ? 'Route d\'accès à la station.' : 'Route de desserte.') + '</p>' + (o.fixed ? '' : '<div class="actions">' + btn('Démolir', 'demolish', undefined, 'danger') + '</div>'); }
       if (s.kind === 'visitor') {
@@ -331,12 +341,22 @@
         const stl = { ski: 'Skie', ride: 'Sur une remontée', queueL: 'Dans la file' + (o.lift ? ' du ' + o.lift.name : ''), walk: 'Marche', inS: 'Dans un service', queueS: 'Fait la queue', rest: 'En pause', lesson: 'En cours de ski', hurt: 'Blessé', down: 'Se relève', gone: 'Reparti', pending: 'Pas encore arrivé' };
         return '<p>' + o.prof.name + ' · ' + D.SKILL[o.skill] + (o.lodger ? ' · résident' : ' · à la journée') + '</p><div class="grid">' + row('État', stl[o.state] || o.state) + row('Décision', o.decision) + row('Raison', o.reason || '—') + row('Départ prévu', SS.hhmm(o.leaveT)) + row('Temps disponible', o.remain > 0 ? Math.round(o.remain / 60) + ' min' : '—') + row('Descentes', o.runs + ' (' + o.km.toFixed(1) + ' km)') + row('Dépensé', eur(o.spent)) + '</div>' +
           '<div class="needs"><span>Faim</span>' + bar(o.hunger, '#f28a1c') + '<span>Énergie</span>' + bar(o.energy, '#35d07f') + '<span>Satisfaction</span>' + bar(o.sat, '#4fc3f7') + '</div>' +
-          (o.thoughts.length ? '<h4>Pensées</h4>' + o.thoughts.map(t => '<div class="thought">« ' + esc(t) + ' »</div>').join('') : '') + '<div class="actions">' + btn('Centrer la caméra', 'vfollow') + '</div><p class="fine">Fiche en lecture seule : le visiteur décide seul selon l\'heure, ses besoins et le domaine.</p>';
+          (o.thoughts.length ? '<h4>Pensées</h4>' + o.thoughts.map(t => '<div class="thought">« ' + esc(t) + ' »</div>').join('') : '') + '<div class="actions">' + btn('🎥 Suivre ce visiteur', 'vfollow') + '</div><p class="fine">Fiche en lecture seule : le visiteur décide seul selon l\'heure, ses besoins et le domaine.</p>';
       }
       return null;
     }
   };
 
+  function renameField(o) { return '<h4>Nom</h4><label class="field"><input id="rename_' + o.id + '" maxlength="28" value="' + esc(o.name) + '" data-in="rename"></label>'; }
+  function modernList(l) {
+    let h = '';
+    for (const def of D.LIFTS) {
+      if (def.id === l.type || !SS.liftUnlocked(def) || def.tier < D.lift(l.type).tier) continue;
+      const r = SS.modernize(l, def.id, true);
+      h += '<div class="card"><div class="ctitle"><b>' + def.name + '</b><span>' + (r.err ? 'impossible' : eur(r.cost)) + '</span></div><div class="cmeta">' + (r.err ? esc(r.err) : 'Débit ' + SS.num(r.an.capacity) + ' pers./h (actuel ' + SS.num(l.capacity) + ') · trajet ' + r.an.rideMin.toFixed(0) + ' min. Reprise de 30 % de l\'ancien modèle.') + '</div>' + (r.err ? '' : btn('Moderniser', 'modern', def.id, 'small')) + '</div>';
+    }
+    return h ? '<h4>Moderniser sur la même ligne</h4>' + h : '';
+  }
   function drawChart() {
     const c = $('chart'); if (!c) return; const x = c.getContext('2d'), hs = G.history.slice(-45), Wd = c.width, H = c.height;
     x.clearRect(0, 0, Wd, H); x.font = '12px system-ui'; x.fillStyle = '#9fb0c3';
@@ -374,6 +394,13 @@
     G = SS.G; if (!G) return;
     if (SS.Arcade.active) { const st = SS.Arcade.st; $('a_speed').textContent = Math.round(st.v * 3.6) + ' km/h'; $('a_score').textContent = st.score + ' pts'; $('a_time').textContent = st.t.toFixed(1) + ' s'; $('a_msg').textContent = st.msgT > 0 ? st.msg : st.offPiste ? 'Hors-piste : neige profonde' : ''; return; }
     acc += dt; if (acc < 0.33) return; acc = 0;
+    const ev = SS.Events.current();
+    if (ev && $('modal').hidden) {
+      UI.wasPaused = G.paused; G.paused = true; $('modal').hidden = false; $('modal').className = 'report';
+      $('modalBox').innerHTML = '<h2>' + ev.title + '</h2><p>' + ev.text + '</p><div class="actions col">' + ev.choices.map((c, i) => btn(c[0], 'choice', i, i ? '' : 'primary big')).join('') + '</div>';
+      renderTop();
+    }
+    if ((R.mapMode === 'crowd' || R.mapMode === 'snow') && (UI.heatT = (UI.heatT || 0) + 1) % 6 === 0) R.drawOverlay();
     renderTop();
     const a = advice(), el = $('advice'), html = a ? '<span>' + a[0] + '</span><p>' + a[1] + '</p>' : '';
     if (el._h !== html) { el.innerHTML = html; el._h = html; el.hidden = !a; }

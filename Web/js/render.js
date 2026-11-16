@@ -117,9 +117,11 @@
   R.refreshPiste = function (p) { remove(p); addPiste(p); R.drawOverlay(); };
   SS.on('building:add', addBuilding); SS.on('lift:add', addLift); SS.on('piste:add', addPiste);
   SS.on('removed', (kind, o) => { remove(o); R.select(null); });
+  SS.on('lift:refresh', l => { remove(l); addLift(l); });
   SS.on('world', () => R.drawOverlay());
 
   // --- texture de sol : pistes, routes, places (aucun z-fighting : c'est peint sur le relief) ---
+  const heat = t => 'hsl(' + Math.round(130 - 130 * SS.clamp(t, 0, 1)) + ',85%,' + Math.round(48 + 8 * t) + '%)';
   R.drawOverlay = function () {
     const G = SS.G, c = ovCtx, k = OV / SS.WORLD, X = x => (x + SS.HALF) * k, Z = z => (z + SS.HALF) * k;
     c.fillStyle = '#ffffff'; c.fillRect(0, 0, OV, OV);
@@ -132,7 +134,10 @@
     for (const p of G.pistes) {
       const col = D.DIFF[p.diff].color, open = SS.pisteOpen(p);
       c.strokeStyle = col; c.lineWidth = (p.width + 7) * k; path(p.pts);
-      c.strokeStyle = R.mapMode ? col : open ? '#dfe9f7' : '#b9bfc9'; c.globalAlpha = R.mapMode ? 0.75 : 1; c.lineWidth = Math.max(1, (p.width - 3) * k); path(p.pts); c.globalAlpha = 1;
+      let fill = R.mapMode ? col : open ? '#dfe9f7' : '#b9bfc9';
+      if (R.mapMode === 'crowd') fill = heat(Math.min(1, p.on / (p.len * p.width / 450)));
+      else if (R.mapMode === 'snow') fill = heat(1 - SS.Weather.quality(p, 1));
+      c.strokeStyle = fill; c.globalAlpha = R.mapMode === 'map' ? 0.75 : 1; c.lineWidth = Math.max(1, (p.width - 3) * k); path(p.pts); c.globalAlpha = 1;
       if (!R.mapMode && open && p.groomed > 0.5) { c.strokeStyle = 'rgba(255,255,255,0.75)'; c.lineWidth = Math.max(1, p.width * 0.28 * k); path(p.pts); }
     }
     ovTex.needsUpdate = true;
@@ -182,10 +187,11 @@
     camera.position.set(x, y, z); camera.lookAt(Cam.tx, ty, Cam.tz);
   };
   Cam.pan = function (dx, dy) {               // déplacement écran -> sol
+    Cam.follow = null;
     const k = Cam.dist * 0.0016, sy = Math.sin(Cam.yaw), cy = Math.cos(Cam.yaw);
     Cam.tx -= (cy * dx + sy * dy) * k; Cam.tz -= (-sy * dx + cy * dy) * k;
   };
-  Cam.focus = function (x, z, dist) { Cam.tx = x; Cam.tz = z; if (dist) Cam.dist = dist; };
+  Cam.focus = function (x, z, dist) { Cam.follow = null; Cam.tx = x; Cam.tz = z; if (dist) Cam.dist = dist; };
   R.groundAt = function (cx, cy) {
     const rect = renderer.domElement.getBoundingClientRect();
     v3.set((cx - rect.left) / rect.width * 2 - 1, -((cy - rect.top) / rect.height) * 2 + 1, 0.5).unproject(camera).sub(camera.position).normalize();
@@ -240,7 +246,7 @@
           const v = riders[k], off = (k - (riders.length - 1) / 2) * 0.9;
           v.x = x + Math.cos(u.yaw) * off; v.z = z - Math.sin(u.yaw) * off;
           v.y = def.kind === 'tow' || def.kind === 'carpet' ? T.getH(v.x, v.z) : tmp.y - hang * vs; v.hx = Math.sin(u.yaw); v.hz = Math.cos(u.yaw);
-          v.hidden = def.kind === 'gondola' || def.kind === 'cablecar';
+          v.hidden = def.kind === 'gondola' || def.kind === 'cablecar' || def.kind === 'funi';
         }
       }
       veh.instanceMatrix.needsUpdate = true;
@@ -297,6 +303,7 @@
 
   R.frame = function () {
     if (!SS.G) return;
+    if (Cam.follow) { const f = Cam.follow; if (f.state === 'gone' || SS.Sim.visitors.indexOf(f) < 0) Cam.follow = null; else { Cam.tx += (f.x - Cam.tx) * 0.15; Cam.tz += (f.z - Cam.tz) * 0.15; } }
     if (!SS.Arcade.active) Cam.apply();
     R.vscale = SS.Arcade.active ? 1 : SS.clamp(Cam.dist / 190, 1.3, 9);
     updateSky(); R.updateLamps(); updateLiftsVis(); updateVisitorsVis(); updateFleet(); updateLabels();

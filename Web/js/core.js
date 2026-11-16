@@ -1,7 +1,7 @@
 // SkiStation Web — noyau : utilitaires, bruit, bus d'événements
 (function () {
   'use strict';
-  const SS = window.SS = { VERSION: 'Web 1.1' };
+  const SS = window.SS = { VERSION: 'Web 1.2' };
 
   SS.WORLD = 8000;            // côté de la carte en mètres (360°)
   SS.HALF = SS.WORLD / 2;

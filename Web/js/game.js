@@ -157,7 +157,7 @@
     r.vert = by - ay; r.hlen = hl; r.len = Math.hypot(hl, r.vert); r.maxLen = SS.maxLen(def);
     r.cost = Math.round(def.cost * (0.45 + 0.55 * Math.min(1.3, r.len / def.maxLen)) / 1000) * 1000;
     const speed = def.speed * SS.MOTION * (SS.researched('handsfree') ? 1.12 : 1);
-    const n = def.kind === 'cablecar' ? 2 : Math.max(2, Math.round(2 * r.len / def.spacing));
+    const n = def.kind === 'cablecar' || def.kind === 'funi' ? 2 : Math.max(2, Math.round(2 * r.len / def.spacing));
     r.vehicles = n; r.capacity = Math.round(def.seats * 3600 / ((2 * r.len / n) / speed)); r.rideMin = r.len / speed / 60;
     r.maint = Math.round(r.cost * 0.0022 + 220);
     if (!T.inside(a.x, a.z) || !T.inside(b.x, b.z)) { r.err = 'Station hors des limites du domaine.'; if (!force) return r; }
@@ -168,23 +168,23 @@
     // profil du terrain sous la ligne
     const steps = Math.max(4, Math.ceil(hl / 20)), prof = [];
     for (let i = 0; i <= steps; i++) { const t = i / steps, x = SS.lerp(a.x, b.x, t), z = SS.lerp(a.z, b.z, t); prof.push({ x, z, y: T.getH(x, z), t }); }
-    if (def.kind === 'tow' || def.kind === 'carpet') {
-      const lim = def.kind === 'tow' ? 0.6 : 0.24; let hi = prof[0].y;
+    if (def.kind === 'tow' || def.kind === 'carpet' || def.kind === 'funi') {
+      const lim = def.kind === 'tow' ? 0.6 : def.kind === 'funi' ? 0.75 : 0.24; let hi = prof[0].y;
       for (let i = 1; i < prof.length; i++) {
         const sl = (prof[i].y - prof[i - 1].y) / (hl / steps);
         if (sl > lim) { r.err = 'Pente trop forte sous la ligne (' + Math.round(sl * 100) + ' %, max ' + Math.round(lim * 100) + ' %).'; if (!force) return r; }
-        if (prof[i].y < hi - 8) { r.err = 'Le tracé redescend : un ' + (def.kind === 'tow' ? 'téléski' : 'tapis') + ' doit monter en continu.'; if (!force) return r; }
+        if (prof[i].y < hi - 8) { r.err = 'Le tracé redescend : un ' + (def.kind === 'tow' ? 'téléski' : def.kind === 'funi' ? 'funiculaire' : 'tapis') + ' doit monter en continu.'; if (!force) return r; }
         hi = Math.max(hi, prof[i].y);
       }
       if (def.kind === 'tow') for (const p of G.pistes) if (crossesLine(p.pts, { a, b }, 45)) { r.err = 'Ce téléski couperait la piste ' + p.name + ' : traversée interdite.'; if (!force) return r; }
     }
     // câble : gares + pylônes, relevés si le relief gêne
-    const pyl = def.kind === 'carpet' ? 0 : def.kind === 'cablecar' ? Math.max(1, Math.floor(hl / 1400)) : Math.max(1, Math.round(hl / (def.big ? 420 : def.kind === 'gondola' ? 125 : def.kind === 'tow' ? 70 : 95)) - 1);
-    const sh = def.kind === 'carpet' ? 0.6 : def.kind === 'tow' ? 5 : 6;
+    const pyl = def.kind === 'funi' ? Math.max(1, Math.round(hl / 30)) : def.kind === 'carpet' ? 0 : def.kind === 'cablecar' ? Math.max(1, Math.floor(hl / 1400)) : Math.max(1, Math.round(hl / (def.big ? 420 : def.kind === 'gondola' ? 125 : def.kind === 'tow' ? 70 : 95)) - 1);
+    const sh = def.kind === 'funi' ? 1.2 : def.kind === 'carpet' ? 0.6 : def.kind === 'tow' ? 5 : 6;
     const path = [{ x: a.x, z: a.z, y: ay + sh, g: ay }];
-    for (let i = 1; i <= pyl; i++) { const t = i / (pyl + 1), x = SS.lerp(a.x, b.x, t), z = SS.lerp(a.z, b.z, t), g = T.getH(x, z); path.push({ x, z, y: g + def.pylonH, g, pylon: true }); }
+    for (let i = 1; i <= pyl; i++) { const t = i / (pyl + 1), x = SS.lerp(a.x, b.x, t), z = SS.lerp(a.z, b.z, t), g = T.getH(x, z); path.push(def.kind === 'funi' ? { x, z, y: g + 1.2, g } : { x, z, y: g + def.pylonH, g, pylon: true }); }
     path.push({ x: b.x, z: b.z, y: by + sh, g: by });
-    const need = def.kind === 'tow' ? 2.5 : def.kind === 'carpet' ? -5 : 7;
+    const need = def.kind === 'tow' ? 2.5 : def.kind === 'carpet' || def.kind === 'funi' ? -50 : 7;
     for (let it = 0; it < 9; it++) {
       let bad = false;
       for (let i = 0; i < path.length - 1; i++) {
@@ -206,7 +206,7 @@
   SS.commitLift = function (an, loaded) {
     if (!loaded && !SS.spend(an.cost, 'Construction')) return null;
     const used = G.lifts.map(l => l.name), def = an.def;
-    const short = def.kind === 'tow' ? 'TK' : def.kind === 'chair' ? 'TS' : def.kind === 'gondola' ? 'TC' : def.kind === 'cablecar' ? 'TPH' : 'Tapis';
+    const short = def.kind === 'tow' ? 'TK' : def.kind === 'chair' ? 'TS' : def.kind === 'gondola' ? 'TC' : def.kind === 'cablecar' ? 'TPH' : def.kind === 'funi' ? 'Funi' : 'Tapis';
     const l = loaded || { id: G.nextId++, type: def.id, name: short + ' ' + (D.LIFT_NAMES.find(n => !used.some(u => u.endsWith(' ' + n))) || G.nextId), open: true, cond: 1, built: G.day, cost: an.cost };
     l.a = an.a; l.b = an.b; l.path = an.path; l.L = an.L; l.len = an.len; l.vert = an.vert; l.capacity = an.capacity; l.maint = an.maint;
     l.n = an.vehicles; l.D = 2 * l.L / l.n; l.phase = 0; l.veh = []; for (let i = 0; i < l.n; i++) l.veh.push([]);
@@ -215,6 +215,21 @@
     for (const st of [l.a, l.b]) { T.flatten(st.x, st.z, 12, st.y, 14); if (!loaded) G.flats.push([st.x, st.z, 12, st.y, 14]); }
     if (!loaded) { G.lifts.push(l); SS.Net.rebuild(); SS.emit('lift:add', l); SS.emit('world'); }
     return l;
+  };
+  // modernisation : remplace le modèle sur la même ligne (gares inchangées), remontée vide uniquement
+  SS.modernize = function (l, type, dry) {
+    const others = G.lifts; G.lifts = others.filter(x => x !== l);
+    const an = SS.analyzeLift(type, l.a, l.b); G.lifts = others;
+    if (!an.ok) return { err: an.err };
+    const cost = Math.max(Math.round(an.cost * 0.1), an.cost - Math.round(l.cost * 0.3));
+    if (dry) return { cost, an };
+    if (l.queue.length || l.veh.some(v => v.length)) return { err: 'Des visiteurs utilisent encore cette remontée : fermez-la et attendez qu\'elle se vide.' };
+    if (!SS.spend(cost, 'Construction')) return { err: 'Fonds insuffisants.' };
+    const old = l.name.split(' ')[0]; l.type = type; l.cost = an.cost; l.cond = 1;
+    SS.commitLift(an, l);
+    const k = an.def.kind, short = k === 'tow' ? 'TK' : k === 'chair' ? 'TS' : k === 'gondola' ? 'TC' : k === 'cablecar' ? 'TPH' : k === 'funi' ? 'Funi' : 'Tapis';
+    if (['TK', 'TS', 'TC', 'TPH', 'Funi', 'Tapis'].indexOf(old) >= 0) l.name = short + l.name.slice(old.length);
+    Net.rebuild(); SS.emit('lift:refresh', l); SS.emit('world'); return { cost };
   };
   SS.liftPos = function (l, s, out) {           // position sur le câble (s de 0 à L)
     const p = l.path; let i = 0; while (i < p.length - 2 && p[i + 1].s < s) i++;
@@ -405,7 +420,7 @@
     const s = SS.stats(); let p = 0;
     p += Math.min(18, s.km * 0.9); p += Math.min(10, s.vert / 200); p += Math.min(6, (s.red > 0) * 2 + (s.black > 0) * 4);
     let tech = 0; for (const l of G.lifts) tech = Math.max(tech, D.lift(l.type).tier); p += tech * 2;
-    for (const b of G.buildings) p += (D.building(b.type).prestige || 0);
+    const seen = {}; for (const b of G.buildings) if (!seen[b.type]) { seen[b.type] = 1; p += (D.building(b.type).prestige || 0); }
     p += Math.min(10, s.beds / 90); p += Math.min(12, Object.keys(G.eventsHosted).reduce((a, k) => a + D.EVENTS.find(e => e.id === k).prestige * Math.min(2, G.eventsHosted[k]) * 0.5, 0));
     p += (G.reputation - 50) * 0.24;
     G.prestige = SS.clamp(Math.round(p), 0, 100); return s;
