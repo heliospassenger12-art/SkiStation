@@ -71,6 +71,7 @@
       case 'modalClose': $('modal').hidden = true; break;
       case 'tab': UI.tab = arg; UI.refresh(); break;
       case 'tool': { const [k, t] = arg.split(':'); B.start(k, t); if (R.coarse || innerWidth < 800) UI.close(); break; }
+      case 'reach': R.showReach = !R.showReach; R.drawOverlay(); UI.refresh(); break;
       case 'width': B.setWidth(+arg); break;
       case 'b_confirm': B.confirm(); break;
       case 'b_undo': B.undo(); break;
@@ -132,8 +133,8 @@
   function advice() {
     const s = SS.stats(), d = Sim.today || {}, fb = Sim.fb;
     if (B.tool) return null;
-    if (!G.lifts.length) return ['🚡', 'Commencez par une remontée : <b>Construire › Remontées</b>, puis cliquez la gare de départ près du <b>front de neige</b> et la gare d\'arrivée plus haut.'];
-    if (!s.connected) return ['⛷️', 'Tracez une piste depuis l\'<b>arrivée de la remontée</b> jusqu\'au <b>front de neige</b> : <b>Construire › Pistes</b>, cliquez de haut en bas.'];
+    if (!G.lifts.length) return ['🚡', 'Commencez par une remontée : <b>Construire › Remontées</b>, cliquez la gare de départ dans le <b>front de neige</b> (cercle orange) et la gare d\'arrivée plus haut, de préférence dans une zone verte.'];
+    if (!s.connected) return ['⛷️', 'Reliez la remontée au <b>front de neige</b> (cercle orange) : <b>Construire › Pistes › Tracé assisté</b>, puis cliquez l\'arrivée de la remontée. Les zones vertes montrent où c\'est possible.'];
     if (G.paused) return ['▶', 'Votre domaine est prêt : lancez le temps (x1, x3 ou x8). Les premiers visiteurs arrivent vers 8 h, les remontées ouvrent à 9 h.'];
     if (G.money < 0) return ['💶', 'Trésorerie négative : empruntez dans <b>Finances</b> ou réduisez vos charges avant d\'investir.'];
     if (d.lost > 30) return ['🅿️', 'Aujourd\'hui, environ ' + d.lost + ' visiteurs n\'ont pas pu venir : parkings saturés. Construisez un parking, une gare routière ou des hébergements.'];
@@ -157,7 +158,8 @@
     el.hidden = false;
     const an = B.an || B.live; let title = '', help = '', body = '', canOk = !!(B.an && B.an.ok);
     if (t.kind === 'piste') {
-      title = '⛷️ Tracé de piste'; help = t.ctrl.length ? 'Ajoutez des points en descendant, puis validez.' : 'Cliquez le départ (en haut), puis descendez point par point.';
+      title = t.auto ? '🧭 Tracé assisté' : '⛷️ Tracé de piste'; help = t.auto && !t.ctrl.length ? 'Cliquez le point de départ (en haut, idéalement l\'arrivée d\'une remontée) : la descente jusqu\'au front de neige est calculée pour vous.' : t.ctrl.length ? (t.auto ? 'Tracé proposé : validez, ou « Annuler le point » pour recommencer.' : 'Ajoutez des points en descendant, puis validez.') : 'Cliquez le départ (en haut), puis descendez point par point. Les zones vertes mènent au front de neige.';
+      if (B.autoMsg) body += '<div class="msg warn">🧭 ' + B.autoMsg + '</div>';
       body += '<div class="chips">Largeur ' + [20, 30, 40].map(w => btn(w + ' m', 'width', w, 'chip' + (t.width === w ? ' on' : ''))).join('') + '</div>';
       if (an && an.pts) {
         const a = an.pts[0], z = an.pts[an.pts.length - 1];
@@ -216,7 +218,8 @@
           h += '<div class="card' + (ok ? '' : ' locked') + '" ' + (ok ? 'data-act="tool" data-arg="lift:' + def.id + '"' : '') + '><div class="ctitle"><b>' + def.name + '</b><span>' + (ok ? eur(def.cost * 0.45) + ' – ' + eur(def.cost) : '🔒 palier ' + def.tier) + '</span></div><div class="cmeta">' + def.seats + ' pl. · portée ' + SS.maxLen(def) + ' m · ~' + SS.num(cap) + ' pers./h · ' + (def.speed * 3.6).toFixed(0) + ' km/h · vent max ' + def.wind + ' km/h</div></div>';
         }
       } else if (tab === 'pistes') {
-        h += '<p>Tracez librement de haut en bas. La difficulté découle du relief réellement traversé ; une piste ne peut ni remonter ni couper un téléski.</p>' + btn('⛷️ Tracer une piste', 'tool', 'piste:', 'primary') +
+        h += '<p>Tracez librement de haut en bas. La difficulté découle du relief réellement traversé ; une piste ne peut ni remonter ni couper un téléski.</p>' + btn('🧭 Tracé assisté : cliquez le départ, le jeu trouve la descente jusqu\'au front de neige', 'tool', 'autopiste:', 'primary') + btn('⛷️ Tracer à la main', 'tool', 'piste:') + btn((R.showReach ? '☑' : '☐') + ' Carte des zones desservables', 'reach') +
+          '<p class="fine">Les zones <b style="color:#46d878">vertes</b> sont celles d\'où une piste peut rejoindre le front de neige. Placez l\'arrivée de vos remontées dedans.</p>' +
           '<div class="legend">' + D.DIFF.map(d => '<span>' + dot(d.id) + d.name + '</span>').join('') + '</div><p class="fine">Enneigeurs, damage et ouverture se règlent dans la fiche de chaque piste (cliquez-la).</p>';
       } else if (tab === 'buildings') {
         let cat = '';

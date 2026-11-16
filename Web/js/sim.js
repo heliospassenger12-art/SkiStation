@@ -1,7 +1,7 @@
 // SkiStation Web — simulation : horloge unique, visiteurs (besoins + décisions), remontées physiques, services, secours, damage, journée
 (function () {
   'use strict';
-  const SS = window.SS, T = SS.Terrain, D = SS.Data, Net = SS.Net, W = SS.Weather;
+  const SS = window.SS, T = SS.Terrain, D = SS.Data, Net = SS.Net, W = SS.Weather, Mg = SS.Mgmt;
   const Sim = SS.Sim = { visitors: [], arrivals: [], rescues: [], groomers: [], present: 0, nextV: 1, lastTouch: 0, fb: {} };
   const M = SS.MOTION, WALK = 1.0, SKI_V = [5.5, 9, 12.5, 16];
   const COLORS = [0xe53935, 0x1e88e5, 0xfdd835, 0x43a047, 0xfb8c00, 0x8e24aa, 0x00acc1, 0xd81b60, 0x3949ab, 0x7cb342, 0xf4511e, 0x212121, 0xffffff, 0x6d4c41];
@@ -22,16 +22,12 @@
     const ev = G.event && G.event.day <= G.day ? D.EVENTS.find(e => e.id === G.event.id).boost : 1;
     const rental = s.rental > 0 || G.summer ? 1 : 0.74;
     const demand = base * rep * cal * W.def().demand * priceF * mk * ev * rental;
-    let lodgers = 0;
-    for (const b of G.buildings) {
-      const def = D.building(b.type); if (def.type !== 'lodging' || !b.open) continue;
-      const occ = SS.clamp((0.3 + G.reputation / 100 * 0.45 + (cal > 1 ? 0.2 : 0) + at.a * 0.25) * (1.5 - 0.5 * b.price / def.price) * (ev > 1 ? 1.3 : 1) * (G.summer ? 0.75 : 1), 0.05, 1);
-      b.guests = Math.round(SS.bcap(b) * occ); lodgers += b.guests;
-    }
+    const lodgers = Mg.allocateLodging(demand, cal, ev);
     const day = Math.round(Math.min(demand, s.access));
     const cap = 1500, total = Math.min(cap, day + lodgers);
     return { total, day: Math.max(0, total - lodgers), lodgers: Math.min(lodgers, total), fair, at, demand: Math.round(demand), access: s.access, lost: Math.max(0, Math.round(demand - s.access)) };
   };
+  Sim.yieldMul = () => SS.researched('yield') && (SS.isWeekend(SS.G.day) || SS.G.summer || SS.isHoliday(SS.G.day)) ? 1.12 : 1;
   Sim.fairPrice = at => SS.G.summer ? 9 + at.km * 0.45 + at.s.vert * 0.002 + at.a * 8 : 22 + at.km * 1.4 + at.s.vert * 0.004 + at.a * 12;
 
   function pickProfile(comp) {
@@ -48,7 +44,8 @@
     Sim.arrivals = []; Sim.visitors = []; Sim.rescues = []; Sim.groomers = []; Sim.present = 0; Sim.fb = {}; Sim.grooming = false;
     Sim.lessons = {}; Sim.flags = {};
     G.satToday = []; G.visitorsToday = 0; G.incidentsToday = 0;
-    for (const b of G.buildings) { b.visits = 0; b.revenue = 0; b.occ = 0; b.queue = []; b.session = {}; }
+    for (const b of G.buildings) { b.visits = 0; b.revenue = 0; b.cogs = 0; b.occ = 0; b.queue = []; b.session = {}; b.busy = 0; }
+    Mg.securePistes();
     for (const l of G.lifts) { l.queue = []; l.rides = 0; l.waitSum = 0; l.veh.forEach(v => v.length = 0); }
     for (const p of G.pistes) p.on = 0;
     const comp = G.event && G.event.day <= G.day && D.EVENTS.find(e => e.id === G.event.id).comp;
@@ -62,11 +59,13 @@
         id: Sim.nextV++, name: SS.pick(D.FIRST) + ' ' + (grp && grp.last || SS.pick(D.LAST)), prof: pr, skill, child: !!pr.child, color: SS.pick(COLORS),
         home, lodger, arriveT: arrive, leaveT: (lodger ? SS.range(15.6, 16.9) : Math.min(17.0, Math.max(arrive / 3600 + 3.5, SS.range(14.6, 17.0)))) * 3600,
         hunger: SS.range(0.08, 0.35), energy: SS.range(0.85, 1), sat: 0.62, spent: 0, runs: 0, km: 0,
-        patience: SS.range(0.7, 1.4), spend: pr.spend * SS.range(0.7, 1.4),
+        patience: SS.range(0.7, 1.4), spend: lodger ? [0.72, 1.05, 1.85][D.building(home.type).seg || 0] * SS.range(0.85, 1.2) : pr.spend * SS.range(0.7, 1.4),
         needRental: s.rental > 0 && Math.random() < 0.32, hasGear: false, hasPass: false,
         lesson: G.summer ? false : pr.child ? (hasKids && Math.random() < 0.8) : (hasSchool && (skill === 0 ? Math.random() < 0.5 : skill === 1 && Math.random() < 0.1)),
         state: 'pending', node: Net.hub.id, x: home.x, z: home.z, y: 0, hx: 0, hz: 1, lat: Math.random() * 6.28, decision: 'Arrive', reason: '', thoughts: [], did: {}
       };
+      v.seg = v.spend < 0.85 ? 0 : v.spend < 1.4 ? 1 : 2;
+      if (lodger && home.opts && home.opts.shuttle) { v.x = SS.HUB.x + (Math.random() - 0.5) * 30; v.z = SS.HUB.z + 40 + Math.random() * 20; v.sat += 0.02; }
       if (v.lesson) v.lessonAt = (arrive < 9.4 * 3600 ? 9.75 : 14) * 3600;
       if (G.summer) {                                   // l'été : vététistes (rapides) et randonneurs (lents, tous sentiers)
         const bike = !v.child && Math.random() < (pr.id === 'sportif' ? 0.85 : pr.id === 'fetard' ? 0.6 : 0.3) && !(grp && grp.fam);
@@ -117,10 +116,12 @@
     let best = null, bs = -1e9;
     for (const b of node.services) {
       const def = D.building(b.type);
-      if (def.type !== type || !b.open) continue;
-      if (b.price > def.price * (1.2 + 0.5 * v.spend)) continue;
+      if (def.type !== type || !Mg.isOpen(b)) continue;
+      const ref = Mg.refPrice(b);
+      if (b.price > ref * (1.2 + 0.5 * v.spend)) continue;
+      if (type === 'food' && b.range === 2 && v.seg === 0 && Math.random() < 0.8) continue;      // les petits budgets évitent le premium
       if (def.tags && type === 'activity' && v.did[b.id]) continue;
-      const sc = (def.quality || 0.5) - b.queue.length / Math.max(4, SS.bcap(b)) - (b.price / (def.price || 1)) * 0.2 + Math.random() * 0.3;
+      const sc = Mg.quality(b) * (0.6 + 0.4 * v.spend) + b.rating * 0.06 - b.queue.length / Math.max(4, SS.bcap(b)) - (b.price / (ref || 1)) * 0.2 - Math.abs(b.range - v.seg) * 0.12 + Math.random() * 0.3;
       if (sc > bs) { bs = sc; best = b; }
     }
     return best;
@@ -132,33 +133,39 @@
   }
   function tryEnter(v) {
     const b = v.svc, def = b && D.building(b.type);
-    if (!b || G.buildings.indexOf(b) < 0 || !b.open) { v.svc = null; return backToNode(v); }
+    if (!b || G.buildings.indexOf(b) < 0 || !Mg.isOpen(b)) { v.svc = null; return backToNode(v); }
     if (b.occ < SS.bcap(b)) return enter(v, b);
     if (b.queue.length > SS.bcap(b) * 0.8 * v.patience + 4 && def.type !== 'ticket' && def.type !== 'rental') {
       if (!v.did[b.id]) think(v, 'Trop de monde : ' + def.name, 'Attente aux services', -0.04); v.did[b.id] = 1; v.svc = null; v.skipFood = G.time + 1800; return backToNode(v);
     }
-    b.queue.push(v); v.state = 'queueS'; v.waitStart = G.time;
+    b.queue.push(v); v.state = 'queueS'; v.state0 = 'q'; v.waitStart = G.time;
   }
   function enter(v, b) {
     const def = D.building(b.type);
-    b.occ++; v.state = 'inS'; v.until = G.time + (def.dur || (def.type === 'ticket' ? 2 : 8)) * 60 * SS.range(0.8, 1.2);
+    b.occ++; v.state = 'inS'; v.svcWait = v.waitStart && v.state0 === 'q' ? G.time - v.waitStart : 0; v.state0 = '';
+    v.until = G.time + (def.type === 'ticket' ? 2 : Mg.dur(b)) * 60 * SS.range(0.8, 1.2);
   }
   function finishService(v) {
     const b = v.svc, def = D.building(b.type); b.occ--; b.visits++;
-    let price = b.price, cat = def.cat;
+    let price = b.price, cat = def.cat; const q = Mg.quality(b), ref = Mg.refPrice(b);
     if (def.type === 'ticket') {
-      price = SS.passNow() * (v.child ? 0.6 : v.lodger ? 0.88 : 1); cat = 'Forfaits'; v.hasPass = true;
+      price = SS.passNow() * (v.child ? 0.6 : v.lodger ? 0.88 : 1) * Sim.yieldMul(); cat = 'Forfaits'; v.hasPass = true;
       const fair = Sim.today.fair; v.sat += SS.clamp((fair - SS.passNow()) / fair * 0.18, -0.2, 0.08);
       if (SS.passNow() > fair * 1.25) think(v, 'Le forfait est cher pour ce domaine', 'Prix du forfait');
     } else if (def.type === 'rental') { v.hasGear = true; cat = 'Location'; }
     else if (def.type === 'food') {
       cat = 'Restauration'; v.hunger = def.id === 'snack' ? Math.max(0, v.hunger - 0.65) : 0; v.energy = Math.min(1, v.energy + 0.25);
-      think(v, def.quality > 0.75 ? 'Excellent repas !' : 'Repas correct', null, (def.quality - 0.5) * 0.14 + (b.node !== Net.hub.id ? 0.03 : 0));
+      think(v, q > 0.8 ? 'Excellent repas !' : q < 0.42 ? 'Repas décevant' : 'Repas correct', q < 0.42 ? 'Qualité des restaurants' : null, (q - 0.5) * 0.16 + (b.node !== Net.hub.id ? 0.03 : 0));
+      if (v.decision === 'Dîner') v.dined = true;
     } else if (def.type === 'drink') { cat = 'Restauration'; v.energy = Math.min(1, v.energy + 0.3); v.hunger = Math.max(0, v.hunger - 0.15); v.sat += 0.04; }
     else if (def.type === 'shop') { cat = 'Boutiques'; v.sat += 0.02; }
-    else if (def.type === 'activity') { cat = 'Activités'; think(v, 'Super moment : ' + def.name, null, def.fun || 0.05); v.energy -= 0.06; }
+    else if (def.type === 'activity') { cat = 'Activités'; think(v, 'Super moment : ' + def.name, null, (def.fun || 0.05) * (0.6 + q * 0.5)); v.energy -= 0.06; }
     v.did[b.id] = 1;
-    if (price > 0) { SS.earn(price, cat); b.revenue += price; v.spent += price; v.sat -= Math.max(0, price / (def.price || price) - 1) * 0.08; }
+    if (price > 0) {
+      SS.earn(price, cat); b.revenue += price; v.spent += price; v.sat -= Math.max(0, price / (ref || price) - 1) * 0.08;
+      const cg = price * Mg.cogsRate(b); if (cg > 0) { SS.charge(cg, 'Achats'); b.cogs = (b.cogs || 0) + cg; }
+    }
+    if (Mg.isService(b)) Mg.rate(b, SS.clamp(q * 5.2 - (v.svcWait || 0) / 600 - Math.max(0, b.price / (ref || 1) - 1) * 3 + Math.random() * 0.6 - 0.3, 0, 5));
     while (b.queue.length && b.occ < SS.bcap(b)) { const q = b.queue.shift(); if (q.state === 'queueS') { const w = G.time - q.waitStart; if (w > 900) think(q, 'Longue attente : ' + def.name, 'Attente aux services', -Math.min(0.1, w / 36000)); enter(q, b); } }
     v.svc = null; backToNode(v);
   }
@@ -313,6 +320,12 @@
         think(v, 'Je prolonge avec le ski nocturne !', null, 0.03); v.dn = 0; return decide(v);
       }
     }
+    if (v.lodger && !v.dined && !(v.home.opts && v.home.opts.hb) && !v.noDinner) {          // dîner au restaurant pour les résidents sans demi-pension
+      const evening = Net.hub.services.filter(b => D.building(b.type).type === 'food' && b.open && b.hours === 'eve');
+      if (!evening.length) v.noDinner = true;
+      else if (G.time < 18.4 * 3600) { if (v.apres >= 1) { v.state = 'rest'; v.until = 18.4 * 3600 + Math.random() * 1500; v.decision = 'Attend le dîner'; v.reason = 'Les restaurants servent le soir à partir de 18 h 30'; return; } }
+      else if (G.time < 21.5 * 3600) { const b = servicesAt(Net.hub, 'food', v); if (b) return goService(v, b, 'Dîner', D.building(b.type).name); v.noDinner = true; }
+    }
     const hubN = Net.hub, n = v.apres = (v.apres || 0) + 1;
     if (G.time < (v.nightDone && G.time > SS.NIGHT_OPEN ? 21.5 : 19.5) * 3600 && n <= (v.lodger ? 3 : 2) && Math.random() < (v.prof.id === 'fetard' ? 0.85 : 0.55)) {
       const b = activityAt(hubN, v) || (v.did.bar ? null : servicesAt(hubN, 'drink', v)) || (Math.random() < 0.4 && !v.did.shop ? servicesAt(hubN, 'shop', v) : null) || (v.hunger > 0.6 ? servicesAt(hubN, 'food', v) : null);
@@ -345,7 +358,7 @@
       if (!SS.pisteOpen(p) && !forced) { Net.touch(); v.path = null; v.target = null; return decide(v); }
       v.state = 'ski'; v.edge = e; v.s = e.s0; p.on++;
       const dd = p.diff - v.skill;
-      const risk = (v.mode === 'rando' ? 0.1 : 1) * 0.0024 * (1 + 2.2 * Math.max(0, dd)) * (1 + 2.5 * p.ice) * (1 + Math.min(1.5, p.on / (p.len * p.width / 400))) * (SS.researched('padding') ? 0.7 : 1) * (p.groomed < 0.3 ? 1.3 : 1) * (G.casual ? 0.5 : 1);
+      const risk = Mg.riskFactor(p) * (v.mode === 'rando' ? 0.1 : 1) * 0.0024 * (1 + 2.2 * Math.max(0, dd)) * (1 + 2.5 * p.ice) * (1 + Math.min(1.5, p.on / (p.len * p.width / 400))) * (SS.researched('padding') ? 0.7 : 1) * (p.groomed < 0.3 ? 1.3 : 1) * (G.casual ? 0.5 : 1);
       v.fallAt = Math.random() < risk * e.len / 1000 ? SS.range(e.s0, e.s1) : -1;
     }
   }
@@ -380,7 +393,7 @@
     v.fallAt = -1;
     if (r < 0.72) { v.state = 'down'; v.until = G.time + 150; think(v, 'Chute sans gravité sur ' + p.name, null, -0.05); return; }
     const severe = r > 0.95;
-    v.state = 'hurt'; G.incidentsToday++; v.decision = 'Blessé'; v.reason = 'Attend les secours';
+    v.state = 'hurt'; G.incidentsToday++; G.safety.incidents++; if (severe) G.safety.severe++; v.decision = 'Blessé'; v.reason = 'Attend les secours';
     let post = null, bd = 1e9;
     const heli = severe ? G.buildings.find(b => b.type === 'heliport' && b.open) : null;
     for (const b of G.buildings) if (b.type === 'rescue' && b.open && (b.busy || 0) < SS.bcap(b)) { const d = Math.hypot(b.x - v.x, b.z - v.z); if (d < bd) { bd = d; post = b; } }
@@ -393,7 +406,7 @@
       if (post && !heli) post.busy = (post.busy || 0) + 1;
       if (severe && !heli) { G.reputation = Math.max(0, G.reputation - 0.8); SS.log('🚑 Accident grave sur ' + p.name + ' : sans héliport, l\'évacuation en traîneau est longue.', 'bad'); }
       else if (severe) SS.log('🚁 Accident grave sur ' + p.name + ' : l\'hélicoptère décolle.', 'warn');
-      Sim.rescues.push({ kind: heli ? 'heli' : 'patrol', x: src.x, z: src.z, y: src.y, v, phase: 'go', speed: heli ? 14 : severe ? 2.6 : 4.5, post: heli ? null : post, src, t0: G.time });
+      Sim.rescues.push({ kind: heli ? 'heli' : 'patrol', x: src.x, z: src.z, y: src.y, v, phase: 'go', speed: heli ? 14 : (severe ? 2.6 : 4.5) * Mg.patrolSpeed(), post: heli ? null : post, src, t0: G.time });
     }
   }
   function updateRescues(dt) {
@@ -403,7 +416,7 @@
       const d = Math.hypot(tx - r.x, tz - r.z), stp = r.speed * dt;
       if (d <= stp + 4) {
         if (r.phase === 'go') {
-          r.phase = 'back'; const w = G.time - (r.t0 || G.time - 3000);
+          r.phase = 'back'; const w = G.time - (r.t0 || G.time - 3000); G.safety.respSum += w; G.safety.respN++;
           think(v, w < 900 ? 'Secours arrivés très vite, bravo aux pisteurs' : 'Secours trop lents…', w < 900 ? null : 'Sécurité', w < 900 ? -0.1 : -0.3);
         } else {
           if (r.post) r.post.busy = Math.max(0, r.post.busy - 1);
@@ -465,12 +478,12 @@
     Sim.grooming = true; Sim.groomers = [];
     if (G.summer) return;
     const winch = SS.researched('winch');
-    Sim.groomList = G.pistes.filter(p => !p.noGroom && (p.diff < 3 || winch)).sort((a, b) => (b.passes + b.ice * 500 + (1 - b.groomed) * 300) - (a.passes + a.ice * 500 + (1 - a.groomed) * 300));
+    Sim.groomList = Mg.groomPlan(); Sim.groomPlanned = Sim.groomList.slice();
     for (const b of G.buildings) if (b.type === 'garage' && b.open) for (let i = 0; i < SS.bcap(b); i++) Sim.groomers.push({ x: b.x + i * 6, z: b.z, y: b.y, garage: b, piste: null, s: 0, state: 'idle', hx: 0, hz: 1 });
     if (!Sim.groomers.length && G.pistes.length) SS.log('Aucune dameuse : les pistes ne seront pas préparées cette nuit.', 'warn');
   }
   function updateGroomers(dt) {
-    const sp = 0.25 * (SS.researched('winch') ? 1.4 : 1);
+    const sp = Mg.groomSpeed();
     for (const g of Sim.groomers) {
       if (g.state === 'idle') { g.piste = null;
         const wait = p => p.lit && SS.nightOn() && G.time < SS.NIGHT_CLOSE + 600;
@@ -494,7 +507,14 @@
   // ---------------- un visiteur ----------------
   function finalize(v) {
     v.state = 'gone'; Sim.present--;
-    if (v.lodger && v.home && v.home.price) { const b = v.home, def = D.building(b.type); SS.earn(b.price, 'Hébergement'); b.revenue += b.price; b.visits++; v.sat += (def.quality - 0.5) * 0.12 - Math.max(0, b.price / def.price - 1) * 0.1; }
+    if (v.lodger && v.home && v.home.price) {
+      const b = v.home, def = D.building(b.type), q = Mg.quality(b);
+      SS.earn(b.price, 'Hébergement'); b.revenue += b.price; b.visits++;
+      if (b.opts.hb && !v.dined) { const dp = Mg.dinnerPrice(b); SS.earn(dp, 'Restauration'); b.revenue += dp; SS.charge(dp * 0.38, 'Achats'); b.cogs = (b.cogs || 0) + dp * 0.38; v.dined = true; v.sat += 0.02; }
+      if (!v.dined && !G.summer) { v.sat -= 0.03; Sim.fb['Rien pour dîner'] = (Sim.fb['Rien pour dîner'] || 0) + 1; }
+      v.sat += (q - 0.5) * 0.14 - Math.max(0, b.price / def.price - 1) * 0.1;
+      Mg.rate(b, SS.clamp(v.sat * 4 + q * 1.6 - Math.max(0, b.price / def.price - 1) * 2, 0, 5));
+    }
     if (v.runs === 0 && !v.lessonDone && !v.carried) v.sat -= 0.15;
     v.sat = SS.clamp(v.sat, 0, 1); G.satToday.push(v.sat);
   }
@@ -576,7 +596,7 @@
     G.time += dt;
     while (Sim.arrivals.length && Sim.arrivals[0].arriveT <= G.time) {
       const v = Sim.arrivals.shift(); v.state = 'walk'; v.y = T.getH(v.x, v.z); v.dn = 0;
-      if (v.lodger && !v.hasPass) { v.hasPass = true; const pr = SS.passNow() * (v.child ? 0.6 : 0.88); SS.earn(pr, 'Forfaits'); v.spent += pr; }
+      if (v.lodger && !v.hasPass) { v.hasPass = true; const pr = SS.passNow() * (v.child ? 0.6 : 0.88) * Sim.yieldMul(); SS.earn(pr, 'Forfaits'); v.spent += pr; }
       Sim.visitors.push(v); Sim.present++; G.visitorsToday++; G.totalVisitors++; decide(v);
     }
     if (G.time - Sim.lastTouch > 600 || G.time < Sim.lastTouch) {
@@ -619,13 +639,12 @@
     for (const v of Sim.visitors) if (v.state !== 'gone') { think(v, 'Retour très tardif', 'Bloqués en altitude', -0.15); if (v.state === 'inS' && v.svc) v.svc.occ = 0; finalize(v); }
     // les pistes non terminées par les dameuses à 22 h restent en l'état
     let up = 0, sal = 0;
-    for (const b of G.buildings) { const def = D.building(b.type); if (!b.open) { up += def.upkeep * 0.3; continue; } up += def.upkeep * (1 + 0.4 * (b.level - 1)) * 0.45; sal += def.upkeep * (1 + 0.4 * (b.level - 1)) * 0.55 + b.staff * 190; }
-    let lm = 0; for (const l of G.lifts) { lm += l.maint * [0.55, 1, 1.6][G.maint] * (l.open ? 1 : 0.4); l.cond = SS.clamp(l.cond - 0.012 + [0.004, 0.012, 0.022][G.maint], 0.2, 1); l.brokenUntil = 0; }
+    for (const b of G.buildings) { const c = Mg.dailyCost(b); up += c[0]; sal += c[1]; b.sRev += b.revenue; b.sCost += c[0] + c[1] + (b.cogs || 0); b.sVisits += b.visits; b.lastRev = b.revenue; b.lastCost = c[0] + c[1] + (b.cogs || 0); b.lastVisits = b.visits; }
+    let lm = 0; for (const l of G.lifts) { lm += l.maint * [0.55, 1, 1.6][G.maint] * (l.open ? 1 : 0.4) * (SS.researched('energy') ? 0.85 : 1); l.cond = SS.clamp(l.cond - 0.012 + [0.004, 0.012, 0.022][G.maint], 0.2, 1); l.brokenUntil = 0; }
     SS.charge(Math.round(up), 'Entretien bâtiments'); SS.charge(Math.round(sal), 'Salaires'); SS.charge(Math.round(lm), 'Remontées');
-    if (G.loan > 0) SS.charge(Math.round(G.loan * 0.0012), 'Intérêts');
     for (const k of ['social', 'tv']) if (G.marketing[k] > 0) G.marketing[k]--;
     const n = G.satToday.length, avg = n ? G.satToday.reduce((a, b) => a + b, 0) / n * 100 : G.sat;
-    if (n) { G.sat = Math.round(avg); G.reputation = SS.clamp(G.reputation + (avg - G.reputation) * Math.min(0.22, 0.04 + n / 2500), 0, 100); }
+    if (n) { G.sat = Math.round(avg); G.reputation = SS.clamp(G.reputation + (avg - G.reputation) * Math.min(0.22, 0.04 + n / 2500) * (avg > G.reputation && SS.researched('loyalty') ? 1.3 : 1) + (G.wage - 1) * 0.12, 0, 100); }
     G.bestDay = Math.max(G.bestDay, G.visitorsToday);
     const inc = Object.values(G.ledger.inc).reduce((a, b) => a + b, 0), exp = Object.values(G.ledger.exp).reduce((a, b) => a + b, 0);
     const opex = Object.keys(G.ledger.exp).filter(k => k !== 'Construction' && k !== 'Recherche').reduce((a, k) => a + G.ledger.exp[k], 0);
@@ -643,11 +662,11 @@
         G.event = null;
       }
     }
-    // recherche
-    if (G.research.cur) {
-      G.research.cur.left--;
-      if (G.research.cur.left <= 0) { const r = D.RESEARCH.find(x => x.id === G.research.cur.id); G.research.done.push(r.id); if (r.tier) G.tier = Math.max(G.tier, r.tier); G.research.cur = null; report.notes.push('🔬 Recherche terminée : ' + r.name + '.'); }
-    }
+    Mg.dailyResearch(report);
+    Mg.dailyLoans(report);
+    // bilan du damage : ce qui était prévu et n'a pas pu être fait
+    if (!G.summer && Sim.groomPlanned) { const missed = Sim.groomPlanned.filter(p => !p.groomedTonight && G.pistes.indexOf(p) >= 0); G.groomReport = { done: Sim.groomPlanned.length - missed.length, missed: missed.map(p => p.name), km: Sim.groomPlanned.filter(p => p.groomedTonight).reduce((a, p) => a + p.len, 0) / 1000 }; if (missed.length && Mg.groomerCount()) report.notes.push('🚜 Damage incomplet : ' + missed.length + ' piste(s) non préparée(s) faute de capacité (' + missed.slice(0, 3).join(', ') + (missed.length > 3 ? '…' : '') + ').'); }
+    Mg.closeDay(G.ledger, G.visitorsToday);
     G.ledger0 = G.ledger.inc; G.ledger = { inc: {}, exp: {} };
     W.night();
     SS.updatePrestige();
@@ -664,7 +683,7 @@
     SS.emit('day:end', report);
   };
   function winterReset() {
-    G.day = 0; G.year++; G.snowBase = 45;
+    G.day = 0; G.year++; G.snowBase = 45; Mg.newSeason();
     for (const p of G.pistes) { p.depth = 45 + (p.topAlt - 1650) * 0.03; p.ice = 0; p.slush = 0; p.groomed = 0.8; p.snowClosed = false; p.avaUntil = 0; }
   }
   function startSummer(report) {
@@ -689,7 +708,7 @@
   function seasonEnd(report) {
     let summer = 0;
     if (SS.researched('summer')) { for (const b of G.buildings) { const def = D.building(b.type); summer += (def.summer || 0) * 90 * 9 + (def.type === 'lodging' ? SS.bcap(b) * b.price * 0.25 * 70 : 0); } for (const l of G.lifts) if (D.lift(l.type).kind !== 'tow') summer += 2500; }
-    G.money += summer; G.day = 0; G.year++; G.snowBase = 45;
+    G.money += summer; G.day = 0; G.year++; G.snowBase = 45; Mg.newSeason();
     for (const p of G.pistes) { p.depth = 45 + (p.topAlt - 1650) * 0.03; p.ice = 0; p.slush = 0; p.groomed = 0.8; p.snowClosed = false; }
     report.notes.push('🌞 Fin de saison ' + (G.year - 1) + '. ' + (summer > 0 ? 'Recettes d\'été (VTT, randonnée, hébergement) : ' + SS.eur(summer) + '.' : 'Recherchez « Saison d\'été » pour générer des recettes hors saison.') + ' Nouvelle saison d\'hiver !');
     W.init();

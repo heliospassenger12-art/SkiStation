@@ -6,7 +6,7 @@
 
   function describe(x, z) {                       // à quoi ce point se raccorde-t-il ?
     const G = SS.G;
-    if (Math.hypot(x - SS.HUB.x, z - SS.HUB.z) < 200) return 'Front de neige';
+    if (Math.hypot(x - SS.HUB.x, z - SS.HUB.z) < SS.HUB_R) return 'Front de neige';
     for (const l of G.lifts) { if (Math.hypot(x - l.b.x, z - l.b.z) < 75) return 'arrivée ' + l.name; if (Math.hypot(x - l.a.x, z - l.a.z) < 75) return 'départ ' + l.name; }
     for (const p of G.pistes) { const c = SS.closestOnPiste(p, x, z); if (c.d < 60) return 'piste ' + p.name; }
     return null;
@@ -23,10 +23,11 @@
 
   B.start = function (kind, type) {
     B.cancel(true);
-    B.tool = { kind, type, ctrl: [], width: B.width || 30, rot: 0 };
+    B.tool = { kind: kind === 'autopiste' ? 'piste' : kind, auto: kind === 'autopiste', type, ctrl: [], width: B.width || 30, rot: 0 };
+    R.showReach = B.tool.kind === 'piste'; R.drawOverlay();
     R.select(null); update(); SS.emit('build');
   };
-  B.cancel = function (silent) { B.tool = null; B.an = null; R.clearPreview(); if (!silent) SS.emit('build'); };
+  B.cancel = function (silent) { B.tool = null; B.an = null; B.autoMsg = null; R.clearPreview(); if (R.showReach) { R.showReach = false; R.drawOverlay(); } if (!silent) SS.emit('build'); };
   B.undo = function () { const t = B.tool; if (!t) return; if (t.kind === 'lift') { if (t.b) t.b = null; else t.a = null; } else if (t.ctrl.length) t.ctrl.pop(); else if (t.kind === 'building') t.pos = null; update(); SS.emit('build'); };
   B.rotate = function () { if (B.tool) { B.tool.rot += Math.PI / 4; update(); } };
   B.setWidth = function (w) { B.width = w; if (B.tool) { B.tool.width = w; update(); SS.emit('build'); } };
@@ -52,6 +53,11 @@
   }
   B.click = function (g) {
     const t = B.tool; if (!t || !g) return;
+    if (t.kind === 'piste' && t.auto && !t.ctrl.length) {
+      const st = snap(g), r = SS.autoPiste(st, null, t.width);
+      if (r.err) { B.autoMsg = r.err; SS.emit('toast', '🧭 ' + r.err, 'warn'); update(); SS.emit('build'); return; }
+      B.autoMsg = r.bad ? 'Tracé assisté trouvé, mais il enfreint une règle : ' + (r.an.err || '') : null; t.ctrl = r.ctrl; update(); SS.emit('build'); return;
+    }
     if (t.kind === 'piste') t.ctrl.push(snap(g));
     else if (t.kind === 'road') t.ctrl.push({ x: g.x, z: g.z });
     else if (t.kind === 'lift') { const p = { x: g.x, z: g.z }; if (!t.a) t.a = p; else t.b = p; }

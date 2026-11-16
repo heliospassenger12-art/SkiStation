@@ -86,7 +86,7 @@
       p.slush = 0;
       if (fall > 2) { p.depth += fall * 0.6; p.powder = SS.clamp(fall / 22, 0, 1); p.ice *= 0.2; if (!p.groomedTonight) p.groomed = Math.min(p.groomed, 0.45); }
       else p.powder *= 0.4;
-      if (p.cannons && tn < -2 && p.depth < 110) { p.depth += 9; cannonCost += p.len * 0.9; }
+      if (p.cannons && tn < (SS.researched('snowmaking2') ? -1 : -2) && p.depth < 110) { p.depth += 9; cannonCost += p.len * 0.9 * (SS.researched('snowmaking2') ? 0.6 : 1); }
       p.depth = SS.clamp(p.depth, 0, 400);
       if (G.casual) { p.depth = Math.max(p.depth, 60); p.ice = 0; p.slush = 0; }
       const was = p.snowClosed; p.snowClosed = p.depth < 15;

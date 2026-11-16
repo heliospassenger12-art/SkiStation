@@ -131,8 +131,13 @@
     const G = SS.G, c = ovCtx, k = OV / SS.WORLD, X = x => (x + SS.HALF) * k, Z = z => (z + SS.HALF) * k;
     c.fillStyle = '#ffffff'; c.fillRect(0, 0, OV, OV);
     c.lineCap = 'round'; c.lineJoin = 'round';
+    if (R.showReach) {                                 // zones d'où une piste peut rejoindre le front de neige
+      if (!R.reachCv || R.reachVer !== SS.Net.version + '|' + SS.G.seed) { const m = SS.reachMask(), cv = R.reachCv || (R.reachCv = document.createElement('canvas')); cv.width = cv.height = SS.N; const x = cv.getContext('2d'), im = x.createImageData(SS.N, SS.N); for (let i = 0; i < m.length; i++) if (m[i]) { im.data[i * 4] = 70; im.data[i * 4 + 1] = 215; im.data[i * 4 + 2] = 120; im.data[i * 4 + 3] = 70; } x.putImageData(im, 0, 0); R.reachVer = SS.Net.version + '|' + SS.G.seed; }
+      c.imageSmoothingEnabled = true; c.drawImage(R.reachCv, 0, 0, OV, OV);
+    }
     let g = c.createRadialGradient(X(-60), Z(2790), 0, X(-60), Z(2790), 420 * k); g.addColorStop(0, 'rgba(196,202,212,0.9)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(X(-600), Z(2300), 1200 * k, 1000 * k);
-    g = c.createRadialGradient(X(SS.HUB.x), Z(SS.HUB.z), 0, X(SS.HUB.x), Z(SS.HUB.z), 150 * k); g.addColorStop(0, 'rgba(214,226,242,1)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(X(-200), Z(2280), 400 * k, 400 * k);
+    g = c.createRadialGradient(X(SS.HUB.x), Z(SS.HUB.z), 0, X(SS.HUB.x), Z(SS.HUB.z), SS.HUB_R * k); g.addColorStop(0, 'rgba(190,214,245,1)'); g.addColorStop(0.7, 'rgba(205,222,245,0.8)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(X(SS.HUB.x - SS.HUB_R), Z(SS.HUB.z - SS.HUB_R), 2 * SS.HUB_R * k, 2 * SS.HUB_R * k);
+    c.strokeStyle = 'rgba(255,178,56,0.9)'; c.lineWidth = Math.max(2, 5 * k); c.setLineDash([22 * k, 16 * k]); c.beginPath(); c.arc(X(SS.HUB.x), Z(SS.HUB.z), SS.HUB_R * k, 0, 7); c.stroke(); c.setLineDash([]);
     const path = pts => { c.beginPath(); pts.forEach((p, i) => i ? c.lineTo(X(p.x), Z(p.z)) : c.moveTo(X(p.x), Z(p.z))); c.stroke(); };
     for (const r of G.roads) { c.strokeStyle = '#d9dde3'; c.lineWidth = Math.max(4, 16 * k); path(r.pts); c.strokeStyle = '#596270'; c.lineWidth = Math.max(2, 9 * k); path(r.pts); }
     for (const b of G.buildings) { const def = D.building(b.type); c.fillStyle = 'rgba(190,197,208,0.8)'; c.beginPath(); c.arc(X(b.x), Z(b.z), (def.r + 3) * k, 0, 7); c.fill(); }
@@ -305,6 +310,7 @@
         if (el._t !== text) { el.textContent = text; el._t = text; el.style.borderColor = color; }
         el.style.transform = 'translate(' + Math.round(lp.x) + 'px,' + Math.round(lp.y) + 'px) translate(-50%,-100%)'; seen.add(key);
       };
+      add('hub', '❄ FRONT DE NEIGE', '#ffb238', SS.HUB.x, T.getH(SS.HUB.x, SS.HUB.z) + 26, SS.HUB.z);
       for (const l of SS.G.lifts) { const w = l.queue.length; add(l, l.name + (G_broken(l) ? ' ⚠' : w > 6 ? ' · ' + w + ' en file' : ''), '#f2c230', l.a.x, l.a.y + 16, l.a.z); }
       for (const p of SS.G.pistes) { SS.pisteAt(p, p.len * 0.45, tmp); add(p, p.name + (SS.pisteOpen(p) ? '' : ' ✕'), D.DIFF[p.diff].color, tmp.x, T.getH(tmp.x, tmp.z) + 8, tmp.z); }
     }

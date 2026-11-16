@@ -5,67 +5,85 @@
   const T = SS.Terrain = { POW: 2.4, TER: 0.4, H: new Float32Array(N * N), viewMode: 'normal', trees: [], treeGrid: new Map(), removedTrees: new Set() };
   let noise;
 
-  const PEAKS = [ // x, z (normalisés), dôme, largeur dôme, aiguille, largeur aiguille
-    [0.03, -0.20, 1500, 0.56, 1000, 0.17],
-    [0.50, -0.46, 1150, 0.36, 650, 0.13],
-    [-0.52, -0.40, 1250, 0.38, 700, 0.14],
-    [0.55, 0.20, 850, 0.34, 330, 0.12],
-    [-0.56, 0.24, 900, 0.34, 380, 0.12],
-    [-0.04, -0.74, 950, 0.32, 420, 0.12],
-    [0.0, 0.22, 420, 0.42, 0, 1]
+  // --- relief : massifs larges, vallées et crêtes, pentes plafonnées par érosion (talus), aiguilles rocheuses étroites au sommet ---
+  // x, z normalisés ; amplitude ; largeur du dôme. La graine décale légèrement chaque massif.
+  const DOMES = [
+    [0.06, -0.22, 1.00, 0.60], [0.56, -0.36, 0.72, 0.44], [-0.56, -0.30, 0.76, 0.46], [0.02, -0.80, 0.66, 0.42],
+    [0.74, 0.02, 0.42, 0.36], [-0.74, 0.06, 0.46, 0.38], [0.30, -0.52, 0.55, 0.30], [-0.30, -0.56, 0.58, 0.30], [0.66, -0.80, 0.5, 0.34], [-0.66, -0.82, 0.52, 0.36]
   ];
+  const SPIKES = [[0.10, -0.24, 850, 0.085], [0.58, -0.38, 560, 0.075], [-0.55, -0.32, 640, 0.075], [0.0, -0.80, 520, 0.075]];
+  const PLATEAUS = [                                  // replats étagés : alpages, cirques et glaciers (x, z, altitude, rayon), à relier par des pentes de ski
+    [-0.42, 0.30, 1980, 0.17], [0.02, 0.26, 2030, 0.16], [0.44, 0.30, 1990, 0.17],
+    [-0.58, 0.02, 2420, 0.15], [-0.18, -0.02, 2480, 0.15], [0.24, 0.0, 2450, 0.15], [0.62, 0.04, 2400, 0.15],
+    [-0.46, -0.30, 2850, 0.15], [0.02, -0.32, 2900, 0.14], [0.44, -0.30, 2880, 0.15],
+    [-0.40, -0.58, 3150, 0.15], [0.06, -0.60, 3200, 0.15], [0.52, -0.56, 3120, 0.15], [0.34, -0.40, 3250, 0.14], [-0.32, -0.46, 3050, 0.14], [0.0, -0.84, 2950, 0.15]
+  ];
+  T.TALUS = [0.40, 0.48, 0.58, 0.88, 1.1];        // pente maximale selon l'altitude (bandes de 2 000, 2 500, 3 000, 3 500, 4 000 m)
+  T.ITER = 140; T.BODY = 3300;
 
-  function rawHeight(x, z) {
-    const nx = x / HALF, nz = z / HALF;
-    const wx = nx + 0.09 * noise.fbm(nx * 1.7 + 11, nz * 1.7 + 3, 3);
-    const wz = nz + 0.09 * noise.fbm(nx * 1.7 - 7, nz * 1.7 + 19, 3);
-    let h = 0;
-    for (const p of PEAKS) {
-      const d2 = (wx - p[0]) * (wx - p[0]) + (wz - p[1]) * (wz - p[1]);
-      h += p[2] * Math.exp(-d2 / (p[3] * p[3])) + p[4] * Math.exp(-d2 / (p[5] * p[5]));
+  function domeField(seed) {
+    const r = SS.rng(seed * 31 + 7), f = new Float32Array(N * N), dj = DOMES.map(d => [d[0] + (r() - 0.5) * 0.14, d[1] + (r() - 0.5) * 0.12, d[2] * (0.85 + r() * 0.3), d[3] * 1.18 * (0.9 + r() * 0.2)]);
+    for (let iz = 0; iz < N; iz++) for (let ix = 0; ix < N; ix++) {
+      const nx = (ix / (N - 1)) * 2 - 1, nz = (iz / (N - 1)) * 2 - 1;
+      const wx = nx + 0.16 * noise.fbm(nx * 1.7 + 11, nz * 1.7 + 3, 3), wz = nz + 0.16 * noise.fbm(nx * 1.7 - 7, nz * 1.7 + 19, 3);
+      let e = 0; for (const d of dj) { const q = (wx - d[0]) * (wx - d[0]) + (wz - d[1]) * (wz - d[1]); e += d[2] * Math.exp(-q / (d[3] * d[3])); }
+      const apron = SS.smooth(0.66, 0.02, nz);            // le massif ne démarre pas au village : la vallée d'accès monte progressivement
+      e *= apron;
+      const rid = noise.ridged(nx * 2.3 + 40, nz * 2.3 + 8, 4) - 0.5;                       // crêtes et combes (grande échelle)
+      const rid2 = noise.ridged((nx + 0.15 * noise.fbm(nx * 3 + 5, nz * 3, 2)) * 4.8 + 13, nz * 4.8 + 57, 4) - 0.45;    // éperons, combes et replats (1 à 2 km)
+      f[iz * N + ix] = e * 2250 + rid * 560 * (0.25 + Math.min(1, e)) * apron + rid2 * 470 * Math.min(1, 0.25 + e * 1.1) * apron + noise.fbm(nx * 8 + 3, nz * 8 + 77, 3) * 26 * (0.3 + Math.min(1, e)) * apron + noise.fbm(nx * 3.4 + 90, nz * 3.4 + 12, 3) * 140 * apron;
     }
-    const e = SS.clamp(h / 2400, 0, 1);
-    h += (noise.ridged(nx * 2.6 + 40, nz * 2.6 + 8, 4) - 0.45) * 400 * (0.25 + e);
-    h += noise.fbm(nx * 9 + 3, nz * 9 + 77, 3) * 70 * (0.4 + e);
-    h += (noise.fbm(nx * 1.1 + 90, nz * 1.1 + 60, 2) + 0.2) * 160;        // vallées jamais plates
-    h = Math.max(h, 0);
-    return 1640 + h;
+    return f;
+  }
+  function erode(h) {                                  // érosion thermique : aucune pente ne dépasse le talus de son altitude
+    const d = new Float32Array(N * N), nb = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, 1.414], [-1, 1, 1.414], [1, -1, 1.414], [-1, -1, 1.414]];
+    const tal = a => { const t = (a - 1640) / 500; const i = SS.clamp(Math.floor(t), 0, 3), u = SS.clamp(t - i, 0, 1); return T.TALUS[i] + (T.TALUS[i + 1] - T.TALUS[i]) * u; };
+    for (let it = 0; it < T.ITER; it++) {
+      d.fill(0);
+      for (let z = 1; z < N - 1; z++) for (let x = 1; x < N - 1; x++) {
+        const i = z * N + x, hi = h[i], lim = tal(hi);
+        for (let k = 0; k < 8; k++) {
+          const j = i + nb[k][1] * N + nb[k][0], ex = hi - h[j] - lim * CELL * nb[k][2];
+          if (ex > 0) { const m = ex * 0.2; d[i] -= m; d[j] += m; }
+        }
+      }
+      for (let i = 0; i < h.length; i++) h[i] += d[i];
+    }
+  }
+  function smoothOnce(h, k) {                          // adoucit les arêtes laissées par l'érosion
+    const o = new Float32Array(h);
+    for (let z = 1; z < N - 1; z++) for (let x = 1; x < N - 1; x++) { const i = z * N + x; o[i] = h[i] * (1 - k) + k * 0.25 * (h[i - 1] + h[i + 1] + h[i - N] + h[i + N]); }
+    h.set(o);
   }
 
   T.init = function (seed) {
-    noise = SS.makeNoise(seed || 1337);
-    T.seed = seed || 1337; T.geo = null; T.snowMask = new Float32Array(N * N); T.removedTrees = new Set(); T.viewMode = 'normal'; T.summer = false;
-    const H = T.H, V = SS.VILLAGE;
-    let max = 0;
-    for (let iz = 0; iz < N; iz++) for (let ix = 0; ix < N; ix++) {
-      const h = rawHeight(-HALF + ix * CELL, -HALF + iz * CELL); H[iz * N + ix] = h; if (h > max) max = h;
+    seed = seed || 1337; noise = SS.makeNoise(seed);
+    T.seed = seed; T.geo = null; T.snowMask = new Float32Array(N * N); T.removedTrees = new Set(); T.viewMode = 'normal'; T.summer = false;
+    const H = T.H, V = SS.VILLAGE, f = domeField(seed);
+    let mx = 0; for (let i = 0; i < f.length; i++) { f[i] = Math.max(0, f[i]); if (f[i] > mx) mx = f[i]; }
+    const body = T.BODY;                                 // altitude visée du massif avant les aiguilles
+    for (let i = 0; i < H.length; i++) H[i] = f[i] * (body - 1640) / mx;
+    const pr = SS.rng(seed * 13 + 5);
+    for (const pl of PLATEAUS) {                         // les plateaux sont creusés avant l'érosion : leurs accès deviennent des rampes douces
+      const cx = (pl[0] + (pr() - 0.5) * 0.12 + 1) / 2 * (N - 1), cz = (pl[1] + (pr() - 0.5) * 0.12 + 1) / 2 * (N - 1), rad = pl[3] * (N - 1) / 2, tgt = pl[2] - 1640;
+      for (let iz = 0; iz < N; iz++) for (let ix = 0; ix < N; ix++) { const q = Math.hypot(ix - cx, iz - cz) / rad; if (q > 2.2) continue; const w = 1 - SS.smooth(0.55, 2.2, q); H[iz * N + ix] = SS.lerp(H[iz * N + ix], tgt + noise.fbm(ix * 0.06, iz * 0.06, 2) * 40, w); }
     }
-    // profil alpin : alpages doux en bas, sommets raides en haut, puis bancs et ressauts (replats skiables / murs)
+    erode(H); smoothOnce(H, 0.3); smoothOnce(H, 0.2);
     for (let iz = 0; iz < N; iz++) for (let ix = 0; ix < N; ix++) {
-      const i = iz * N + ix, nx = (-HALF + ix * CELL) / HALF, nz = (-HALF + iz * CELL) / HALF;
-      const e = (H[i] - 1640) / (max - 1640);
-      let h = 2570 * Math.pow(e, T.POW);
-      const P = 300, ph = noise.fbm(nx * 1.4 + 200, nz * 1.4 + 300, 2) * 9;
-      h += (P / 6.283) * T.TER * Math.sin(6.283 * h / P + ph) * SS.smooth(40, 300, h);
-      H[i] = 1640 + h;
+      const i = iz * N + ix, nx = (ix / (N - 1)) * 2 - 1, nz = (iz / (N - 1)) * 2 - 1;
+      const zz = -HALF + iz * CELL;
+      let h = 1640 + H[i] + SS.clamp((2760 - zz) * 0.07, 0, 130) * (1 - SS.smooth(1700, 2400, H[i] + 1640));      // vallée d'accès : monte doucement depuis le village
+      for (const sp of SPIKES) { const q = (nx - sp[0]) * (nx - sp[0]) + (nz - sp[1]) * (nz - sp[1]); const rug = 0.55 + 0.9 * (noise.ridged(nx * 26 + sp[0] * 9, nz * 26, 3) - 0.35); h += sp[2] * Math.exp(-q / (sp[3] * sp[3])) * SS.clamp(rug, 0.25, 1.2); }
+      h += noise.fbm(nx * 18 + 5, nz * 18 + 9, 3) * 6 * (0.4 + SS.smooth(1700, 2800, h));      // bosses et ondulations locales
+      H[i] = Math.max(1640, h);
     }
-    // plateau glaciaire skiable sous le sommet principal
-    for (let iz = 0; iz < N; iz++) for (let ix = 0; ix < N; ix++) {
-      const x = -HALF + ix * CELL, z = -HALF + iz * CELL, d = Math.hypot(x - 1000, z + 1500);
-      if (d > 1100) continue;
-      const target = 3200 - ((x - 1000) * 0.78 - (z + 1500) * 0.62) * 0.17;
-      const w = (1 - SS.smooth(450, 1100, d)) * (1 - SS.smooth(350, 800, Math.abs(H[iz * N + ix] - target)));
-      H[iz * N + ix] = SS.lerp(H[iz * N + ix], target, w);
-    }
+    // l'altitude maximale est recalée à 4 200 m par les aiguilles
+    let top = 0; for (let i = 0; i < H.length; i++) if (H[i] > top) top = H[i];
+    for (let i = 0; i < H.length; i++) if (H[i] > 3350) H[i] = 3350 + (H[i] - 3350) * (4200 - 3350) / Math.max(1, top - 3350);      // point culminant : 4 200 m
     // replat du village et front de neige en pente douce
     for (let iz = 0; iz < N; iz++) for (let ix = 0; ix < N; ix++) {
-      const x = -HALF + ix * CELL, z = -HALF + iz * CELL;
-      const d = Math.hypot((x - V.x) * 0.8, z - 2760);
-      const w = 1 - SS.smooth(380, 760, d);
-      if (w > 0) {
-        const target = V.h + SS.clamp((V.z - z) * 0.07, -8, 60);
-        H[iz * N + ix] = SS.lerp(H[iz * N + ix], target, w);
-      }
+      const x = -HALF + ix * CELL, z = -HALF + iz * CELL, d = Math.hypot((x - V.x) * 0.8, z - 2760), w = 1 - SS.smooth(330, 900, d);
+      if (w > 0) H[iz * N + ix] = SS.lerp(H[iz * N + ix], V.h + SS.clamp((V.z - z) * 0.07, -8, 60), w);
     }
     T.minH = Infinity; T.maxH = -Infinity;
     for (let i = 0; i < H.length; i++) { if (H[i] < T.minH) T.minH = H[i]; if (H[i] > T.maxH) T.maxH = H[i]; }
@@ -112,7 +130,7 @@
       const snowS = SS.smooth(2950, 3250, h + n * 150) * (1 - SS.smooth(0.7, 1.0, g));
       const alp = SS.smooth(2100, 2800, h + n * 200);
       let sr = SS.lerp(0.30, 0.52, alp) + n * 0.05, sg = SS.lerp(0.50, 0.50, alp) + n * 0.06, sb = SS.lerp(0.20, 0.36, alp);
-      const rockS = Math.max(SS.smooth(0.55, 0.9, g + n * 0.12), SS.smooth(2600, 3000, h) * 0.8), rcS = 0.40 + 0.10 * n;
+      const rockS = Math.max(SS.smooth(0.7, 1.1, g + n * 0.1), SS.smooth(3000, 3400, h) * 0.7), rcS = 0.40 + 0.10 * n;
       sr = SS.lerp(sr, rcS + 0.03, rockS); sg = SS.lerp(sg, rcS + 0.01, rockS); sb = SS.lerp(sb, rcS, rockS);
       col[0] = SS.lerp(sr, 0.93, snowS); col[1] = SS.lerp(sg, 0.95, snowS); col[2] = SS.lerp(sb, 0.99, snowS);
       return col;
@@ -124,7 +142,7 @@
       const ice = SS.smooth(3150, 3500, h) * (1 - SS.smooth(0.35, 0.6, g)) * (0.55 + 0.45 * n);
       r = SS.lerp(r, 0.72, ice); gg = SS.lerp(gg, 0.88, ice); b = SS.lerp(b, 0.97, ice);
     }
-    const rock = SS.smooth(0.62, 0.95, g + n * 0.12) * (1 - (T.snowMask ? T.snowMask[i] : 0));
+    const rock = SS.smooth(0.8, 1.15, g + n * 0.1) * (1 - (T.snowMask ? T.snowMask[i] : 0));
     const rc = 0.36 + 0.10 * n;
     r = SS.lerp(r, rc + 0.04, rock); gg = SS.lerp(gg, rc + 0.01, rock); b = SS.lerp(b, rc, rock);
     if (h < 1800) { const v = SS.smooth(1800, 1650, h) * 0.05; r -= v; gg -= v * 0.6; }
