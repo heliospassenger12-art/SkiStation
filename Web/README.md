@@ -12,8 +12,8 @@ tout est en JavaScript, three.js est fourni dans `js/three.min.js`.
 
 | Cahier des charges | Dans la version web |
 |---|---|
-| Modes | Carrière (6 étapes, du premier téléski aux Jeux Olympiques) et Bac à sable (argent illimité / catalogue libre en option) |
-| Montagne 360° | Massif procédural 8 × 8 km, 1 640 → 4 200 m : alpages, forêts, bancs, crêtes rocheuses, plateau glaciaire |
+| Modes | Carrière en trois difficultés (6 étapes, du premier téléski aux Jeux Olympiques) et Bac à sable (argent illimité / catalogue libre en option) |
+| Montagne 360° | Quatre choix au départ (Classique, Dents Blanches, Val Perdu, Aléatoire). Massif procédural 8 × 8 km, 1 640 → 4 200 m : alpages, forêts, bancs, crêtes rocheuses, plateau glaciaire |
 | Construction libre | Pistes, remontées, routes, bâtiments. Devis avant validation (prix, longueur, dénivelé, pente, difficulté, arbres). Arbres coupés seulement après validation, terrassement local sous les bâtiments et les gares |
 | Difficulté des pistes | Calculée sur le relief réellement traversé (pente le long du tracé et dévers) |
 | Remontées | 13 modèles sur 6 paliers de recherche, dont un funiculaire au sol. Modernisation sur la même ligne avec reprise de l'ancien modèle. Portée dépassée refusée, jamais corrigée. Téléski : pas de traversée de piste. Véhicules physiques, embarquement réel |
@@ -27,6 +27,7 @@ tout est en JavaScript, three.js est fourni dans `js/three.min.js`.
 | Activités | Snowpark, luge, patinoire, nordique, chiens de traîneau, parapente, spa, musée, concerts, stade de slalom, stade olympique |
 | Économie | Forfait, tarifs, charges, emprunt, marketing, événements, réputation, prestige, recettes d'été |
 | Événements du matin | Une fois sur quatre environ : grève, panne électrique, risque d'avalanche, influenceuse, subvention, tournage, équipe nationale, contrôle technique, chef étoilé. Deux choix, conséquences immédiates |
+| Succès | 18 succès à débloquer, listés dans Carrière |
 | Arcade | Descente à la troisième personne sur n'importe quelle piste construite : sauts, vrilles, flips |
 
 ## Interface
@@ -65,4 +66,4 @@ tout est en JavaScript, three.js est fourni dans `js/three.min.js`.
 - 1 500 visiteurs simulés au maximum.
 - Au village, les piétons contournent les bâtiments un par un (pas de vrai calcul d'itinéraire).
 - Multijoueur non réalisé.
-- La sauvegarde est locale au navigateur ; une partie rechargée reprend au matin du jour en cours.
+- La sauvegarde automatique est locale au navigateur ; Options › « Exporter un code de sauvegarde » donne un code à recoller au menu principal sur un autre appareil ; une partie rechargée reprend au matin du jour en cours.

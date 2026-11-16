@@ -14,7 +14,7 @@
     const at = SS.attract(), s = at.s;
     const fair = Sim.fairPrice(at);
     if (at.km <= 0) return { total: 0, day: 0, lodgers: 0, fair, at, why: 'Aucune piste reliée au front de neige par une remontée.' };
-    const base = 40 + 1500 * Math.pow(at.a, 1.1);
+    const base = (40 + 1500 * Math.pow(at.a, 1.1)) * (G.mode === 'career' ? [1.15, 1, 0.88][G.level] : 1);
     const rep = 0.55 + G.reputation / 100 * 0.9;
     const cal = (SS.isWeekend(G.day) ? 1.35 : 1) * (SS.isHoliday(G.day) ? 1.3 : 1);
     const priceF = SS.clamp(1.6 - 0.6 * G.passPrice / fair, 0.2, 1.35);
@@ -419,7 +419,7 @@
           for (let k = 0; k < def.seats && l.queue.length; k++) {
             const v = l.queue.shift(), w = G.time - v.waitStart;
             l.waitSum += w;
-            if (w > 720) think(v, Math.round(w / 60) + ' min de queue au ' + l.name, 'Files aux remontées', -Math.min(0.14, (w - 720) / 3600 * 0.3));
+            if (w > 720) { const pen = Math.min(0.1, (w - 720) / 3600 * 0.25, 0.3 - (v.qPen || 0)); v.qPen = (v.qPen || 0) + Math.max(0, pen); think(v, Math.round(w / 60) + ' min de queue au ' + l.name, 'Files aux remontées', -Math.max(0, pen)); }
             v.sat += (def.comfort - 0.5) * 0.012;
             v.state = 'ride'; v.veh = i; vh.push(v);
           }
@@ -544,6 +544,7 @@
     G.time += dt;
     while (Sim.arrivals.length && Sim.arrivals[0].arriveT <= G.time) {
       const v = Sim.arrivals.shift(); v.state = 'walk'; v.y = T.getH(v.x, v.z); v.dn = 0;
+      if (v.lodger && !v.hasPass) { v.hasPass = true; const pr = G.passPrice * (v.child ? 0.6 : 0.88); SS.earn(pr, 'Forfaits'); v.spent += pr; }
       Sim.visitors.push(v); Sim.present++; G.visitorsToday++; G.totalVisitors++; decide(v);
     }
     if (G.time - Sim.lastTouch > 600 || G.time < Sim.lastTouch) {
@@ -615,10 +616,11 @@
       G.research.cur.left--;
       if (G.research.cur.left <= 0) { const r = D.RESEARCH.find(x => x.id === G.research.cur.id); G.research.done.push(r.id); if (r.tier) G.tier = Math.max(G.tier, r.tier); G.research.cur = null; report.notes.push('🔬 Recherche terminée : ' + r.name + '.'); }
     }
-    G.ledger = { inc: {}, exp: {} };
+    G.ledger0 = G.ledger.inc; G.ledger = { inc: {}, exp: {} };
     W.night();
     SS.updatePrestige();
     SS.checkCareer(report);
+    SS.checkAch(report);
     G.day++; W.next();
     if (G.day >= SS.SEASON_DAYS) seasonEnd(report);
     G.time = SS.DAY_START; Sim.lastTouch = 0;
@@ -636,6 +638,10 @@
     report.notes.push('🌞 Fin de saison ' + (G.year - 1) + '. ' + (summer > 0 ? 'Recettes d\'été (VTT, randonnée, hébergement) : ' + SS.eur(summer) + '.' : 'Recherchez « Saison d\'été » pour générer des recettes hors saison.') + ' Nouvelle saison d\'hiver !');
     W.init();
   }
+  SS.checkAch = function (report) {
+    const s = SS.stats(); s.money = G.money; s.total = G.totalVisitors; s.medals = Object.values(G.medals).reduce((a, b) => a + b, 0); s.year = G.year; s.loan = G.loan; s.night = G.ledger0 && G.ledger0['Forfaits nocturnes'] > 0; s.research = G.research.done.length;
+    for (const a of D.ACH) if (!G.ach[a.id] && a.test(s, G)) { G.ach[a.id] = G.day + 1 + (G.year - 1) * SS.SEASON_DAYS; const msg = '🏅 Succès débloqué : ' + a.name + '.'; if (report) report.notes.push(msg); else SS.log(msg, 'good'); }
+  };
   SS.checkCareer = function (report) {
     if (G.mode !== 'career' || G.career.done) return;
     const st = D.CAREER[G.career.stage], s = SS.stats();

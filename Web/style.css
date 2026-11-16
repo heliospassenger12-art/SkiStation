@@ -105,3 +105,7 @@ p.tag{float:none;background:none;padding:0;font-size:14px}
 .jrow span:not(:first-child){text-align:right}.jrow.head{color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
 .jlog{padding:6px 9px;margin:4px 0;border-radius:9px;background:var(--bg2);font-size:12.5px;border-left:3px solid var(--blue)}
 .jlog small{display:block;color:var(--mut);font-size:11px}.jlog.good{border-color:var(--ok)}.jlog.warn{border-color:var(--warn)}.jlog.bad{border-color:var(--bad)}
+.smrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 0 0}.smrow span{font-size:12px;color:var(--mut);min-width:70px}
+textarea{width:100%;min-height:74px;margin:8px 0;padding:8px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.07);color:var(--tx);font:11px/1.3 ui-monospace,monospace;resize:vertical;user-select:text;-webkit-user-select:text}
+.achs{display:grid;grid-template-columns:1fr 1fr;gap:6px}.ach{padding:7px 9px;border-radius:10px;background:var(--bg2);opacity:.55;font-size:12.5px}
+.ach.on{opacity:1;outline:1px solid rgba(255,178,56,.5)}.ach small{display:block;color:var(--mut);font-size:11px}

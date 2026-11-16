@@ -40,13 +40,15 @@
     $('modalBox').innerHTML =
       '<div class="logo">Ski<span>Station</span></div><p class="tag">Construisez, gérez et faites vivre votre station de ski — du premier téléski aux Jeux Olympiques.</p>' +
       '<label class="field">Nom de la station<input id="sm_name" maxlength="28" value="Mont-Hélios"></label>' +
-      '<div class="modes"><button class="mode on" data-act="sm_mode" data-arg="career"><b>Carrière</b><span>650 000 € de départ, recherche à débloquer, six étapes jusqu\'aux Jeux.</span></button>' +
+      '<div class="modes"><button class="mode on" data-act="sm_mode" data-arg="career"><b>Carrière</b><span>Budget de 450 000 à 900 000 € selon la difficulté, recherche à débloquer, six étapes jusqu\'aux Jeux.</span></button>' +
       '<button class="mode" data-act="sm_mode" data-arg="sandbox"><b>Bac à sable</b><span>Liberté totale pour bâtir le domaine de vos rêves.</span></button></div>' +
+      '<div class="smrow"><span>Difficulté</span>' + ['Détente', 'Normale', 'Exigeante'].map((n, i) => btn(n, 'sm_level', i, 'chip lvl' + (i === 1 ? ' on' : ''))).join('') + '</div>' +
+      '<div class="smrow"><span>Montagne</span>' + [['Classique', 1337], ['Dents Blanches', 4242], ['Val Perdu', 9001], ['Aléatoire', 0]].map((m, i) => btn(m[0], 'sm_seed', m[1], 'chip seed' + (i === 0 ? ' on' : ''))).join('') + '</div>' +
       '<div id="sm_opts" class="opts" hidden><label><input type="checkbox" id="sm_unl" checked> Argent illimité</label><label><input type="checkbox" id="sm_all" checked> Tout le catalogue débloqué</label></div>' +
       '<div class="opts"><label><input type="checkbox" id="sm_casual"> Neige simplifiée (pas de verglas, de soupe ni de manque de neige)</label></div>' +
-      '<div class="actions">' + btn('Nouvelle partie', 'sm_new', undefined, 'primary big') + (has ? btn('Continuer la sauvegarde', 'sm_load', undefined, 'big') : '') + '</div>' +
+      '<div class="actions">' + btn('Nouvelle partie', 'sm_new', undefined, 'primary big') + (has ? btn('Continuer la sauvegarde', 'sm_load', undefined, 'big') : '') + btn('Importer un code', 'sm_import', undefined, 'big') + '</div><div id="sm_imp" hidden><textarea id="sm_code" placeholder="Collez ici un code de sauvegarde (SKI1:…)"></textarea>' + btn('Charger ce code', 'sm_importGo', undefined, 'primary') + '</div>' +
       '<p class="fine">Souris : glisser pour déplacer, clic droit pour tourner, molette pour zoomer. Tactile : un doigt déplace, deux doigts zooment et tournent.</p>';
-    UI.mode = 'career';
+    UI.mode = 'career'; UI.level = 1; UI.seed = 1337;
   }
 
   // ---------------- actions ----------------
@@ -54,7 +56,12 @@
     G = SS.G;
     switch (a) {
       case 'sm_mode': UI.mode = arg; document.querySelectorAll('.mode').forEach(m => m.classList.toggle('on', m.dataset.arg === arg)); $('sm_opts').hidden = arg !== 'sandbox'; break;
-      case 'sm_new': SS.startGame({ mode: UI.mode, name: ($('sm_name').value || 'Mont-Hélios').trim(), unlimited: UI.mode === 'sandbox' && $('sm_unl').checked, allUnlocked: UI.mode === 'sandbox' && $('sm_all').checked, casual: $('sm_casual').checked }); break;
+      case 'sm_level': UI.level = +arg; document.querySelectorAll('.lvl').forEach(m => m.classList.toggle('on', m.dataset.arg === arg)); break;
+      case 'sm_seed': UI.seed = +arg; document.querySelectorAll('.seed').forEach(m => m.classList.toggle('on', m.dataset.arg === arg)); break;
+      case 'sm_import': $('sm_imp').hidden = !$('sm_imp').hidden; break;
+      case 'sm_importGo': { const d = SS.importSave($('sm_code').value); if (d) SS.startGame(null, d); else { el.textContent = 'Code invalide — réessayer'; } break; }
+      case 'export': { const code = SS.exportSave(); UI.code = code; UI.refresh(true); const ta = $('exportCode'); if (ta) { ta.value = code; ta.select(); } if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(() => toast('Code copié dans le presse-papiers.', 'good')).catch(() => toast('Sélectionnez le code et copiez-le.', 'info')); break; }
+      case 'sm_new': SS.startGame({ level: UI.level, seed: UI.seed || (1 + Math.floor(Math.random() * 99999)), mode: UI.mode, name: ($('sm_name').value || 'Mont-Hélios').trim(), unlimited: UI.mode === 'sandbox' && $('sm_unl').checked, allUnlocked: UI.mode === 'sandbox' && $('sm_all').checked, casual: $('sm_casual').checked }); break;
       case 'sm_load': { const d = SS.loadData(); if (d) SS.startGame(null, d); break; }
       case 'menu': if (sure(el)) { SS.save(); SS.G.paused = true; $('hud').hidden = true; startMenu(); } break;
       case 'speed': if (arg === '0') G.paused = !G.paused; else { G.speed = +arg; G.paused = false; } renderTop(); break;
@@ -280,6 +287,8 @@
           h += '<div class="card cur"><div class="ctitle"><b>' + (i + 1) + '. ' + st.title + '</b><span>prime ' + eur(st.reward) + '</span></div>' + st.goals.map(g => '<div class="goal ' + (g[1](s) ? 'ok' : '') + '">' + (g[1](s) ? '✔' : '○') + ' ' + g[0] + '</div>').join('') + '</div>';
         });
       } else h += '<p class="fine">Bac à sable : pas d\'objectifs imposés. Les événements restent disponibles.</p>';
+      const na = D.ACH.filter(a => G.ach[a.id]).length;
+      h += '<h4>Succès — ' + na + ' / ' + D.ACH.length + '</h4><div class="achs">' + D.ACH.map(a => '<div class="ach' + (G.ach[a.id] ? ' on' : '') + '"><b>' + (G.ach[a.id] ? '🏅 ' : '🔒 ') + a.name + '</b><small>' + a.desc + '</small></div>').join('') + '</div>';
       h += '<h4>Événements</h4>';
       if (!SS.researched('events')) h += '<p class="fine">Recherchez « Événementiel sportif » pour débloquer les compétitions et les concerts. La fête du village est toujours possible.</p>';
       if (G.event) { const ev = D.EVENTS.find(e => e.id === G.event.id); h += '<div class="msg">📅 ' + ev.name + (G.event.day > G.day ? ' dans ' + (G.event.day - G.day) + ' jour(s)' : ' en cours — ' + G.event.left + ' jour(s) restants') + '.</div>'; }
@@ -300,7 +309,7 @@
     options() {
       const T = SS.Terrain;
       return '<h4>Affichage</h4><div class="actions col">' + btn((T.viewMode === 'slope' ? '☑' : '☐') + ' Vue des pentes (vert / bleu / rouge / noir)', 'view', 'slope') + btn((R.mapMode === 'map' ? '☑' : '☐') + ' Plan des pistes coloré', 'view', 'map') + btn((R.mapMode === 'crowd' ? '☑' : '☐') + ' Carte d\'affluence des pistes', 'view', 'crowd') + btn((R.mapMode === 'snow' ? '☑' : '☐') + ' Carte de qualité de neige', 'view', 'snow') + btn((R.labelsOn ? '☑' : '☐') + ' Noms des pistes et remontées', 'view', 'labels') + btn((SS.Minimap.on ? '☑' : '☐') + ' Mini-carte', 'minimap') + btn((SS.Audio.on ? '☑' : '☐') + ' Ambiance sonore', 'sound') + '</div>' +
-        '<h4>Partie</h4><label class="field">Nom de la station<input id="stationName" maxlength="28" value="' + esc(G.name) + '" data-in="station"></label><div class="actions col">' + btn('💾 Sauvegarder maintenant', 'save') + btn('⏏ Menu principal', 'menu') + btn('❔ Rappel des bases', 'panel', 'help') + '</div>' +
+        '<h4>Partie</h4><label class="field">Nom de la station<input id="stationName" maxlength="28" value="' + esc(G.name) + '" data-in="station"></label><div class="actions col">' + btn('💾 Sauvegarder maintenant', 'save') + btn('📋 Exporter un code de sauvegarde', 'export') + (UI.code ? '<textarea id="exportCode" readonly></textarea><p class="fine">Copiez ce code et gardez-le : « Importer un code » au menu principal le recharge sur n\'importe quel appareil.</p>' : '') + btn('⏏ Menu principal', 'menu') + btn('❔ Rappel des bases', 'panel', 'help') + '</div>' +
         '<h4>Commandes</h4><p class="fine">Glisser : déplacer · clic droit ou Maj + glisser : tourner / incliner · molette : zoom · ZQSD/WASD et flèches : déplacer · A/E ou Q/E : tourner · Espace : pause · 1-2-3 : vitesses · R : tourner un bâtiment · Entrée : valider · Retour arrière : annuler un point · Échap : quitter l\'outil.</p>' +
         '<p class="fine">Mode arcade : ouvrez la fiche d\'une piste puis « Descendre en arcade ».</p><p class="fine">SkiStation ' + SS.VERSION + '</p>';
     },

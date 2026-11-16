@@ -111,6 +111,27 @@
     { id: 'olympics', name: 'Jeux Olympiques d\'hiver', cost: 3000000, boost: 2.2, prestige: 25, days: 6, comp: true, need: s => s.olympic >= 1 && s.heli >= 1 && s.prestige >= 85 && s.beds >= 900, needTxt: 'Stade olympique, héliport, prestige 85, 900 lits' }
   ];
 
+  D.ACH = [
+    { id: 'first', name: 'Premier client', desc: 'Accueillir un premier visiteur.', test: s => s.total >= 1 },
+    { id: 'v10k', name: 'Dix mille sourires', desc: '10 000 visiteurs cumulés.', test: s => s.total >= 10000 },
+    { id: 'v100k', name: 'Destination incontournable', desc: '100 000 visiteurs cumulés.', test: s => s.total >= 100000 },
+    { id: 'full', name: 'Complet !', desc: '1 000 visiteurs en une journée.', test: s => s.bestDay >= 1000 },
+    { id: 'happy', name: 'Station du bonheur', desc: 'Satisfaction de 80 % avec au moins 300 visiteurs.', test: (s, G) => s.sat >= 80 && G.visitorsToday >= 300 },
+    { id: 'rainbow', name: 'Les quatre couleurs', desc: 'Une piste ouverte de chaque difficulté.', test: (s, G) => [0, 1, 2, 3].every(d => G.pistes.some(p => p.diff === d && p.open)) },
+    { id: 'km20', name: 'Grand domaine', desc: '20 km de pistes.', test: s => s.km >= 20 },
+    { id: 'alt3500', name: 'Toit du domaine', desc: 'Une remontée arrivant au-dessus de 3 500 m.', test: s => s.topAlt >= 3500 },
+    { id: 'vert2000', name: 'Deux mille de dénivelé', desc: '2 000 m entre le point bas et le point haut desservis.', test: s => s.vert >= 2000 },
+    { id: 'million', name: 'Premier million', desc: '1 000 000 € en caisse.', test: s => s.money >= 1000000 },
+    { id: 'debtfree', name: 'Sans dette', desc: 'Rembourser tout emprunt après la première saison.', test: s => s.year >= 2 && s.loan <= 0 },
+    { id: 'medals', name: 'Pépinière de champions', desc: '500 médailles délivrées par l\'école de ski.', test: s => s.medals >= 500 },
+    { id: 'nightowl', name: 'Oiseaux de nuit', desc: 'Vendre des forfaits nocturnes.', test: s => s.night },
+    { id: 'science', name: 'Bureau d\'études', desc: 'Terminer 10 recherches.', test: s => s.research >= 10 },
+    { id: 'host', name: 'Terre d\'événements', desc: 'Organiser 5 événements.', test: s => s.eventsHosted >= 5 },
+    { id: 'stars5', name: 'Cinq étoiles', desc: 'Prestige de 90 ou plus.', test: s => s.prestige >= 90 },
+    { id: 'season', name: 'Une saison au compteur', desc: 'Terminer une saison d\'hiver.', test: s => s.year >= 2 },
+    { id: 'olympic', name: 'Flamme olympique', desc: 'Organiser les Jeux Olympiques d\'hiver.', test: s => s.olympics >= 1 }
+  ];
+
   D.WEATHER = {
     sun: { name: 'Grand soleil', icon: '☀️', demand: 1.15, sky: 0x7db9ee, snow: 0, light: 1 },
     cloud: { name: 'Nuageux', icon: '⛅', demand: 1.0, sky: 0xa9bfd3, snow: 0, light: 0.8 },

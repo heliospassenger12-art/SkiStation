@@ -10,7 +10,7 @@
       v: 1, mode: opts.mode || 'career', unlimited: !!opts.unlimited, allUnlocked: !!opts.allUnlocked, casual: !!opts.casual,
       name: opts.name || 'Mont-Hélios', seed: opts.seed || 1337,
       day: 0, year: 1, time: SS.DAY_START, speed: 1, paused: true,
-      money: opts.mode === 'sandbox' ? 2500000 : 650000, loan: 0,
+      money: opts.mode === 'sandbox' ? 2500000 : [900000, 650000, 450000][opts.level === undefined ? 1 : opts.level], loan: 0, level: opts.level === undefined ? 1 : opts.level, ach: {},
       ledger: { inc: {}, exp: {} }, history: [],
       pistes: [], lifts: [], buildings: [], roads: [], nextId: 1, flats: [],
       research: { done: [], cur: null }, tier: 0,
@@ -95,14 +95,14 @@
     for (let i = 1; i < pts.length; i++) {
       const dh = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].z - pts[i - 1].z) || 1;
       const along = (pts[i - 1].y - pts[i].y) / dh; T.grad(pts[i].x, pts[i].z, g);
-      slopes.push(Math.max(Math.abs(along), 0.42 * Math.hypot(g.x, g.z)));
+      slopes.push(Math.max(Math.abs(along), 0.26 * Math.hypot(g.x, g.z)));   // le terrassement de la piste atténue le dévers
       if (pts[i].y > minY + 5) rise = Math.max(rise, pts[i].y - minY); minY = Math.min(minY, pts[i].y);
       if (!T.inside(pts[i].x, pts[i].z)) { r.err = 'La piste sort des limites du domaine.'; return r; }
     }
     const sorted = slopes.slice().sort((a, b) => a - b);
     r.avg = slopes.reduce((a, b) => a + b, 0) / slopes.length; r.p90 = sorted[Math.floor(sorted.length * 0.9)]; r.max = sorted[sorted.length - 1];
     const m = 0.55 * r.p90 + 0.45 * r.avg;
-    r.diff = m < 0.13 ? 0 : m < 0.24 ? 1 : m < 0.38 ? 2 : 3;
+    r.diff = m < 0.14 ? 0 : m < 0.26 ? 1 : m < 0.42 ? 2 : 3;
     r.trees = T.treesNearPath(pts, r.width / 2 + 5, false);
     r.cost = Math.round((4000 + r.len * 28 * (r.width / 30) * (1 + r.diff * 0.25) + r.trees * 120) / 100) * 100;
     if (r.len < 80) { r.err = 'Piste trop courte (minimum 80 m).'; return r; }
@@ -435,7 +435,7 @@
   };
 
   // ---------- sauvegarde ----------
-  SS.save = function () {
+  SS.serialize = function () {
     try {
       const strip = (o, keys) => { const c = {}; for (const k in o) if (keys.indexOf(k) < 0) c[k] = o[k]; return c; };
       const data = Object.assign({}, G, {
@@ -444,14 +444,18 @@
         buildings: G.buildings.map(b => strip(b, ['queue', 'occ'])),
         removedTrees: Array.from(T.removedTrees), satToday: []
       });
-      localStorage.setItem(SAVE_KEY, JSON.stringify(data)); return true;
-    } catch (e) { return false; }
+      return JSON.stringify(data);
+    } catch (e) { return null; }
   };
+  SS.save = function () { try { const s = SS.serialize(); if (!s) return false; localStorage.setItem(SAVE_KEY, s); return true; } catch (e) { return false; } };
+  // code de sauvegarde à copier : survit à un changement d'appareil ou de navigateur
+  SS.exportSave = function () { const s = SS.serialize(); return s ? 'SKI1:' + btoa(unescape(encodeURIComponent(s))) : ''; };
+  SS.importSave = function (txt) { try { txt = String(txt).trim(); if (txt.indexOf('SKI1:') !== 0) return null; const d = JSON.parse(decodeURIComponent(escape(atob(txt.slice(5))))); return d && d.pistes && d.lifts && d.buildings ? d : null; } catch (e) { return null; } };
   SS.hasSave = function () { try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; } };
   SS.loadData = function () { try { return JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) { return null; } };
   // à appeler après T.init(seed) et avant la construction des maillages
   SS.restore = function (data) {
-    G = SS.G = data; G.paused = true; if (!G.nightPrice) G.nightPrice = 14;
+    G = SS.G = data; G.paused = true; if (!G.nightPrice) G.nightPrice = 14; if (!G.ach) G.ach = {}; if (G.level === undefined) G.level = 1;
     for (const f of G.flats) T.flatten(f[0], f[1], f[2], f[3], f[4]);
     T.removedTrees = new Set(data.removedTrees || []); delete G.removedTrees;
     const pistes = G.pistes, lifts = G.lifts; G.pistes = []; G.lifts = [];
