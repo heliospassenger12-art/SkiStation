@@ -14,7 +14,7 @@
       ledger: { inc: {}, exp: {} }, history: [],
       pistes: [], lifts: [], buildings: [], roads: [], nextId: 1, flats: [],
       research: { done: [], cur: null }, tier: 0,
-      passPrice: 26, maint: 1, marketing: { social: 0, tv: 0 },
+      passPrice: 26, nightPrice: 14, maint: 1, marketing: { social: 0, tv: 0 },
       reputation: 50, prestige: 0, satToday: [], sat: 60,
       weather: null, forecast: [], snowBase: 55,
       career: { stage: 0, done: false }, event: null, eventsHosted: {}, bestDay: 0,
@@ -221,9 +221,13 @@
     const a = p[i], b = p[i + 1], t = SS.clamp((s - a.s) / (b.s - a.s), 0, 1);
     out.x = a.x + (b.x - a.x) * t; out.y = a.y + (b.y - a.y) * t; out.z = a.z + (b.z - a.z) * t; return out;
   };
-  SS.liftRunning = l => l.open && !l.windStop && G.time >= l.brokenUntil && G.time >= SS.LIFT_OPEN - 900 && G.time < SS.LIFT_CLOSE + 2400;
-  SS.liftBoarding = l => l.open && !l.windStop && G.time >= l.brokenUntil && G.time >= SS.LIFT_OPEN && G.time < SS.LIFT_CLOSE;
-  SS.pisteOpen = p => p.open && !p.snowClosed && !(p.avaUntil > G.time);
+  SS.nightOn = () => SS.researched('night') && G.pistes.some(p => p.lit) && G.lifts.some(l => l.night);
+  SS.nightActive = () => G.time >= SS.NIGHT_OPEN && G.time < SS.NIGHT_CLOSE && SS.researched('night');
+  const nightLift = l => l.night && SS.researched('night');
+  SS.liftRunning = l => l.open && !l.windStop && G.time >= l.brokenUntil && ((G.time >= SS.LIFT_OPEN - 900 && G.time < SS.LIFT_CLOSE + 2400) || (nightLift(l) && G.time >= SS.NIGHT_OPEN - 900 && G.time < SS.NIGHT_CLOSE + 1800));
+  SS.liftBoarding = l => l.open && !l.windStop && G.time >= l.brokenUntil && ((G.time >= SS.LIFT_OPEN && G.time < SS.LIFT_CLOSE) || (nightLift(l) && SS.nightActive()));
+  // après la fermeture du jour, seules les pistes éclairées restent ouvertes
+  SS.pisteOpen = p => p.open && !p.snowClosed && !(p.avaUntil > G.time) && (G.time < SS.LIFT_CLOSE + 2700 || G.time >= SS.NIGHT_CLOSE + 600 || !!p.lit);
 
   // ---------- bâtiments ----------
   SS.inVillage = (x, z) => Math.hypot(x - SS.VILLAGE.x, z - 2720) < 620;
@@ -432,7 +436,7 @@
   SS.loadData = function () { try { return JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) { return null; } };
   // à appeler après T.init(seed) et avant la construction des maillages
   SS.restore = function (data) {
-    G = SS.G = data; G.paused = true;
+    G = SS.G = data; G.paused = true; if (!G.nightPrice) G.nightPrice = 14;
     for (const f of G.flats) T.flatten(f[0], f[1], f[2], f[3], f[4]);
     T.removedTrees = new Set(data.removedTrees || []); delete G.removedTrees;
     const pistes = G.pistes, lifts = G.lifts; G.pistes = []; G.lifts = [];

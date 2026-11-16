@@ -90,9 +90,29 @@
       const m = new THREE.Matrix4().makeRotationZ(0.25); m.setPosition(x, y + 5, z);
       P.push({ geo: new THREE.CylinderGeometry(0.3, 0.5, 10, 6), matrix: m, color: 0xf2c230 }, { geo: new THREE.BoxGeometry(1.6, 1.6, 1.6), matrix: new THREE.Matrix4().makeTranslation(x - 1.2, y + 10, z), color: 0x8d9299 });
     }
+    const lamps = [];
+    if (p.lit) for (let s = 30; s < p.len; s += 70) {
+      SS.pisteAt(p, s, tmp); const d = Math.hypot(tmp.dx, tmp.dz) || 1, sg = (s / 70 | 0) % 2 ? 1 : -1, x = tmp.x - tmp.dz / d * (half + 3) * sg, z = tmp.z + tmp.dx / d * (half + 3) * sg, y = T.getH(x, z);
+      P.push({ geo: new THREE.CylinderGeometry(0.25, 0.35, 11, 5), matrix: new THREE.Matrix4().makeTranslation(x, y + 5.5, z), color: 0x5d636c });
+      lamps.push(x, y + 11.5, z);
+    }
     const g = new THREE.Group(); if (P.length) g.add(new THREE.Mesh(SS.mergeParts(P), bodyMat));
+    if (lamps.length) {
+      const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(lamps, 3));
+      const halo = new THREE.Points(lg, haloMat()); halo.frustumCulled = false; halo.userData.halo = true; g.add(halo);
+      const heads = new THREE.Points(lg, headMat()); heads.frustumCulled = false; heads.userData.halo = true; g.add(heads);
+    }
     scene.add(g); R.objs.set(p, g);
   }
+  // halos des lampadaires : un dégradé radial partagé, visible la nuit
+  let _halo, _head;
+  function glowTex() { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), g = x.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, 'rgba(255,226,160,1)'); g.addColorStop(0.35, 'rgba(255,200,120,0.45)'); g.addColorStop(1, 'rgba(255,190,110,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; }
+  function haloMat() { return _halo || (_halo = new THREE.PointsMaterial({ map: glowTex(), size: 70, sizeAttenuation: true, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })); }
+  function headMat() { return _head || (_head = new THREE.PointsMaterial({ color: 0xfff1c8, size: 3, sizeAttenuation: true, transparent: true, opacity: 0, depthWrite: false })); }
+  R.updateLamps = function () {
+    if (!_halo) return; const G = SS.G, on = SS.researched('night') && G.time > 16.5 * 3600 && G.time < SS.NIGHT_CLOSE + 1200;
+    const k = on ? SS.clamp(1 - (R.day || 0) * 1.6, 0, 1) : 0; _halo.opacity = 0.85 * k; _head.opacity = k;
+  };
   function remove(o) { const g = R.objs.get(o); if (g) { scene.remove(g); g.traverse(c => c.geometry && c.geometry.dispose()); R.objs.delete(o); } }
   R.refreshPiste = function (p) { remove(p); addPiste(p); R.drawOverlay(); };
   SS.on('building:add', addBuilding); SS.on('lift:add', addLift); SS.on('piste:add', addPiste);
@@ -279,7 +299,7 @@
     if (!SS.G) return;
     if (!SS.Arcade.active) Cam.apply();
     R.vscale = SS.Arcade.active ? 1 : SS.clamp(Cam.dist / 190, 1.3, 9);
-    updateSky(); updateLiftsVis(); updateVisitorsVis(); updateFleet(); updateLabels();
+    updateSky(); R.updateLamps(); updateLiftsVis(); updateVisitorsVis(); updateFleet(); updateLabels();
     const ds = SS.clamp(Cam.dist / 130, 2, 40); for (const o of R.preview.children) if (o.userData.dot) o.scale.setScalar(ds);
     renderer.render(scene, camera);
   };

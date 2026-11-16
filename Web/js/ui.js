@@ -72,6 +72,8 @@
       case 'focus': { const [k, id] = arg.split(':'); const o = (k === 'lift' ? G.lifts : k === 'piste' ? G.pistes : G.buildings).find(x => x.id === +id); if (o) { UI.sel = { kind: k, obj: o }; B.highlight(UI.sel); const p = k === 'lift' ? o.a : k === 'piste' ? o.pts[Math.floor(o.pts.length / 2)] : o; SS.Cam.focus(p.x, p.z, Math.min(SS.Cam.dist, 1400)); UI.open('inspect'); } break; }
       case 'toggleOpen': { const o = UI.sel.obj; o.open = !o.open; Net.touch(); R.drawOverlay(); UI.refresh(); break; }
       case 'cannons': { const p = UI.sel.obj, c = Math.round(p.len * 55); if (SS.spend(c, 'Construction')) { p.cannons = true; R.refreshPiste(p); toast('Enneigeurs installés sur ' + p.name + '.', 'good'); } else toast('Fonds insuffisants.', 'bad'); UI.refresh(); break; }
+      case 'light': { const p = UI.sel.obj, c = Math.round(p.len * 45); if (SS.spend(c, 'Construction')) { p.lit = true; R.refreshPiste(p); toast('Éclairage installé sur ' + p.name + '.', 'good'); } else toast('Fonds insuffisants.', 'bad'); UI.refresh(); break; }
+      case 'nightLift': { const l = UI.sel.obj; l.night = !l.night; Net.touch(); UI.refresh(); break; }
       case 'noGroom': UI.sel.obj.noGroom = !UI.sel.obj.noGroom; UI.refresh(); break;
       case 'upgrade': { const b = UI.sel.obj, c = SS.upgradeCost(b); if (b.level < 3 && SS.spend(c, 'Construction')) { b.level++; toast('Agrandissement terminé : niveau ' + b.level + '.', 'good'); } else toast('Fonds insuffisants.', 'bad'); UI.refresh(); break; }
       case 'staff': { const b = UI.sel.obj; b.staff = SS.clamp(b.staff + (+arg), 1, 14); UI.refresh(); break; }
@@ -84,6 +86,8 @@
       case 'research': { const r = D.RESEARCH.find(x => x.id === arg); if (G.research.cur) { toast('Une recherche est déjà en cours.', 'warn'); break; } if (SS.spend(r.cost, 'Recherche')) { G.research.cur = { id: r.id, left: r.days }; toast('Recherche lancée : ' + r.name + ' (' + r.days + ' jours).', 'good'); } else toast('Fonds insuffisants.', 'bad'); UI.refresh(); break; }
       case 'event': { const ev = D.EVENTS.find(x => x.id === arg); if (G.event) { toast('Un événement est déjà programmé.', 'warn'); break; } if (!ev.need(SS.stats())) { toast('Prérequis manquants : ' + ev.needTxt + '.', 'warn'); break; } if (SS.spend(ev.cost, 'Événements')) { G.event = { id: ev.id, day: G.day + 3, left: ev.days }; toast(ev.name + ' programmé(e) dans 3 jours. Préparez la station !', 'good'); } else toast('Fonds insuffisants.', 'bad'); UI.refresh(); break; }
       case 'view': if (arg === 'slope') { SS.Terrain.setViewMode(SS.Terrain.viewMode === 'slope' ? 'normal' : 'slope'); } else if (arg === 'map') { R.mapMode = !R.mapMode; R.drawOverlay(); } else if (arg === 'labels') R.labelsOn = !R.labelsOn; UI.refresh(); break;
+      case 'sound': SS.Audio.setOn(!SS.Audio.on); UI.refresh(); break;
+      case 'minimap': SS.Minimap.on = !SS.Minimap.on; UI.refresh(); break;
       case 'save': toast(SS.save() ? '💾 Partie sauvegardée.' : 'Sauvegarde impossible dans ce navigateur.', 'info'); break;
       case 'vfollow': { const v = UI.sel.obj; SS.Cam.focus(v.x, v.z, 500); break; }
     }
@@ -92,7 +96,8 @@
   function sure(el) { if (el.dataset.sure) return true; el.dataset.sure = '1'; el.textContent = 'Confirmer ?'; el.classList.add('danger'); return false; }
   function input(k, val, el) {
     G = SS.G;
-    if (k === 'pass') { G.passPrice = +val; const o = $('passOut'); if (o) o.textContent = val + ' €'; }
+    if (k === 'night') { G.nightPrice = +val; const o = $('nightOut'); if (o) o.textContent = val + ' €'; }
+    else if (k === 'pass') { G.passPrice = +val; const o = $('passOut'); if (o) o.textContent = val + ' €'; }
     else if (k === 'bprice') { UI.sel.obj.price = +val; const o = $('bpriceOut'); if (o) o.textContent = val + ' €'; }
   }
 
@@ -225,6 +230,7 @@
       let h = '<div class="kpis"><div><b>' + (G.unlimited ? '∞' : eur(G.money)) + '</b>trésorerie</div><div><b>' + eur(G.loan) + '</b>emprunt</div><div><b class="' + (ti - te >= 0 ? 'pos' : 'neg') + '">' + eur(ti - te) + '</b>résultat d\'exploitation</div></div>';
       h += '<canvas id="chart" width="380" height="130"></canvas>';
       h += '<h4>Forfait journée</h4><div class="slider"><input type="range" min="10" max="90" step="1" value="' + G.passPrice + '" data-in="pass"><b id="passOut">' + G.passPrice + ' €</b></div><p class="fine">Juste prix estimé pour votre domaine : <b>' + Math.round(d.fair) + ' €</b>. Au-dessus, la fréquentation et la satisfaction baissent. Enfants −40 %, résidents −12 %.</p>';
+      if (SS.researched('night')) h += '<h4>Forfait nocturne</h4><div class="slider"><input id="nightPrice" type="range" min="5" max="40" step="1" value="' + G.nightPrice + '" data-in="night"><b id="nightOut">' + G.nightPrice + ' €</b></div><p class="fine">Vendu en fin de journée aux skieurs qui prolongent (18 h 30 – 21 h). ' + (SS.Sim.nightReachable() ? 'Domaine nocturne prêt.' : '<span class="warn">Il faut une piste éclairée au départ d\'une remontée nocturne partant du front de neige.</span>') + '</p>';
       h += '<h4>Aujourd\'hui</h4><div class="two"><div>' + (Object.keys(inc).map(k => row(k, eur(inc[k]))).join('') || '<p class="fine">Pas encore de recettes.</p>') + '</div><div>' + (Object.keys(exp).map(k => row(k, '−' + eur(exp[k]))).join('') || '<p class="fine">Pas encore de dépenses.</p>') + '</div></div>';
       if (last) h += '<p class="fine">Hier : ' + last.v + ' visiteurs, recettes ' + eur(last.inc) + ', dépenses ' + eur(last.exp) + '.</p>';
       h += '<h4>Entretien des remontées</h4><div class="chips">' + ['Minimal', 'Normal', 'Renforcé'].map((n, i) => btn(n, 'maint', i, 'chip' + (G.maint === i ? ' on' : ''))).join('') + '</div><p class="fine">Un entretien minimal coûte moins cher mais multiplie les pannes.</p>';
@@ -283,7 +289,7 @@
     },
     options() {
       const T = SS.Terrain;
-      return '<h4>Affichage</h4><div class="actions col">' + btn((T.viewMode === 'slope' ? '☑' : '☐') + ' Vue des pentes (vert / bleu / rouge / noir)', 'view', 'slope') + btn((R.mapMode ? '☑' : '☐') + ' Plan des pistes coloré', 'view', 'map') + btn((R.labelsOn ? '☑' : '☐') + ' Noms des pistes et remontées', 'view', 'labels') + '</div>' +
+      return '<h4>Affichage</h4><div class="actions col">' + btn((T.viewMode === 'slope' ? '☑' : '☐') + ' Vue des pentes (vert / bleu / rouge / noir)', 'view', 'slope') + btn((R.mapMode ? '☑' : '☐') + ' Plan des pistes coloré', 'view', 'map') + btn((R.labelsOn ? '☑' : '☐') + ' Noms des pistes et remontées', 'view', 'labels') + btn((SS.Minimap.on ? '☑' : '☐') + ' Mini-carte', 'minimap') + btn((SS.Audio.on ? '☑' : '☐') + ' Ambiance sonore', 'sound') + '</div>' +
         '<h4>Partie</h4><div class="actions col">' + btn('💾 Sauvegarder maintenant', 'save') + btn('⏏ Menu principal', 'menu') + btn('❔ Rappel des bases', 'panel', 'help') + '</div>' +
         '<h4>Commandes</h4><p class="fine">Glisser : déplacer · clic droit ou Maj + glisser : tourner / incliner · molette : zoom · ZQSD/WASD et flèches : déplacer · A/E ou Q/E : tourner · Espace : pause · 1-2-3 : vitesses · R : tourner un bâtiment · Entrée : valider · Retour arrière : annuler un point · Échap : quitter l\'outil.</p>' +
         '<p class="fine">Mode arcade : ouvrez la fiche d\'une piste puis « Descendre en arcade ».</p><p class="fine">SkiStation ' + SS.VERSION + '</p>';
@@ -308,7 +314,7 @@
         if (G.lifts.indexOf(o) < 0) return null;
         const def = D.lift(o.type); UI.title = o.name;
         const stt = !o.open ? 'Fermée par l\'exploitant' : o.windStop ? 'Arrêtée : vent trop fort' : G.time < o.brokenUntil ? 'En panne jusqu\'à ' + SS.hhmm(o.brokenUntil) : SS.liftBoarding(o) ? 'En service' : 'Hors horaires (9 h – 16 h 45)';
-        return '<p>' + def.name + ' — ' + stt + '</p><div class="grid">' + row('Longueur', SS.num(o.len) + ' m') + row('Dénivelé', SS.num(o.vert) + ' m') + row('Altitudes', SS.num(o.a.y) + ' → ' + SS.num(o.b.y) + ' m') + row('Débit', SS.num(o.capacity) + ' pers./h') + row('File d\'attente', o.queue.length + ' (~' + Math.round(Sim.liftWait(o)) + ' min)') + row('À bord', o.riders || 0) + row('Passages du jour', o.rides) + row('État mécanique', pct(o.cond)) + row('Entretien', eur(o.maint) + ' / j') + row('Vent max.', def.wind + ' km/h') + '</div><div class="actions">' + btn(o.open ? 'Fermer' : 'Ouvrir', 'toggleOpen') + btn('Démolir', 'demolish', undefined, 'danger') + '</div>';
+        return '<p>' + def.name + ' — ' + stt + '</p><div class="grid">' + row('Longueur', SS.num(o.len) + ' m') + row('Dénivelé', SS.num(o.vert) + ' m') + row('Altitudes', SS.num(o.a.y) + ' → ' + SS.num(o.b.y) + ' m') + row('Débit', SS.num(o.capacity) + ' pers./h') + row('File d\'attente', o.queue.length + ' (~' + Math.round(Sim.liftWait(o)) + ' min)') + row('À bord', o.riders || 0) + row('Passages du jour', o.rides) + row('État mécanique', pct(o.cond)) + row('Entretien', eur(o.maint) + ' / j') + row('Vent max.', def.wind + ' km/h') + '</div><div class="actions">' + btn(o.open ? 'Fermer' : 'Ouvrir', 'toggleOpen') + (SS.researched('night') ? btn(o.night ? '🌙 Nocturne : ouverte' : '🌙 Nocturne : fermée', 'nightLift') : '') + btn('Démolir', 'demolish', undefined, 'danger') + '</div>';
       }
       if (s.kind === 'piste') {
         if (G.pistes.indexOf(o) < 0) return null;
@@ -316,8 +322,8 @@
         const con = o.edges.length && Net.from(o.nb.id, 3, 'plan').dist[Net.hub.id] < Infinity, acc2 = Net.from(Net.hub.id, 3, 'plan').dist[o.na.id] < Infinity;
         return '<p>' + dot(o.diff) + 'Piste ' + D.DIFF[o.diff].name.toLowerCase() + ' — ' + (SS.pisteOpen(o) ? 'ouverte' : o.snowClosed ? 'fermée : neige insuffisante' : o.avaUntil > G.time ? 'sécurisation avalanche jusqu\'à ' + SS.hhmm(o.avaUntil) : 'fermée') + '</p>' +
           (!acc2 ? '<div class="msg warn">Aucune remontée ne mène à son départ.</div>' : '') + (!con ? '<div class="msg warn">Son arrivée ne permet pas de redescendre au front de neige.</div>' : '') +
-          '<div class="grid">' + row('Longueur', SS.num(o.len) + ' m') + row('Dénivelé', SS.num(o.drop) + ' m') + row('Pente moy. / forte', Math.round(o.avg * 100) + ' % / ' + Math.round(o.p90 * 100) + ' %') + row('Départ', SS.num(o.topAlt) + ' m') + row('Neige', W.state(o) + ' · ' + Math.round(o.depth) + ' cm') + row('Damage', pct(o.groomed)) + row('Skieurs', o.on) + row('Passages du jour', o.passes) + '</div>' +
-          '<div class="actions">' + btn(o.open ? 'Fermer' : 'Ouvrir', 'toggleOpen') + btn(o.noGroom ? 'Damage : désactivé (freeride)' : 'Damage : chaque soir', 'noGroom') + (o.cannons ? '' : SS.researched('snowmaking') ? btn('Installer des enneigeurs — ' + eur(o.len * 55), 'cannons') : btn('Enneigeurs : recherche requise', 'x', undefined, '', true)) + '</div><div class="actions">' + btn('🎿 Descendre en arcade', 'arcade', undefined, 'primary') + btn('Démolir', 'demolish', undefined, 'danger') + '</div>';
+          '<div class="grid">' + row('Longueur', SS.num(o.len) + ' m') + row('Dénivelé', SS.num(o.drop) + ' m') + row('Pente moy. / forte', Math.round(o.avg * 100) + ' % / ' + Math.round(o.p90 * 100) + ' %') + row('Départ', SS.num(o.topAlt) + ' m') + row('Neige', W.state(o) + ' · ' + Math.round(o.depth) + ' cm') + row('Damage', pct(o.groomed)) + row('Éclairage', o.lit ? 'oui (nocturne)' : 'non') + row('Skieurs', o.on) + row('Passages du jour', o.passes) + '</div>' +
+          '<div class="actions">' + btn(o.open ? 'Fermer' : 'Ouvrir', 'toggleOpen') + btn(o.noGroom ? 'Damage : désactivé (freeride)' : 'Damage : chaque soir', 'noGroom') + (o.lit ? '' : SS.researched('night') ? btn('💡 Éclairer — ' + eur(o.len * 45), 'light') : '') + (o.cannons ? '' : SS.researched('snowmaking') ? btn('Installer des enneigeurs — ' + eur(o.len * 55), 'cannons') : btn('Enneigeurs : recherche requise', 'x', undefined, '', true)) + '</div><div class="actions">' + btn('🎿 Descendre en arcade', 'arcade', undefined, 'primary') + btn('Démolir', 'demolish', undefined, 'danger') + '</div>';
       }
       if (s.kind === 'road') { UI.title = 'Route'; return '<p>' + (o.fixed ? 'Route d\'accès à la station.' : 'Route de desserte.') + '</p>' + (o.fixed ? '' : '<div class="actions">' + btn('Démolir', 'demolish', undefined, 'danger') + '</div>'); }
       if (s.kind === 'visitor') {

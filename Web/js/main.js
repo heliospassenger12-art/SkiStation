@@ -15,11 +15,11 @@
     const canvas = document.getElementById('view');
     try { SS.R.init(canvas); } catch (e) { document.getElementById('fatal').style.display = 'flex'; return; }
     SS.Build.initInput(canvas);
-    SS.UI.init();
+    SS.UI.init(); SS.Minimap.init();
     let last = performance.now();
     function loop(now) {
       const dt = Math.min(0.1, (now - last) / 1000); last = now;
-      if (SS.G) { SS.tick(dt); SS.Build.frame(dt); SS.Arcade.frame(dt); SS.R.frame(); SS.UI.frame(dt); }
+      if (SS.G) { SS.tick(dt); SS.Build.frame(dt); SS.Arcade.frame(dt); SS.R.frame(); SS.UI.frame(dt); SS.Minimap.frame(dt); SS.Audio.frame(); }
       requestAnimationFrame(loop);
     }
     requestAnimationFrame(loop);

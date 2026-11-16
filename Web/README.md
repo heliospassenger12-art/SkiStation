@@ -17,7 +17,8 @@ tout est en JavaScript, three.js est fourni dans `js/three.min.js`.
 | Construction libre | Pistes, remontées, routes, bâtiments. Devis avant validation (prix, longueur, dénivelé, pente, difficulté, arbres). Arbres coupés seulement après validation, terrassement local sous les bâtiments et les gares |
 | Difficulté des pistes | Calculée sur le relief réellement traversé (pente le long du tracé et dévers) |
 | Remontées | 12 modèles sur 6 paliers de recherche. Portée dépassée refusée, jamais corrigée. Téléski : pas de traversée de piste. Véhicules physiques, embarquement réel |
-| Temps | Horloge unique, pause / x1 / x3 / x8, cycle jour-nuit |
+| Temps | Horloge unique, pause / x1 / x3 / x8, journée de 07:30 à minuit, cycle jour-nuit |
+| Ski nocturne | Recherche dédiée, éclairage des pistes, remontées ouvertes de 18 h 30 à 21 h, forfait du soir, damage décalé après la nocturne |
 | Visiteurs | Budget temps, faim, énergie, profil, niveau. Décision Skier / Manger / Repos / Rentrer, fiche en lecture seule |
 | GPS du domaine | Piste cible persistante, trajet par remontées (montée) et pistes (descente), temps de trajet + attente + retour vérifiés, aucune téléportation |
 | Services | Restauration, bar, location, magasin, hébergements, activités : capacité, file, qualité, prix réglable, agrandissement |
@@ -26,6 +27,11 @@ tout est en JavaScript, three.js est fourni dans `js/three.min.js`.
 | Activités | Snowpark, luge, patinoire, nordique, chiens de traîneau, parapente, spa, musée, concerts, stade de slalom, stade olympique |
 | Économie | Forfait, tarifs, charges, emprunt, marketing, événements, réputation, prestige, recettes d'été |
 | Arcade | Descente à la troisième personne sur n'importe quelle piste construite : sauts, vrilles, flips |
+
+## Interface
+
+- Mini-carte cliquable (relief, pistes, remontées, visiteurs, champ de la caméra), masquable dans Options.
+- Ambiance sonore procédurale (vent selon l'altitude, foule, câbles, sons d'interface), désactivable dans Options. Elle démarre au premier clic.
 
 ## Commandes
 
@@ -45,11 +51,13 @@ tout est en JavaScript, three.js est fourni dans `js/three.min.js`.
 - `js/build.js` outils de construction et entrées
 - `js/arcade.js` mode arcade
 - `js/ui.js` interface
+- `js/minimap.js` mini-carte
+- `js/audio.js` ambiance sonore
 
 ## Limites connues
 
-- Graphismes procéduraux (pas d'assets), sans ombres portées ni son.
+- Graphismes procéduraux (pas d'assets), sans ombres portées ; pas de musique.
 - 1 500 visiteurs simulés au maximum.
 - Les visiteurs marchent en ligne droite au village (pas d'évitement des bâtiments).
-- Funiculaire, ski nocturne et multijoueur non réalisés.
+- Funiculaire et multijoueur non réalisés.
 - La sauvegarde est locale au navigateur ; une partie rechargée reprend au matin du jour en cours.

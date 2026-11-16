@@ -80,6 +80,7 @@
     { id: 'nordic', name: 'Activités nordiques', cost: 45000, days: 2, desc: 'Centre nordique, chiens de traîneau, refuge.' },
     { id: 'luxury', name: 'Hôtellerie de prestige', cost: 180000, days: 5, desc: 'Palace, table gastronomique, spa.' },
     { id: 'events', name: 'Événementiel sportif', cost: 120000, days: 4, desc: 'Stade de slalom, scène de concerts et calendrier d\'événements.' },
+    { id: 'night', name: 'Ski nocturne', cost: 140000, days: 3, desc: 'Éclairage des pistes et ouverture de 18 h 30 à 21 h des remontées désignées, avec un forfait du soir.', req: 'snowmaking' },
     { id: 'summer', name: 'Saison d\'été', cost: 100000, days: 4, desc: 'Parapente, musée, et recettes estivales pendant l\'intersaison.' },
     { id: 'olympic', name: 'Dossier olympique', cost: 900000, days: 10, desc: 'Débloque le stade olympique et la candidature aux Jeux.', req: 'events' }
   ];

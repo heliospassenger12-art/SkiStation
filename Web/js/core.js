@@ -1,7 +1,7 @@
 // SkiStation Web — noyau : utilitaires, bruit, bus d'événements
 (function () {
   'use strict';
-  const SS = window.SS = { VERSION: 'Web 1.0' };
+  const SS = window.SS = { VERSION: 'Web 1.1' };
 
   SS.WORLD = 8000;            // côté de la carte en mètres (360°)
   SS.HALF = SS.WORLD / 2;
@@ -15,9 +15,11 @@
   SS.CLOCK_RATE = 30;         // secondes de jeu par seconde réelle à x1
   SS.MOTION = 0.2;            // vitesse simulée = vitesse réelle x MOTION (par seconde de jeu)
   SS.DAY_START = 7.5 * 3600;
-  SS.DAY_END = 22 * 3600;
+  SS.DAY_END = 24 * 3600 - 60;
   SS.LIFT_OPEN = 9 * 3600;
   SS.LIFT_CLOSE = 16.75 * 3600;
+  SS.NIGHT_OPEN = 18.5 * 3600;     // ski nocturne : pistes éclairées et remontées désignées
+  SS.NIGHT_CLOSE = 21 * 3600;
 
   // maisons décoratives du vieux village (non interactives)
   SS.DECOR = [

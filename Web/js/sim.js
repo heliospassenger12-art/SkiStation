@@ -199,11 +199,19 @@
         if (!b) v.lesson = false;
       }
     }
-    const liftsOpen = now >= SS.LIFT_OPEN && now < SS.LIFT_CLOSE - 600;
+    const inNight = v.night && SS.nightActive() && now < SS.NIGHT_CLOSE - 600;
+    if (v.night && !inNight && now < SS.NIGHT_OPEN && now >= SS.LIFT_CLOSE - 600) {
+      if (!atHub) return headToHub(v, 'Pause avant la nocturne');
+      const b = v.hunger > 0.45 ? servicesAt(n, 'food', v) : !v.did.bar ? servicesAt(n, 'drink', v) : null;
+      if (b) { if (D.building(b.type).type === 'drink') v.did.bar = 1; return goService(v, b, 'Attend la nocturne', D.building(b.type).name); }
+      v.state = 'rest'; v.until = SS.NIGHT_OPEN + Math.random() * 300; v.decision = 'Attend la nocturne'; v.reason = 'Ouverture à 18:30'; return;
+    }
+    const liftsOpen = (now >= SS.LIFT_OPEN && now < SS.LIFT_CLOSE - 600) || inNight;
     const tHome = atHub ? 0 : Math.min(Net.time(v.node, hub, md), 5400);
     const remain = v.leaveT - now - tHome - 600;
     v.remain = remain;
-    if (now >= SS.LIFT_CLOSE - 600 || remain <= 0) {
+    if ((now >= SS.LIFT_CLOSE - 600 && !inNight) || remain <= 0) {
+      if (v.night && now >= SS.NIGHT_OPEN) v.night = false;
       if (!atHub) return headToHub(v, remain <= 0 ? 'Heure de départ' : 'Fermeture des remontées');
       return apresSki(v);
     }
@@ -258,9 +266,24 @@
     for (const b of n.services) { const def = D.building(b.type); if (def.type === 'activity' && b.open && !v.did[b.id] && b.price <= def.price * (1.2 + 0.5 * v.spend + (def.price === 0 ? 1 : 0)) && (def.tags === v.prof.tags || Math.random() < 0.3)) pick = b; }
     return pick;
   }
+  // une piste éclairée dont le départ est desservi depuis le front de neige par une remontée nocturne
+  function nightReachable() {
+    if (!SS.nightOn()) return false;
+    return G.pistes.some(p => p.lit && p.open && !p.snowClosed && G.lifts.some(l => l.night && l.open && l.na === Net.hub && l.nb === p.na));
+  }
+  Sim.nightReachable = nightReachable;
   function apresSki(v) {
+    if (!v.nightDone && G.time < SS.NIGHT_CLOSE - 3600 && nightReachable() && v.energy > 0.3 && v.skill > 0) {
+      v.nightDone = true;
+      const want = (v.lodger ? 0.35 : 0.12) + (v.prof.id === 'fetard' || v.prof.id === 'sportif' ? 0.25 : 0) - Math.max(0, G.nightPrice - 14) * 0.02;
+      if (Math.random() < want) {
+        v.night = true; v.leaveT = SS.NIGHT_CLOSE - 300 + Math.random() * 300;
+        const price = G.nightPrice * (v.lodger ? 0.85 : 1); SS.earn(price, 'Forfaits nocturnes'); v.spent += price;
+        think(v, 'Je prolonge avec le ski nocturne !', null, 0.03); v.dn = 0; return decide(v);
+      }
+    }
     const hubN = Net.hub, n = v.apres = (v.apres || 0) + 1;
-    if (G.time < 19.5 * 3600 && n <= (v.lodger ? 3 : 2) && Math.random() < (v.prof.id === 'fetard' ? 0.85 : 0.55)) {
+    if (G.time < (v.nightDone && G.time > SS.NIGHT_OPEN ? 21.5 : 19.5) * 3600 && n <= (v.lodger ? 3 : 2) && Math.random() < (v.prof.id === 'fetard' ? 0.85 : 0.55)) {
       const b = activityAt(hubN, v) || (v.did.bar ? null : servicesAt(hubN, 'drink', v)) || (Math.random() < 0.4 && !v.did.shop ? servicesAt(hubN, 'shop', v) : null) || (v.hunger > 0.6 ? servicesAt(hubN, 'food', v) : null);
       if (b) { const t = D.building(b.type).type; if (t === 'drink') v.did.bar = 1; if (t === 'shop') v.did.shop = 1; return goService(v, b, 'Après-ski', D.building(b.type).name); }
     }
@@ -417,7 +440,12 @@
   function updateGroomers(dt) {
     const sp = 0.25 * (SS.researched('winch') ? 1.4 : 1);
     for (const g of Sim.groomers) {
-      if (g.state === 'idle') { g.piste = Sim.groomList.shift(); if (!g.piste) { g.state = 'home'; continue; } g.state = 'travel'; g.s = g.piste.len; }
+      if (g.state === 'idle') { g.piste = null;
+        const wait = p => p.lit && SS.nightOn() && G.time < SS.NIGHT_CLOSE + 600;
+        const i = Sim.groomList.findIndex(p => !wait(p));
+        if (i < 0) { if (!Sim.groomList.length) g.state = 'home'; continue; }
+        g.piste = Sim.groomList.splice(i, 1)[0]; g.state = 'travel'; g.s = g.piste.len;
+      }
       if (g.state === 'travel' || g.state === 'home') {
         const tgt = g.state === 'home' ? g.garage : g.piste.pts[g.piste.pts.length - 1];
         const d = Math.hypot(tgt.x - g.x, tgt.z - g.z), stp = 5 * dt;
@@ -500,6 +528,8 @@
       if (Sim.present > 0 && Math.random() < 0.5) SS.emit('pulse');
     }
     if (!Sim.flags.open && G.time >= SS.LIFT_OPEN) { Sim.flags.open = true; Net.touch(); if (G.lifts.length) SS.emit('toast', '🚡 09:00 — ouverture des remontées.', 'info'); }
+    if (!Sim.flags.night && G.time >= SS.NIGHT_OPEN && SS.nightOn()) { Sim.flags.night = true; Net.touch(); SS.emit('toast', '🌙 18:30 — ouverture du ski nocturne sur les pistes éclairées.', 'info'); }
+    if (!Sim.flags.nightEnd && G.time >= SS.NIGHT_CLOSE && SS.nightOn()) { Sim.flags.nightEnd = true; Net.touch(); }
     if (!Sim.flags.close && G.time >= SS.LIFT_CLOSE) { Sim.flags.close = true; Net.touch(); if (G.lifts.length) SS.emit('toast', '16:45 — fermeture des remontées, dernier retour station.', 'info'); }
     updateLifts(dt);
     const vs = Sim.visitors;
@@ -522,7 +552,7 @@
     Sim.arrivals = [];
     if (!Sim.grooming) startGrooming();
     const from = Math.max(G.time, 17.25 * 3600);
-    for (let t = from; t < SS.DAY_END; t += 30) updateGroomers(30);
+    for (let t = from; t < SS.DAY_END; t += 30) { G.time = t; updateGroomers(30); }
     G.time = SS.DAY_END; SS.endDay(); return true;
   };
 
