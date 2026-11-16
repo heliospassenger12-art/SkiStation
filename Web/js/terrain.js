@@ -34,7 +34,7 @@
 
   T.init = function (seed) {
     noise = SS.makeNoise(seed || 1337);
-    T.seed = seed || 1337; T.geo = null; T.snowMask = new Float32Array(N * N); T.removedTrees = new Set(); T.viewMode = 'normal';
+    T.seed = seed || 1337; T.geo = null; T.snowMask = new Float32Array(N * N); T.removedTrees = new Set(); T.viewMode = 'normal'; T.summer = false;
     const H = T.H, V = SS.VILLAGE;
     let max = 0;
     for (let iz = 0; iz < N; iz++) for (let ix = 0; ix < N; ix++) {
@@ -108,6 +108,15 @@
     }
     const x = -HALF + ix * CELL, z = -HALF + iz * CELL;
     const n = noise.fbm(x * 0.004, z * 0.004, 3);
+    if (T.summer) {                                                  // été : alpages verts, éboulis, neiges éternelles
+      const snowS = SS.smooth(2950, 3250, h + n * 150) * (1 - SS.smooth(0.7, 1.0, g));
+      const alp = SS.smooth(2100, 2800, h + n * 200);
+      let sr = SS.lerp(0.30, 0.52, alp) + n * 0.05, sg = SS.lerp(0.50, 0.50, alp) + n * 0.06, sb = SS.lerp(0.20, 0.36, alp);
+      const rockS = Math.max(SS.smooth(0.55, 0.9, g + n * 0.12), SS.smooth(2600, 3000, h) * 0.8), rcS = 0.40 + 0.10 * n;
+      sr = SS.lerp(sr, rcS + 0.03, rockS); sg = SS.lerp(sg, rcS + 0.01, rockS); sb = SS.lerp(sb, rcS, rockS);
+      col[0] = SS.lerp(sr, 0.93, snowS); col[1] = SS.lerp(sg, 0.95, snowS); col[2] = SS.lerp(sb, 0.99, snowS);
+      return col;
+    }
     let r = 0.93, gg = 0.95, b = 0.99;                               // neige
     const shade = SS.clamp(0.5 + (hz * 0.5 - hx * 0.25), 0, 1);       // versants nord plus bleutés
     r -= 0.07 * shade; gg -= 0.045 * shade;
@@ -215,7 +224,7 @@
     const parts = [];
     const c1 = new THREE.ConeGeometry(4.4, 12, 5, 1, true); c1.translate(0, 7, 0);
     const c2 = new THREE.ConeGeometry(3.0, 8, 5, 1, true); c2.translate(0, 12.5, 0);
-    parts.push({ geo: c1, color: 0x1f4a36 }, { geo: c2, color: 0xdfeaf2 });
+    parts.push({ geo: c1, color: 0x1f4a36 }, { geo: c2, color: T.summer ? 0x2c6146 : 0xdfeaf2 });
     const geo = SS.mergeParts(parts);
     const mesh = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }), T.trees.length);
     const m = new THREE.Matrix4();

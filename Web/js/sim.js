@@ -13,26 +13,26 @@
     G = SS.G;
     const at = SS.attract(), s = at.s;
     const fair = Sim.fairPrice(at);
-    if (at.km <= 0) return { total: 0, day: 0, lodgers: 0, fair, at, why: 'Aucune piste reliée au front de neige par une remontée.' };
-    const base = (40 + 1500 * Math.pow(at.a, 1.1)) * (G.mode === 'career' ? [1.15, 1, 0.88][G.level] : 1);
+    if (at.km <= 0) return { total: 0, day: 0, lodgers: 0, fair, at, why: G.summer ? 'Aucun sentier desservi : l\'été, seuls télésièges, télécabines, téléphériques et funiculaires fonctionnent.' : 'Aucune piste reliée au front de neige par une remontée.' };
+    const base = (G.summer ? 30 + 650 * Math.pow(at.a, 1.1) : 40 + 1500 * Math.pow(at.a, 1.1)) * (G.mode === 'career' ? [1.15, 1, 0.88][G.level] : 1);
     const rep = 0.55 + G.reputation / 100 * 0.9;
-    const cal = (SS.isWeekend(G.day) ? 1.35 : 1) * (SS.isHoliday(G.day) ? 1.3 : 1);
-    const priceF = SS.clamp(1.6 - 0.6 * G.passPrice / fair, 0.2, 1.35);
+    const cal = (SS.isWeekend(G.day) ? 1.35 : 1) * (G.summer ? 1.15 : SS.isHoliday(G.day) ? 1.3 : 1);
+    const priceF = SS.clamp(1.6 - 0.6 * SS.passNow() / fair, 0.2, 1.35);
     const mk = 1 + (G.marketing.social > 0 ? 0.15 : 0) + (G.marketing.tv > 0 ? 0.35 : 0);
     const ev = G.event && G.event.day <= G.day ? D.EVENTS.find(e => e.id === G.event.id).boost : 1;
-    const rental = s.rental > 0 ? 1 : 0.74;
+    const rental = s.rental > 0 || G.summer ? 1 : 0.74;
     const demand = base * rep * cal * W.def().demand * priceF * mk * ev * rental;
     let lodgers = 0;
     for (const b of G.buildings) {
       const def = D.building(b.type); if (def.type !== 'lodging' || !b.open) continue;
-      const occ = SS.clamp((0.3 + G.reputation / 100 * 0.45 + (cal > 1 ? 0.2 : 0) + at.a * 0.25) * (1.5 - 0.5 * b.price / def.price) * (ev > 1 ? 1.3 : 1), 0.05, 1);
+      const occ = SS.clamp((0.3 + G.reputation / 100 * 0.45 + (cal > 1 ? 0.2 : 0) + at.a * 0.25) * (1.5 - 0.5 * b.price / def.price) * (ev > 1 ? 1.3 : 1) * (G.summer ? 0.75 : 1), 0.05, 1);
       b.guests = Math.round(SS.bcap(b) * occ); lodgers += b.guests;
     }
     const day = Math.round(Math.min(demand, s.access));
     const cap = 1500, total = Math.min(cap, day + lodgers);
     return { total, day: Math.max(0, total - lodgers), lodgers: Math.min(lodgers, total), fair, at, demand: Math.round(demand), access: s.access, lost: Math.max(0, Math.round(demand - s.access)) };
   };
-  Sim.fairPrice = at => 22 + at.km * 1.4 + at.s.vert * 0.004 + at.a * 12;
+  Sim.fairPrice = at => SS.G.summer ? 9 + at.km * 0.45 + at.s.vert * 0.002 + at.a * 8 : 22 + at.km * 1.4 + at.s.vert * 0.004 + at.a * 12;
 
   function pickProfile(comp) {
     let r = Math.random(), tot = 0; const ws = D.PROFILES.map(p => p.w * (comp && p.id === 'sportif' ? 2 : 1));
@@ -54,30 +54,47 @@
     const comp = G.event && G.event.day <= G.day && D.EVENTS.find(e => e.id === G.event.id).comp;
     const parkings = G.buildings.filter(b => D.building(b.type).type === 'parking' && b.open);
     const hasKids = s.kids > 0, hasSchool = s.school > 0;
-    const mk = (home, lodger) => {
-      const pr = pickProfile(comp); let r = Math.random(), skill = 0;
+    const mk = (home, lodger, pr, grp) => {
+      pr = pr || pickProfile(comp); let r = Math.random(), skill = 0;
       for (let i = 0; i < 4; i++) { r -= pr.skill[i]; if (r <= 0) { skill = i; break; } }
-      const arrive = lodger ? tri(8.4, 9.0, 10.2) * 3600 : tri(8.0, 9.2, 11.6) * 3600;
+      const arrive = grp && grp.arrive ? grp.arrive + Math.random() * 240 : lodger ? tri(8.4, 9.0, 10.2) * 3600 : tri(8.0, 9.2, 11.6) * 3600;
       const v = {
-        id: Sim.nextV++, name: SS.pick(D.FIRST) + ' ' + SS.pick(D.LAST), prof: pr, skill, child: !!pr.child, color: SS.pick(COLORS),
+        id: Sim.nextV++, name: SS.pick(D.FIRST) + ' ' + (grp && grp.last || SS.pick(D.LAST)), prof: pr, skill, child: !!pr.child, color: SS.pick(COLORS),
         home, lodger, arriveT: arrive, leaveT: (lodger ? SS.range(15.6, 16.9) : Math.min(17.0, Math.max(arrive / 3600 + 3.5, SS.range(14.6, 17.0)))) * 3600,
         hunger: SS.range(0.08, 0.35), energy: SS.range(0.85, 1), sat: 0.62, spent: 0, runs: 0, km: 0,
         patience: SS.range(0.7, 1.4), spend: pr.spend * SS.range(0.7, 1.4),
         needRental: s.rental > 0 && Math.random() < 0.32, hasGear: false, hasPass: false,
-        lesson: pr.child ? (hasKids && Math.random() < 0.8) : (hasSchool && (skill === 0 ? Math.random() < 0.5 : skill === 1 && Math.random() < 0.1)),
+        lesson: G.summer ? false : pr.child ? (hasKids && Math.random() < 0.8) : (hasSchool && (skill === 0 ? Math.random() < 0.5 : skill === 1 && Math.random() < 0.1)),
         state: 'pending', node: Net.hub.id, x: home.x, z: home.z, y: 0, hx: 0, hz: 1, lat: Math.random() * 6.28, decision: 'Arrive', reason: '', thoughts: [], did: {}
       };
       if (v.lesson) v.lessonAt = (arrive < 9.4 * 3600 ? 9.75 : 14) * 3600;
+      if (G.summer) {                                   // l'été : vététistes (rapides) et randonneurs (lents, tous sentiers)
+        const bike = !v.child && Math.random() < (pr.id === 'sportif' ? 0.85 : pr.id === 'fetard' ? 0.6 : 0.3) && !(grp && grp.fam);
+        v.mode = grp && grp.mode ? grp.mode : bike ? 'vtt' : 'rando'; if (grp && !grp.mode) grp.mode = v.mode;
+        if (v.mode === 'rando') { v.sf = 0.2; v.skill = 3; v.needRental = false; } else { v.sf = 0.85; v.needRental = s.rental > 0 && Math.random() < 0.45; }
+      }
+      if (grp) { if (!grp.arrive) { grp.arrive = arrive; grp.leave = v.leaveT; } else v.leaveT = grp.leave + Math.random() * 300; v.grp = grp; grp.members.push(v); grp.maxDiff = Math.min(grp.maxDiff, Math.min(3, skill + 1)); }
       Sim.arrivals.push(v);
     };
+    // familles et groupes d'amis : arrivent, skient et déjeunent ensemble. Renvoie le nombre de personnes créées.
+    const PF = id => D.PROFILES.find(p => p.id === id);
+    const party = (home, lodger, max) => {
+      const pr = pickProfile(comp), fam = pr.id === 'famille' || pr.id === 'enfant';
+      let n = Math.random() < (fam ? 0.15 : 0.45) ? 1 : 2 + Math.floor(Math.random() * (fam ? 3 : 4)); n = Math.min(n, max);
+      if (n < 2) { mk(home, lodger, pr.id === 'enfant' ? PF('famille') : pr); return 1; }
+      const last = SS.pick(D.LAST), grp = { id: Sim.nextV, fam, last: fam ? last : null, name: fam ? 'Famille ' + last : 'Groupe d\'amis', members: [], target: null, targetT: -1e9, eatT: -1e9, eatNode: -1, maxDiff: 3 };
+      const adults = fam ? Math.min(n, Math.random() < 0.3 ? 1 : 2) : n;
+      for (let i = 0; i < n; i++) mk(home, lodger, fam ? PF(i < adults ? 'famille' : 'enfant') : pr, grp);
+      return n;
+    };
     let k = 0;
-    for (let i = 0; i < d.day; i++) {
+    for (let i = 0; i < d.day;) {
       let home = SS.ARRIVAL;
       if (parkings.length) { home = parkings[k % parkings.length]; k++; }
-      mk(home, false);
+      i += party(home, false, d.day - i);
     }
     let left = d.lodgers;
-    for (const b of G.buildings) if (D.building(b.type).type === 'lodging' && b.open) for (let i = 0; i < (b.guests || 0) && left > 0; i++, left--) mk(b, true);
+    for (const b of G.buildings) if (D.building(b.type).type === 'lodging' && b.open) for (let i = 0; i < (b.guests || 0) && left > 0;) { const n = party(b, true, Math.min((b.guests || 0) - i, left)); i += n; left -= n; }
     Sim.arrivals.sort((a, b) => a.arriveT - b.arriveT);
     Sim.expected = Sim.arrivals.length;
   };
@@ -130,9 +147,9 @@
     const b = v.svc, def = D.building(b.type); b.occ--; b.visits++;
     let price = b.price, cat = def.cat;
     if (def.type === 'ticket') {
-      price = G.passPrice * (v.child ? 0.6 : v.lodger ? 0.88 : 1); cat = 'Forfaits'; v.hasPass = true;
-      const fair = Sim.today.fair; v.sat += SS.clamp((fair - G.passPrice) / fair * 0.18, -0.2, 0.08);
-      if (G.passPrice > fair * 1.25) think(v, 'Le forfait est cher pour ce domaine', 'Prix du forfait');
+      price = SS.passNow() * (v.child ? 0.6 : v.lodger ? 0.88 : 1); cat = 'Forfaits'; v.hasPass = true;
+      const fair = Sim.today.fair; v.sat += SS.clamp((fair - SS.passNow()) / fair * 0.18, -0.2, 0.08);
+      if (SS.passNow() > fair * 1.25) think(v, 'Le forfait est cher pour ce domaine', 'Prix du forfait');
     } else if (def.type === 'rental') { v.hasGear = true; cat = 'Location'; }
     else if (def.type === 'food') {
       cat = 'Restauration'; v.hunger = def.id === 'snack' ? Math.max(0, v.hunger - 0.65) : 0; v.energy = Math.min(1, v.energy + 0.25);
@@ -217,9 +234,10 @@
     }
     // MANGER
     const lunch = now > 11.5 * 3600 && now < 14 * 3600;
-    if ((v.hunger > 0.78 || (lunch && v.hunger > 0.5)) && !(v.skipFood > now)) {
+    const gEat = v.grp && now - v.grp.eatT < 1500 && v.grp.eatNode === n.id && v.hunger > 0.28;
+    if ((v.hunger > 0.78 || (lunch && v.hunger > 0.5) || gEat) && !(v.skipFood > now)) {
       const b = servicesAt(n, 'food', v);
-      if (b) return goService(v, b, 'Manger', 'Faim ' + Math.round(v.hunger * 100) + ' %');
+      if (b) { if (v.grp && !gEat) { v.grp.eatT = now; v.grp.eatNode = n.id; } return goService(v, b, 'Manger', gEat ? 'Déjeune avec ' + v.grp.name.toLowerCase() : 'Faim ' + Math.round(v.hunger * 100) + ' %'); }
       const fn = findFoodNode(v, remain);
       if (fn) { v.path = Net.path(v.node, fn.id, md); if (v.path && v.path.length) { v.decision = 'Manger'; v.reason = 'Restaurant le plus proche via le domaine'; return takeEdge(v, v.path.shift()); } }
       if (!v.noFood) { v.noFood = true; think(v, 'Nulle part où manger !', 'Manque de restauration', -0.12); }
@@ -237,26 +255,39 @@
     // activité sur place (snowpark, luge…)
     if (Math.random() < 0.12) { const b = activityAt(n, v); if (b) return goService(v, b, 'Activité', D.building(b.type).name); }
     // SKIER : choisir une piste cible, vérifier le budget temps sur le trajet GPS complet + retour
-    const from = Net.from(v.node, md);
-    let best = null, bs = -1e9;
-    for (const p of G.pistes) {
+    const from = Net.from(v.node, md), grp = v.grp;
+    let best = null, bs = -1e9, together = false;
+    if (grp && grp.target && now - grp.targetT < 1800 && G.pistes.indexOf(grp.target) >= 0) {
+      const p = grp.target, t1 = from.dist[p.na.id], t2 = p.nb.id === hub ? 0 : Net.time(p.nb.id, hub, md);
+      if (SS.pisteOpen(p) && p.diff <= md && p.edges.length && t1 < 2400 && t2 < Infinity && t1 + p.len / (SKI_V[v.skill] * M * (v.sf || 1)) + t2 <= remain) { best = p; together = true; }
+    }
+    if (!best) for (const p of G.pistes) {
       if (!SS.pisteOpen(p) || p.diff > md || !p.edges.length) continue;
       const t1 = from.dist[p.na.id]; if (t1 === Infinity) continue;
       const t2 = p.nb.id === hub ? 0 : Net.time(p.nb.id, hub, md); if (t2 === Infinity) continue;
-      const total = t1 + p.len / (SKI_V[v.skill] * M) + t2;
+      const total = t1 + p.len / (SKI_V[v.skill] * M * (v.sf || 1)) + t2;
       if (total > remain) continue;
       const dd = p.diff - v.skill;
       let sc = (dd === 0 ? 1 : dd === -1 ? 0.7 : dd === 1 ? 0.35 : 0.3) + W.quality(p, v.skill) * 0.6 - Math.min(1, p.on / (p.len * p.width / 500)) * 0.5 - t1 / 3600 * 0.7 + Math.random() * 0.55;
       if (p === v.lastPiste) sc -= 0.25;
+      if (grp && p.diff > grp.maxDiff) sc -= 0.9;                // on choisit pour le moins à l'aise du groupe
       if (v.prof.id === 'contemplatif' || v.prof.id === 'sportif') sc += (p.topAlt - 1650) / 2500 * 0.3;
       if (sc > bs) { bs = sc; best = p; }
     }
     if (!best) {
       if (!atHub) return headToHub(v, 'Plus assez de temps pour une descente');
+      // remontées momentanément à l'arrêt (panne, grève, vent) : on patiente au lieu de repartir
+      const stopped = G.lifts.find(l => l.open && SS.liftSeason(l) && l.na === Net.hub && (now < l.brokenUntil || l.windStop));
+      if (stopped && now < SS.LIFT_CLOSE - 5400 && (v.waits = (v.waits || 0) + 1) <= 10) {
+        if (v.waits === 1) think(v, stopped.name + ' à l\'arrêt, j\'attends', 'Pannes', -0.05);
+        v.state = 'rest'; v.until = now + 900; v.decision = 'Attend la remise en service'; v.reason = stopped.name + ' à l\'arrêt'; return;
+      }
       if (now < SS.LIFT_CLOSE - 3600 && !v.runs) { think(v, 'Aucune piste accessible pour mon niveau', 'Pistes inadaptées au niveau', -0.3); return goHome(v, 'Rien à skier'); }
       return apresSki(v);
     }
-    v.target = best; v.decision = 'Skier'; v.reason = 'Objectif : ' + best.name + ' (' + D.DIFF[best.diff].name.toLowerCase() + ')';
+    if (grp && !together) { grp.target = best; grp.targetT = now; }
+    if (together) v.sat = Math.min(1, v.sat + 0.004);
+    v.target = best; v.decision = 'Skier'; v.reason = (together ? 'Avec ' + grp.name.toLowerCase() + ' : ' : 'Objectif : ') + best.name + ' (' + D.DIFF[best.diff].name.toLowerCase() + ')';
     v.path = Net.path(v.node, best.na.id, md) || [];
     advance(v);
   }
@@ -314,7 +345,7 @@
       if (!SS.pisteOpen(p) && !forced) { Net.touch(); v.path = null; v.target = null; return decide(v); }
       v.state = 'ski'; v.edge = e; v.s = e.s0; p.on++;
       const dd = p.diff - v.skill;
-      const risk = 0.0024 * (1 + 2.2 * Math.max(0, dd)) * (1 + 2.5 * p.ice) * (1 + Math.min(1.5, p.on / (p.len * p.width / 400))) * (SS.researched('padding') ? 0.7 : 1) * (p.groomed < 0.3 ? 1.3 : 1) * (G.casual ? 0.5 : 1);
+      const risk = (v.mode === 'rando' ? 0.1 : 1) * 0.0024 * (1 + 2.2 * Math.max(0, dd)) * (1 + 2.5 * p.ice) * (1 + Math.min(1.5, p.on / (p.len * p.width / 400))) * (SS.researched('padding') ? 0.7 : 1) * (p.groomed < 0.3 ? 1.3 : 1) * (G.casual ? 0.5 : 1);
       v.fallAt = Math.random() < risk * e.len / 1000 ? SS.range(e.s0, e.s1) : -1;
     }
   }
@@ -432,6 +463,7 @@
   // ---------------- damage en soirée ----------------
   function startGrooming() {
     Sim.grooming = true; Sim.groomers = [];
+    if (G.summer) return;
     const winch = SS.researched('winch');
     Sim.groomList = G.pistes.filter(p => !p.noGroom && (p.diff < 3 || winch)).sort((a, b) => (b.passes + b.ice * 500 + (1 - b.groomed) * 300) - (a.passes + a.ice * 500 + (1 - a.groomed) * 300));
     for (const b of G.buildings) if (b.type === 'garage' && b.open) for (let i = 0; i < SS.bcap(b); i++) Sim.groomers.push({ x: b.x + i * 6, z: b.z, y: b.y, garage: b, piste: null, s: 0, state: 'idle', hx: 0, hz: 1 });
@@ -499,7 +531,7 @@
       }
       case 'ski': {
         const e = v.edge, p = e.piste; SS.pisteAt(p, v.s, tmp);
-        const sp = SKI_V[v.skill] * SS.clamp(0.7 + tmp.slope * 1.3, 0.6, 1.35) * (1 - 0.25 * p.slush) * (1 - 0.12 * p.powder) * M;
+        const sp = (v.sf || 1) * SKI_V[v.skill] * SS.clamp(0.7 + tmp.slope * 1.3, 0.6, 1.35) * (1 - 0.25 * p.slush) * (1 - 0.12 * p.powder) * M;
         v.s += sp * dt; v.lat += sp * dt * 0.035;
         const d = Math.hypot(tmp.dx, tmp.dz) || 1, amp = (p.width / 2 - 3) * (0.5 + 0.4 * Math.sin(v.id));
         const off = Math.sin(v.lat) * amp, c = Math.cos(v.lat) * 0.6;
@@ -544,7 +576,7 @@
     G.time += dt;
     while (Sim.arrivals.length && Sim.arrivals[0].arriveT <= G.time) {
       const v = Sim.arrivals.shift(); v.state = 'walk'; v.y = T.getH(v.x, v.z); v.dn = 0;
-      if (v.lodger && !v.hasPass) { v.hasPass = true; const pr = G.passPrice * (v.child ? 0.6 : 0.88); SS.earn(pr, 'Forfaits'); v.spent += pr; }
+      if (v.lodger && !v.hasPass) { v.hasPass = true; const pr = SS.passNow() * (v.child ? 0.6 : 0.88); SS.earn(pr, 'Forfaits'); v.spent += pr; }
       Sim.visitors.push(v); Sim.present++; G.visitorsToday++; G.totalVisitors++; decide(v);
     }
     if (G.time - Sim.lastTouch > 600 || G.time < Sim.lastTouch) {
@@ -598,7 +630,7 @@
     const inc = Object.values(G.ledger.inc).reduce((a, b) => a + b, 0), exp = Object.values(G.ledger.exp).reduce((a, b) => a + b, 0);
     const opex = Object.keys(G.ledger.exp).filter(k => k !== 'Construction' && k !== 'Recherche').reduce((a, k) => a + G.ledger.exp[k], 0);
     const report = { opex, day: G.day, date: SS.dateStr(G.day), visitors: G.visitorsToday, sat: G.sat, inc, exp, ledger: G.ledger, fb: Sim.fb, incidents: G.incidentsToday, lost: Sim.today ? Sim.today.lost : 0, why: Sim.today && Sim.today.why, weather: G.weather.type, notes: [] };
-    G.history.push({ day: G.day, year: G.year, v: G.visitorsToday, sat: G.sat, inc: Math.round(inc), exp: Math.round(opex), money: Math.round(G.money), rep: Math.round(G.reputation) });
+    G.history.push({ su: !!G.summer, day: G.day, year: G.year, v: G.visitorsToday, sat: G.sat, inc: Math.round(inc), exp: Math.round(opex), money: Math.round(G.money), rep: Math.round(G.reputation) });
     if (G.history.length > 150) G.history.shift();
     // événement en cours
     if (G.event && G.event.day <= G.day) {
@@ -622,13 +654,37 @@
     SS.checkCareer(report);
     SS.checkAch(report);
     G.day++; W.next();
-    if (G.day >= SS.SEASON_DAYS) seasonEnd(report);
+    if (G.summer) { if (G.day >= SS.SUMMER_DAYS) endSummer(report); }
+    else if (G.day >= SS.SEASON_DAYS) { if (SS.researched('summer')) startSummer(report); else seasonEnd(report); }
     G.time = SS.DAY_START; Sim.lastTouch = 0;
     for (const n of report.notes) { G.log.unshift({ t: SS.DAY_START, d: G.day, msg: n, kind: 'good' }); if (G.log.length > 60) G.log.pop(); }
     Sim.startDay();
     SS.Events.morning();
     SS.save();
     SS.emit('day:end', report);
+  };
+  function winterReset() {
+    G.day = 0; G.year++; G.snowBase = 45;
+    for (const p of G.pistes) { p.depth = 45 + (p.topAlt - 1650) * 0.03; p.ice = 0; p.slush = 0; p.groomed = 0.8; p.snowClosed = false; p.avaUntil = 0; }
+  }
+  function startSummer(report) {
+    G.summer = true; G.day = 0; G.event = G.event && G.event.day > 0 ? null : G.event;
+    for (const p of G.pistes) { p.snowClosed = false; p.avaUntil = 0; p.ice = 0; p.slush = 0; p.powder = 0; }
+    report.notes.push('🌞 Fin de la saison d\'hiver. La saison d\'été commence : 30 jours de VTT et de randonnée. Téléskis et tapis sont à l\'arrêt ; réglez le forfait été dans Finances.');
+    W.init(); Net.touch(); SS.emit('season');
+  }
+  function endSummer(report) {
+    G.summer = false; winterReset();
+    report.notes.push('❄️ Fin de l\'été : les premières neiges tombent. Saison d\'hiver ' + G.year + ' !');
+    W.init(); Net.touch(); SS.emit('season');
+  }
+  // passer l'été sans le jouer : recettes forfaitaires réduites pour les jours restants
+  SS.skipSummer = function () {
+    if (!G.summer || Sim.present > 0) return false;
+    const hs = G.history.filter(h => h.su && h.year === G.year), avg = hs.length ? hs.reduce((a, h) => a + h.inc - h.exp, 0) / hs.length : 0;
+    const gain = Math.round(Math.max(0, avg) * 0.6 * (SS.SUMMER_DAYS - G.day)); G.money += gain;
+    const report = { opex: 0, day: G.day, date: SS.dateStr(G.day), visitors: 0, sat: G.sat, inc: 0, exp: 0, ledger: G.ledger, fb: {}, incidents: 0, notes: ['Été abrégé : ' + SS.eur(gain) + ' de recettes estimées pour les jours restants.'] };
+    endSummer(report); G.time = SS.DAY_START; Sim.lastTouch = 0; Sim.startDay(); SS.save(); SS.emit('day:end', report); return true;
   };
   function seasonEnd(report) {
     let summer = 0;

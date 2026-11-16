@@ -95,6 +95,7 @@
       case 'view': if (arg === 'slope') { SS.Terrain.setViewMode(SS.Terrain.viewMode === 'slope' ? 'normal' : 'slope'); } else if (arg === 'map' || arg === 'crowd' || arg === 'snow') { R.mapMode = R.mapMode === arg ? false : arg; R.drawOverlay(); } else if (arg === 'labels') R.labelsOn = !R.labelsOn; UI.refresh(); break;
       case 'sound': SS.Audio.setOn(!SS.Audio.on); UI.refresh(); break;
       case 'minimap': SS.Minimap.on = !SS.Minimap.on; UI.refresh(); break;
+      case 'skipSummer': if (!sure(el)) break; if (!SS.skipSummer()) toast('Attendez que la station soit vide (le soir) pour abréger l\'été.', 'warn'); UI.refresh(true); break;
       case 'save': toast(SS.save() ? '💾 Partie sauvegardée.' : 'Sauvegarde impossible dans ce navigateur.', 'info'); break;
       case 'vfollow': { const v = UI.sel.obj; SS.Cam.focus(v.x, v.z, 500); SS.Cam.follow = v; toast('Caméra attachée à ' + esc(v.name) + '. Déplacez la vue pour la libérer.', 'info'); break; }
       case 'modern': { const r = SS.modernize(UI.sel.obj, arg); if (r.err) toast(r.err, 'warn'); else toast('✅ Remontée modernisée pour ' + eur(r.cost) + '.', 'good'); UI.refresh(); break; }
@@ -107,6 +108,7 @@
     G = SS.G;
     if (k === 'rename') { const v = String(val).slice(0, 28); if (UI.sel && UI.sel.obj && v.trim()) { UI.sel.obj.name = v; UI.title = v; $('panelTitle').textContent = v; } return; }
     if (k === 'station') { if (String(val).trim()) G.name = String(val).slice(0, 28); return; }
+    if (k === 'spass') { G.summerPass = +val; const o = $('spassOut'); if (o) o.textContent = val + ' €'; return; }
     if (k === 'night') { G.nightPrice = +val; const o = $('nightOut'); if (o) o.textContent = val + ' €'; }
     else if (k === 'pass') { G.passPrice = +val; const o = $('passOut'); if (o) o.textContent = val + ' €'; }
     else if (k === 'bprice') { UI.sel.obj.price = +val; const o = $('bpriceOut'); if (o) o.textContent = val + ' €'; }
@@ -116,7 +118,7 @@
   function renderTop() {
     G = SS.G; if (!G) return;
     const w = D.WEATHER[G.weather.type];
-    $('t_name').textContent = G.name; $('t_mode').textContent = G.mode === 'career' ? 'Carrière · ' + D.CAREER[G.career.stage].title : 'Bac à sable';
+    $('t_name').textContent = G.name; $('t_mode').textContent = (G.mode === 'career' ? 'Carrière · ' + D.CAREER[G.career.stage].title : 'Bac à sable') + (G.summer ? ' · Été' : '');
     $('t_date').textContent = SS.dateStr(G.day) + ' · An ' + G.year; $('t_time').textContent = SS.hhmm(G.time);
     $('t_weather').textContent = w.icon + ' ' + G.weather.temp + '°'; $('t_weather').title = w.name;
     $('t_money').textContent = G.unlimited ? '∞' : eur(G.money); $('t_money').classList.toggle('neg', G.money < 0);
@@ -141,8 +143,8 @@
       return ['💬', '<b>' + top + '</b> : ' + fb[top] + ' remarques aujourd\'hui. ' + (tips[top] || '')];
     }
     if (!s.food && G.visitorsToday > 30) return ['🍽️', 'Vos visiteurs n\'ont rien à manger : un snack ou un restaurant augmentera leur satisfaction et vos recettes.'];
-    if (!s.rental) return ['🎿', 'Sans location de matériel, un quart des clients potentiels ne vient pas.'];
-    if (!s.garage && G.pistes.length > 1) return ['🚜', 'Sans garage à dameuses, vos pistes se dégradent chaque jour.'];
+    if (!G.summer && !s.rental) return ['🎿', 'Sans location de matériel, un quart des clients potentiels ne vient pas.'];
+    if (!G.summer && !s.garage && G.pistes.length > 1) return ['🚜', 'Sans garage à dameuses, vos pistes se dégradent chaque jour.'];
     if (!s.rescue && G.visitorsToday > 80) return ['🚑', 'Aucun poste de secours : un accident ruinerait votre réputation.'];
     if (G.mode === 'career' && !G.research.cur && G.tier < 6 && G.money > 150000) return ['🔬', 'Pensez à lancer une recherche pour débloquer de nouvelles remontées et équipements.'];
     return null;
@@ -196,7 +198,7 @@
   const PANELS = {
     journal() {
       const hs = G.history.slice(-10).reverse();
-      let h = '<h4>Derniers jours</h4>' + (hs.length ? '<div class="jtab"><div class="jrow head"><span>Jour</span><span>Visiteurs</span><span>Satisf.</span><span>Résultat</span></div>' + hs.map(x => '<div class="jrow"><span>' + SS.dateStr(x.day) + '</span><span>' + x.v + '</span><span>' + x.sat + ' %</span><span class="' + (x.inc - x.exp >= 0 ? 'pos' : 'neg') + '">' + eur(x.inc - x.exp) + '</span></div>').join('') + '</div>' : '<p class="fine">Aucune journée terminée pour l\'instant.</p>');
+      let h = '<h4>Derniers jours</h4>' + (hs.length ? '<div class="jtab"><div class="jrow head"><span>Jour</span><span>Visiteurs</span><span>Satisf.</span><span>Résultat</span></div>' + hs.map(x => '<div class="jrow"><span>' + SS.dateStr(x.day, !!x.su) + '</span><span>' + x.v + '</span><span>' + x.sat + ' %</span><span class="' + (x.inc - x.exp >= 0 ? 'pos' : 'neg') + '">' + eur(x.inc - x.exp) + '</span></div>').join('') + '</div>' : '<p class="fine">Aucune journée terminée pour l\'instant.</p>');
       h += '<h4>Faits marquants</h4>' + (G.log.length ? G.log.slice(0, 30).map(l => '<div class="jlog ' + l.kind + '"><small>' + SS.dateStr(l.d) + ' · ' + SS.hhmm(l.t) + '</small>' + l.msg + '</div>').join('') : '<p class="fine">Rien à signaler.</p>');
       return h;
     },
@@ -246,7 +248,8 @@
       const inc = G.ledger.inc, exp = G.ledger.exp, ti = Object.values(inc).reduce((a, b) => a + b, 0), te = OPEX(exp), d = Sim.today || { fair: 26 }, last = G.history[G.history.length - 1];
       let h = '<div class="kpis"><div><b>' + (G.unlimited ? '∞' : eur(G.money)) + '</b>trésorerie</div><div><b>' + eur(G.loan) + '</b>emprunt</div><div><b class="' + (ti - te >= 0 ? 'pos' : 'neg') + '">' + eur(ti - te) + '</b>résultat d\'exploitation</div></div>';
       h += '<canvas id="chart" width="380" height="130"></canvas>';
-      h += '<h4>Forfait journée</h4><div class="slider"><input type="range" min="10" max="90" step="1" value="' + G.passPrice + '" data-in="pass"><b id="passOut">' + G.passPrice + ' €</b></div><p class="fine">Juste prix estimé pour votre domaine : <b>' + Math.round(d.fair) + ' €</b>. Au-dessus, la fréquentation et la satisfaction baissent. Enfants −40 %, résidents −12 %.</p>';
+      if (G.summer) h += '<h4>Forfait été (VTT et piétons)</h4><div class="slider"><input id="summerPass" type="range" min="5" max="45" step="1" value="' + G.summerPass + '" data-in="spass"><b id="spassOut">' + G.summerPass + ' €</b></div><p class="fine">Juste prix estimé cet été : <b>' + Math.round(d.fair) + ' €</b>.</p>';
+      h += '<h4>Forfait journée' + (G.summer ? ' d\'hiver' : '') + '</h4><div class="slider"><input type="range" min="10" max="90" step="1" value="' + G.passPrice + '" data-in="pass"><b id="passOut">' + G.passPrice + ' €</b></div><p class="fine">Juste prix estimé pour votre domaine : <b>' + Math.round(d.fair) + ' €</b>. Au-dessus, la fréquentation et la satisfaction baissent. Enfants −40 %, résidents −12 %.</p>';
       if (SS.researched('night')) h += '<h4>Forfait nocturne</h4><div class="slider"><input id="nightPrice" type="range" min="5" max="40" step="1" value="' + G.nightPrice + '" data-in="night"><b id="nightOut">' + G.nightPrice + ' €</b></div><p class="fine">Vendu en fin de journée aux skieurs qui prolongent (18 h 30 – 21 h). ' + (SS.Sim.nightReachable() ? 'Domaine nocturne prêt.' : '<span class="warn">Il faut une piste éclairée au départ d\'une remontée nocturne partant du front de neige.</span>') + '</p>';
       h += '<h4>Aujourd\'hui</h4><div class="two"><div>' + (Object.keys(inc).map(k => row(k, eur(inc[k]))).join('') || '<p class="fine">Pas encore de recettes.</p>') + '</div><div>' + (Object.keys(exp).map(k => row(k, '−' + eur(exp[k]))).join('') || '<p class="fine">Pas encore de dépenses.</p>') + '</div></div>';
       if (last) h += '<p class="fine">Hier : ' + last.v + ' visiteurs, recettes ' + eur(last.inc) + ', dépenses ' + eur(last.exp) + '.</p>';
@@ -299,11 +302,12 @@
       const w = G.weather, def = D.WEATHER[w.type];
       let h = '<div class="wnow"><span class="big">' + def.icon + '</span><div><b>' + def.name + '</b><br>' + w.temp + ' °C au village · vent ' + Math.round(W.windNow) + ' km/h' + (w.snow ? ' · ' + w.snow + ' cm attendus' : '') + '</div></div>';
       h += '<div class="fc">' + G.forecast.map((f, i) => '<div><small>' + SS.dateStr(G.day + 1 + i).split(' ')[0] + '</small><span>' + D.WEATHER[f.type].icon + '</span><small>' + f.temp + '°' + (f.snow ? ' · ' + f.snow + ' cm' : '') + '</small></div>').join('') + '</div>';
-      h += '<div class="grid">' + row('Température à 2 500 m', Math.round(W.tempAt(2500)) + ' °C') + row('Température à 3 500 m', Math.round(W.tempAt(3500)) + ' °C') + row('Neige au village', Math.round(G.snowBase) + ' cm') + row('Fréquentation', '×' + def.demand) + '</div>';
+      h += '<div class="grid">' + row('Température à 2 500 m', Math.round(W.tempAt(2500)) + ' °C') + row('Température à 3 500 m', Math.round(W.tempAt(3500)) + ' °C') + (G.summer ? '' : row('Neige au village', Math.round(G.snowBase) + ' cm')) + row('Fréquentation', '×' + def.demand) + '</div>';
+      if (G.summer) h += '<div class="msg">🌞 Saison d\'été, jour ' + (G.day + 1) + ' / ' + SS.SUMMER_DAYS + '. Pas de neige à gérer : les pistes servent de sentiers.</div><div class="actions">' + btn('⏭ Passer directement à l\'hiver', 'skipSummer') + '</div>';
       if (G.casual) h += '<div class="msg">Neige simplifiée activée : ni verglas, ni soupe, ni manque de neige.</div>';
-      h += '<h4>État des pistes</h4>'; if (!G.pistes.length) h += '<p class="fine">Aucune piste.</p>';
-      for (const p of G.pistes) h += '<div class="li" data-act="focus" data-arg="piste:' + p.id + '">' + dot(p.diff) + '<b>' + esc(p.name) + '</b><span class="tag ' + (p.ice > 0.45 || p.slush > 0.45 || p.snowClosed ? 'bad' : 'ok') + '">' + W.state(p) + '</span><small>' + Math.round(p.depth) + ' cm · damage ' + pct(p.groomed) + (p.cannons ? ' · enneigeurs' : '') + '</small></div>';
-      h += '<p class="fine">Redoux l\'après-midi → neige soupe ; regel nocturne → verglas, sauf si la piste est damée. Après de fortes chutes, les pistes hautes ouvrent à 10 h 30 (sécurisation avalanches).</p>';
+      h += '<h4>' + (G.summer ? 'État des sentiers' : 'État des pistes') + '</h4>'; if (!G.pistes.length) h += '<p class="fine">Aucune piste.</p>';
+      for (const p of G.pistes) h += '<div class="li" data-act="focus" data-arg="piste:' + p.id + '">' + dot(p.diff) + '<b>' + esc(p.name) + '</b><span class="tag ' + (p.ice > 0.45 || p.slush > 0.45 || p.snowClosed ? 'bad' : 'ok') + '">' + W.state(p) + '</span><small>' + (G.summer ? SS.num(p.len) + ' m · ' + p.passes + ' passages' : Math.round(p.depth) + ' cm · damage ' + pct(p.groomed) + (p.cannons ? ' · enneigeurs' : '')) + '</small></div>';
+      if (!G.summer) h += '<p class="fine">Redoux l\'après-midi → neige soupe ; regel nocturne → verglas, sauf si la piste est damée. Après de fortes chutes, les pistes hautes ouvrent à 10 h 30 (sécurisation avalanches).</p>';
       return h;
     },
     options() {
@@ -348,7 +352,7 @@
       if (s.kind === 'visitor') {
         UI.title = o.name; const bar = (v, c) => '<div class="bar"><i style="width:' + Math.round(SS.clamp(v, 0, 1) * 100) + '%;background:' + c + '"></i></div>';
         const stl = { ski: 'Skie', ride: 'Sur une remontée', queueL: 'Dans la file' + (o.lift ? ' du ' + o.lift.name : ''), walk: 'Marche', inS: 'Dans un service', queueS: 'Fait la queue', rest: 'En pause', lesson: 'En cours de ski', hurt: 'Blessé', down: 'Se relève', gone: 'Reparti', pending: 'Pas encore arrivé' };
-        return '<p>' + o.prof.name + ' · ' + D.SKILL[o.skill] + (o.lodger ? ' · résident' : ' · à la journée') + '</p><div class="grid">' + row('État', stl[o.state] || o.state) + row('Décision', o.decision) + row('Raison', o.reason || '—') + row('Départ prévu', SS.hhmm(o.leaveT)) + row('Temps disponible', o.remain > 0 ? Math.round(o.remain / 60) + ' min' : '—') + row('Descentes', o.runs + ' (' + o.km.toFixed(1) + ' km)') + row('Dépensé', eur(o.spent)) + '</div>' +
+        return '<p>' + o.prof.name + ' · ' + D.SKILL[o.skill] + (o.lodger ? ' · résident' : ' · à la journée') + '</p><div class="grid">' + row('État', stl[o.state] || o.state) + (o.grp ? row('Groupe', esc(o.grp.name) + ' (' + o.grp.members.length + ')') : '') + row('Décision', o.decision) + row('Raison', o.reason || '—') + row('Départ prévu', SS.hhmm(o.leaveT)) + row('Temps disponible', o.remain > 0 ? Math.round(o.remain / 60) + ' min' : '—') + (o.mode ? row('Activité', o.mode === 'vtt' ? 'VTT de descente' : 'Randonnée') : '') + row('Descentes', o.runs + ' (' + o.km.toFixed(1) + ' km)') + row('Dépensé', eur(o.spent)) + '</div>' +
           '<div class="needs"><span>Faim</span>' + bar(o.hunger, '#f28a1c') + '<span>Énergie</span>' + bar(o.energy, '#35d07f') + '<span>Satisfaction</span>' + bar(o.sat, '#4fc3f7') + '</div>' +
           (o.thoughts.length ? '<h4>Pensées</h4>' + o.thoughts.map(t => '<div class="thought">« ' + esc(t) + ' »</div>').join('') : '') + '<div class="actions">' + btn('🎥 Suivre ce visiteur', 'vfollow') + '</div><p class="fine">Fiche en lecture seule : le visiteur décide seul selon l\'heure, ses besoins et le domaine.</p>';
       }

@@ -14,7 +14,7 @@
       ledger: { inc: {}, exp: {} }, history: [],
       pistes: [], lifts: [], buildings: [], roads: [], nextId: 1, flats: [],
       research: { done: [], cur: null }, tier: 0,
-      passPrice: 26, nightPrice: 14, maint: 1, marketing: { social: 0, tv: 0 },
+      passPrice: 26, nightPrice: 14, summerPass: 12, summer: false, maint: 1, marketing: { social: 0, tv: 0 },
       reputation: 50, prestige: 0, satToday: [], sat: 60,
       weather: null, forecast: [], snowBase: 55,
       career: { stage: 0, done: false }, event: null, eventsHosted: {}, bestDay: 0,
@@ -55,7 +55,8 @@
   // ---------- calendrier ----------
   const WD = ['Mer.', 'Jeu.', 'Ven.', 'Sam.', 'Dim.', 'Lun.', 'Mar.'], MO = [['déc.', 31], ['janv.', 31], ['févr.', 28], ['mars', 31], ['avr.', 30]];
   SS.SEASON_DAYS = 140;
-  SS.dateStr = function (day) {
+  SS.dateStr = function (day, summer) {
+    if (summer === undefined ? G.summer : summer) return WD[day % 7] + ' ' + (day < 21 ? (day + 11) + ' juil.' : (day - 20) + ' août');
     let d = day, m = 0; while (m < MO.length - 1 && d >= MO[m][1]) { d -= MO[m][1]; m++; }
     return WD[day % 7] + ' ' + (d + 1) + ' ' + MO[m][0];
   };
@@ -236,11 +237,13 @@
     const a = p[i], b = p[i + 1], t = SS.clamp((s - a.s) / (b.s - a.s), 0, 1);
     out.x = a.x + (b.x - a.x) * t; out.y = a.y + (b.y - a.y) * t; out.z = a.z + (b.z - a.z) * t; return out;
   };
-  SS.nightOn = () => SS.researched('night') && G.pistes.some(p => p.lit) && G.lifts.some(l => l.night);
+  SS.liftSeason = l => !G.summer || (D.lift(l.type).kind !== 'tow' && D.lift(l.type).kind !== 'carpet');   // l'été, téléskis et tapis sont à l'arrêt
+  SS.passNow = () => G.summer ? G.summerPass : G.passPrice;
+  SS.nightOn = () => !G.summer && SS.researched('night') && G.pistes.some(p => p.lit) && G.lifts.some(l => l.night);
   SS.nightActive = () => G.time >= SS.NIGHT_OPEN && G.time < SS.NIGHT_CLOSE && SS.researched('night');
   const nightLift = l => l.night && SS.researched('night');
-  SS.liftRunning = l => l.open && !l.windStop && G.time >= l.brokenUntil && ((G.time >= SS.LIFT_OPEN - 900 && G.time < SS.LIFT_CLOSE + 2400) || (nightLift(l) && G.time >= SS.NIGHT_OPEN - 900 && G.time < SS.NIGHT_CLOSE + 1800));
-  SS.liftBoarding = l => l.open && !l.windStop && G.time >= l.brokenUntil && ((G.time >= SS.LIFT_OPEN && G.time < SS.LIFT_CLOSE) || (nightLift(l) && SS.nightActive()));
+  SS.liftRunning = l => l.open && SS.liftSeason(l) && !l.windStop && G.time >= l.brokenUntil && ((G.time >= SS.LIFT_OPEN - 900 && G.time < SS.LIFT_CLOSE + 2400) || (nightLift(l) && G.time >= SS.NIGHT_OPEN - 900 && G.time < SS.NIGHT_CLOSE + 1800));
+  SS.liftBoarding = l => l.open && SS.liftSeason(l) && !l.windStop && G.time >= l.brokenUntil && ((G.time >= SS.LIFT_OPEN && G.time < SS.LIFT_CLOSE) || (nightLift(l) && SS.nightActive()));
   // après la fermeture du jour, seules les pistes éclairées restent ouvertes
   SS.pisteOpen = p => p.open && !p.snowClosed && !(p.avaUntil > G.time) && (G.time < SS.LIFT_CLOSE + 2700 || G.time >= SS.NIGHT_CLOSE + 600 || !!p.lit);
 
@@ -379,7 +382,7 @@
       for (let i = 0; i < n; i++) if (!done[i] && dist[i] < bd) { bd = dist[i]; u = i; }
       if (u < 0) break; done[u] = 1;
       for (const e of Net.nodes[u].out) {
-        if (down === 'plan') { if (!(e.kind === 'lift' ? e.lift.open : e.piste.open && !e.piste.snowClosed && e.piste.diff <= maxDiff)) continue; }
+        if (down === 'plan') { if (!(e.kind === 'lift' ? e.lift.open && SS.liftSeason(e.lift) : e.piste.open && !e.piste.snowClosed && e.piste.diff <= maxDiff)) continue; }
         else if (down) { if (e.kind === 'lift' || !(e.piste.diff <= maxDiff && e.piste.open)) continue; }
         else if (!Net.edgeUsable(e, maxDiff)) continue;
         const d = bd + Net.edgeTime(e);
@@ -430,7 +433,7 @@
     const s = SS.stats(); let km = 0; const kinds = [0, 0, 0, 0];
     for (const p of G.pistes) if (p.open && !p.snowClosed && p.edges.length && Net.from(p.nb.id, 3, 'plan').dist[Net.hub.id] < Infinity && Net.from(Net.hub.id, 3, 'plan').dist[p.na.id] < Infinity) { km += p.len / 1000; kinds[p.diff]++; }
     let a = Math.min(1, km / 22) * 0.55 + kinds.filter(k => k > 0).length * 0.05 + Math.min(0.1, s.vert / 12000);
-    for (const b of G.buildings) a += (D.building(b.type).attract || 0);
+    for (const b of G.buildings) a += (D.building(b.type).attract || 0) + (G.summer && D.building(b.type).summer ? 0.04 : 0);
     return { a: Math.min(1.25, a), km, kinds, s };
   };
 
@@ -455,7 +458,7 @@
   SS.loadData = function () { try { return JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) { return null; } };
   // à appeler après T.init(seed) et avant la construction des maillages
   SS.restore = function (data) {
-    G = SS.G = data; G.paused = true; if (!G.nightPrice) G.nightPrice = 14; if (!G.ach) G.ach = {}; if (G.level === undefined) G.level = 1;
+    G = SS.G = data; G.paused = true; if (!G.nightPrice) G.nightPrice = 14; if (!G.ach) G.ach = {}; if (!G.summerPass) G.summerPass = 12; if (G.level === undefined) G.level = 1;
     for (const f of G.flats) T.flatten(f[0], f[1], f[2], f[3], f[4]);
     T.removedTrees = new Set(data.removedTrees || []); delete G.removedTrees;
     const pistes = G.pistes, lifts = G.lifts; G.pistes = []; G.lifts = [];

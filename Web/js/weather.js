@@ -6,7 +6,7 @@
 
   function roll(day) {
     const late = SS.smooth(85, 140, day), r = Math.random();
-    const table = [['sun', 0.30], ['cloud', 0.24], ['snow', 0.23 - late * 0.09], ['heavy', 0.07 - late * 0.03], ['storm', 0.05], ['thaw', 0.04 + late * 0.14], ['frost', 0.11 - late * 0.09]];
+    const table = SS.G.summer ? [['sun', 0.46], ['cloud', 0.30], ['rain', 0.17], ['storm', 0.07]] : [['sun', 0.30], ['cloud', 0.24], ['snow', 0.23 - late * 0.09], ['heavy', 0.07 - late * 0.03], ['storm', 0.05], ['thaw', 0.04 + late * 0.14], ['frost', 0.11 - late * 0.09]];
     let tot = 0; for (const t of table) tot += t[1];
     let x = r * tot;
     for (const t of table) { x -= t[1]; if (x <= 0) return make(t[0], day); }
@@ -14,6 +14,7 @@
   }
   function make(type, day) {
     const def = D.WEATHER[type];
+    if (SS.G.summer) return { type, temp: Math.round(19 + SS.range(-3, 5) - (type === 'rain' || type === 'storm' ? 6 : 0)), wind: Math.round((def.wind || 0) * 0.7 + SS.range(3, 22)), snow: 0 };
     const base = -4 + 9 * SS.smooth(60, 140, day) + (day < 15 ? 1.5 : 0);
     return { type, temp: Math.round(base + (def.warm || 0) + SS.range(-2, 2) + (type === 'sun' ? 1.5 : 0)), wind: Math.round((def.wind || 0) + SS.range(5, type === 'storm' ? 45 : 28)), snow: Math.round(def.snow * SS.range(0.6, 1.4)) };
   }
@@ -33,11 +34,13 @@
 
   // qualité de neige perçue 0..1 (skill module l'effet de la poudreuse)
   W.quality = function (p, skill) {
+    if (SS.G.summer) return SS.G.weather.type === 'rain' ? 0.45 : 0.78;
     let q = 0.5 + 0.3 * p.groomed + p.powder * (skill >= 2 ? 0.25 : -0.1) - 0.5 * p.ice - 0.35 * p.slush;
     if (p.depth < 30) q -= 0.2;
     return SS.clamp(q, 0, 1);
   };
   W.state = function (p) {
+    if (SS.G.summer) return SS.G.weather.type === 'rain' ? 'Sentier boueux' : 'Sentier sec';
     if (p.snowClosed) return 'Neige insuffisante';
     if (p.ice > 0.45) return 'Verglas';
     if (p.slush > 0.45) return 'Neige soupe';
@@ -62,7 +65,7 @@
 
   // effets en cours de journée (appelé toutes les 10 min de jeu)
   W.dayTick = function () {
-    const G = SS.G; if (G.casual) return;
+    const G = SS.G; if (G.casual || G.summer) return;
     for (const p of G.pistes) {
       const mid = p.topAlt - p.drop / 2, t = W.tempAt(mid, false);
       if (G.time > 12.5 * 3600 && t > 1.5) p.slush = Math.min(1, p.slush + (t - 1.5) * 0.012);
@@ -73,6 +76,7 @@
   // passage de la nuit : chutes, fonte, regel, canons. Le damage est fait avant par les dameuses.
   W.night = function () {
     const G = SS.G, w = G.weather; let cannonCost = 0, closed = [];
+    if (G.summer) { for (const p of G.pistes) { p.passes = 0; p.snowClosed = false; p.avaUntil = 0; } return; }
     for (const p of G.pistes) {
       const mid = p.topAlt - p.drop / 2, tn = W.tempAt(mid, true), td = W.tempAt(mid, false);
       const fall = w.snow * (0.6 + (mid - 1650) / 1000 * 0.5);

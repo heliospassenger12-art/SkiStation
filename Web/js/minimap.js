@@ -16,7 +16,7 @@
     cv.addEventListener('pointermove', e => { if (drag) go(e); });
     cv.addEventListener('pointerup', () => { drag = false; });
     cv.addEventListener('pointercancel', () => { drag = false; });
-    SS.on('game:start', MM.rebuild);
+    SS.on('game:start', MM.rebuild); SS.on('season', MM.rebuild);
   };
   // relief ombré calculé une fois par partie (altitude + éclairage nord-ouest)
   MM.rebuild = function () {
@@ -26,6 +26,7 @@
       const sh = SS.clamp(0.75 + (T.getH(x - step, z - step) - T.getH(x + step, z + step)) / (step * 2.6), 0.35, 1.15);
       const e = SS.clamp((h - 1640) / 2560, 0, 1), rock = SS.smooth(0.55, 0.9, T.slope(x, z));
       let r = 214 - 40 * e, g = 224 - 30 * e, b = 238 - 10 * e;
+      if (SS.G.summer && h < 3000) { const f = SS.smooth(3000, 2600, h); r = SS.lerp(r, 120, f); g = SS.lerp(g, 160, f); b = SS.lerp(b, 95, f); }
       if (h < 2250) { const f = 0.35 * SS.smooth(2250, 1900, h); r -= 70 * f; g -= 40 * f; b -= 70 * f; }
       r = SS.lerp(r, 120, rock); g = SS.lerp(g, 118, rock); b = SS.lerp(b, 116, rock);
       const k = (j * n + i) * 4; d[k] = r * sh; d[k + 1] = g * sh; d[k + 2] = b * sh; d[k + 3] = 255;

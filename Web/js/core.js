@@ -1,7 +1,7 @@
 // SkiStation Web — noyau : utilitaires, bruit, bus d'événements
 (function () {
   'use strict';
-  const SS = window.SS = { VERSION: 'Web 1.3' };
+  const SS = window.SS = { VERSION: 'Web 1.4' };
 
   SS.WORLD = 8000;            // côté de la carte en mètres (360°)
   SS.HALF = SS.WORLD / 2;
@@ -20,6 +20,7 @@
   SS.LIFT_CLOSE = 16.75 * 3600;
   SS.NIGHT_OPEN = 18.5 * 3600;     // ski nocturne : pistes éclairées et remontées désignées
   SS.NIGHT_CLOSE = 21 * 3600;
+  SS.SUMMER_DAYS = 30;             // saison d'été jouable (VTT, randonnée) après la recherche dédiée
 
   // maisons décoratives du vieux village (non interactives)
   SS.DECOR = [

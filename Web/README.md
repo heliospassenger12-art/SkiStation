@@ -19,7 +19,7 @@ tout est en JavaScript, three.js est fourni dans `js/three.min.js`.
 | Remontées | 13 modèles sur 6 paliers de recherche, dont un funiculaire au sol. Modernisation sur la même ligne avec reprise de l'ancien modèle. Portée dépassée refusée, jamais corrigée. Téléski : pas de traversée de piste. Véhicules physiques, embarquement réel |
 | Temps | Horloge unique, pause / x1 / x3 / x8, journée de 07:30 à minuit, cycle jour-nuit |
 | Ski nocturne | Recherche dédiée, éclairage des pistes, remontées ouvertes de 18 h 30 à 21 h, forfait du soir, damage décalé après la nocturne |
-| Visiteurs | Budget temps, faim, énergie, profil, niveau. Décision Skier / Manger / Repos / Rentrer, fiche en lecture seule |
+| Visiteurs | Familles et groupes d'amis qui arrivent, skient et déjeunent ensemble (le groupe choisit pour le moins à l'aise). Budget temps, faim, énergie, profil, niveau. Décision Skier / Manger / Repos / Rentrer, fiche en lecture seule |
 | GPS du domaine | Piste cible persistante, trajet par remontées (montée) et pistes (descente), temps de trajet + attente + retour vérifiés, aucune téléportation |
 | Services | Restauration, bar, location, magasin, hébergements, activités : capacité, file, qualité, prix réglable, agrandissement |
 | École / enfants | École de ski (moniteurs, cours collectifs et individuels), Jardin des Piou-Piou, médailles |
@@ -27,6 +27,7 @@ tout est en JavaScript, three.js est fourni dans `js/three.min.js`.
 | Activités | Snowpark, luge, patinoire, nordique, chiens de traîneau, parapente, spa, musée, concerts, stade de slalom, stade olympique |
 | Économie | Forfait, tarifs, charges, emprunt, marketing, événements, réputation, prestige, recettes d'été |
 | Événements du matin | Une fois sur quatre environ : grève, panne électrique, risque d'avalanche, influenceuse, subvention, tournage, équipe nationale, contrôle technique, chef étoilé. Deux choix, conséquences immédiates |
+| Saison d'été | Après la recherche « Saison d'été » : 30 jours jouables de VTT et de randonnée sur les remontées (hors téléskis et tapis), paysage d'été, météo et forfait dédiés ; peut être abrégée |
 | Succès | 18 succès à débloquer, listés dans Carrière |
 | Arcade | Descente à la troisième personne sur n'importe quelle piste construite : sauts, vrilles, flips |
 
@@ -66,4 +67,5 @@ tout est en JavaScript, three.js est fourni dans `js/three.min.js`.
 - 1 500 visiteurs simulés au maximum.
 - Au village, les piétons contournent les bâtiments un par un (pas de vrai calcul d'itinéraire).
 - Multijoueur non réalisé.
+- L'été réutilise les pistes comme sentiers : pas de tracés VTT dédiés ni d'équipements propres à l'été.
 - La sauvegarde automatique est locale au navigateur ; Options › « Exporter un code de sauvegarde » donne un code à recoller au menu principal sur un autre appareil ; une partie rechargée reprend au matin du jour en cours.

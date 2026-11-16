@@ -37,6 +37,7 @@
   R.buildWorld = function () {
     for (const o of scene.children.slice()) if (o !== hemi && o !== sun) scene.remove(o);
     R.objs.clear();
+    T.summer = !!SS.G.summer;
     scene.add(T.buildMesh(ovTex));
     scene.add(T.buildTrees());
     skirt = new THREE.Mesh(new THREE.PlaneGeometry(90000, 90000).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0xe9eef5 })); skirt.position.y = 1632; scene.add(skirt);
@@ -119,6 +120,10 @@
   SS.on('removed', (kind, o) => { remove(o); R.select(null); });
   SS.on('lift:refresh', l => { remove(l); addLift(l); });
   SS.on('world', () => R.drawOverlay());
+  SS.on('season', () => {
+    if (!T.geo) return; T.summer = !!SS.G.summer; T.updateRegion(0, 0, SS.N - 1, SS.N - 1);
+    scene.remove(T.treeMesh); T.treeMesh.geometry.dispose(); scene.add(T.buildTrees()); R.drawOverlay();
+  });
 
   // --- texture de sol : pistes, routes, places (aucun z-fighting : c'est peint sur le relief) ---
   const heat = t => 'hsl(' + Math.round(130 - 130 * SS.clamp(t, 0, 1)) + ',85%,' + Math.round(48 + 8 * t) + '%)';
@@ -133,6 +138,12 @@
     for (const b of G.buildings) { const def = D.building(b.type); c.fillStyle = 'rgba(190,197,208,0.8)'; c.beginPath(); c.arc(X(b.x), Z(b.z), (def.r + 3) * k, 0, 7); c.fill(); }
     for (const p of G.pistes) {
       const col = D.DIFF[p.diff].color, open = SS.pisteOpen(p);
+      if (G.summer && !R.mapMode) {                    // l'été, la piste devient un sentier balisé
+        c.strokeStyle = 'rgba(214,226,170,0.55)'; c.lineWidth = p.width * k; path(p.pts);
+        c.strokeStyle = '#8a6a45'; c.lineWidth = Math.max(1.5, 7 * k); path(p.pts);
+        c.strokeStyle = col; c.setLineDash([10 * k, 22 * k]); c.lineWidth = Math.max(1, 3 * k); path(p.pts); c.setLineDash([]);
+        continue;
+      }
       c.strokeStyle = col; c.lineWidth = (p.width + 7) * k; path(p.pts);
       let fill = R.mapMode ? col : open ? '#dfe9f7' : '#b9bfc9';
       if (R.mapMode === 'crowd') fill = heat(Math.min(1, p.on / (p.len * p.width / 450)));
@@ -215,9 +226,9 @@
     sun.intensity = 1.7 * day * w.light; sun.color.setHex(0xfff4e0).lerp(SUNSET, Math.min(0.7, edge * 0.7));
     hemi.intensity = 0.5 + 0.5 * day * (0.6 + 0.4 * w.light); hemi.color.setHex(0xdfeeff).lerp(c3.setHex(0x6f8fd0), 1 - day);
     winMat.color.setHex(0x2a3644).lerp(c3.setHex(0xffd27a), SS.smooth(0.55, 0.15, day));
-    skirt.material.color.setHex(0xe9eef5);
+    skirt.material.color.setHex(SS.G.summer ? 0x4f7a3a : 0xe9eef5);
     R.day = day;
-    snowPts.visible = w.snow > 0;
+    snowPts.visible = w.snow > 0 || !!w.rain; snowPts.material.color.setHex(w.rain ? 0x9fc4e8 : 0xffffff);
     if (snowPts.visible) {
       const a = snowPts.geometry.attributes.position.array, sz = Math.max(300, Cam.dist * 0.9), t = performance.now() / 1000;
       snowPts.position.set(Cam.tx - sz / 2, T.getH(Cam.tx, Cam.tz) - sz * 0.1, Cam.tz - sz / 2); snowPts.scale.set(sz, sz * 0.8, sz);

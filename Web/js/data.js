@@ -82,7 +82,7 @@
     { id: 'luxury', name: 'Hôtellerie de prestige', cost: 180000, days: 5, desc: 'Palace, table gastronomique, spa.' },
     { id: 'events', name: 'Événementiel sportif', cost: 120000, days: 4, desc: 'Stade de slalom, scène de concerts et calendrier d\'événements.' },
     { id: 'night', name: 'Ski nocturne', cost: 140000, days: 3, desc: 'Éclairage des pistes et ouverture de 18 h 30 à 21 h des remontées désignées, avec un forfait du soir.', req: 'snowmaking' },
-    { id: 'summer', name: 'Saison d\'été', cost: 100000, days: 4, desc: 'Parapente, musée, et recettes estivales pendant l\'intersaison.' },
+    { id: 'summer', name: 'Saison d\'été', cost: 100000, days: 4, desc: 'Saison d\'été jouable de 30 jours : VTT et randonnée sur vos remontées (hors téléskis et tapis). Débloque aussi parapente et musée.' },
     { id: 'olympic', name: 'Dossier olympique', cost: 900000, days: 10, desc: 'Débloque le stade olympique et la candidature aux Jeux.', req: 'events' }
   ];
 
@@ -138,6 +138,7 @@
     snow: { name: 'Chutes de neige', icon: '🌨️', demand: 0.85, sky: 0xb9c3cf, snow: 12, light: 0.65 },
     heavy: { name: 'Fortes chutes', icon: '❄️', demand: 0.6, sky: 0xaab2bc, snow: 35, light: 0.5 },
     storm: { name: 'Tempête', icon: '🌬️', demand: 0.4, sky: 0x8d959f, snow: 20, light: 0.45, wind: 60 },
+    rain: { name: 'Pluie', icon: '🌧️', demand: 0.45, sky: 0x8f9aa6, snow: 0, light: 0.6, rain: true },
     thaw: { name: 'Redoux', icon: '🌦️', demand: 0.8, sky: 0x9fb4c4, snow: 0, light: 0.8, warm: 7 },
     frost: { name: 'Grand froid', icon: '🥶', demand: 0.9, sky: 0x86bdf0, snow: 0, light: 1, warm: -9 }
   };
