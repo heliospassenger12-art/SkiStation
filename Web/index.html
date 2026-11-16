@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>SkiStation</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="view"></canvas>
+<div id="labels"></div>
+<div id="hud" hidden>
+  <div id="topbar">
+    <div class="tgroup id"><b id="t_name"></b><small id="t_mode"></small></div>
+    <div class="tgroup"><b id="t_time"></b><small id="t_date"></small></div>
+    <div class="tgroup"><b id="t_weather"></b><small>météo</small></div>
+    <div class="tgroup"><b id="t_money"></b><small>trésorerie</small></div>
+    <div class="tgroup"><b id="t_vis"></b><small>visiteurs</small></div>
+    <div class="tgroup"><b id="t_sat"></b><small>satisfaction</small></div>
+    <div class="tgroup"><b id="t_stars"></b><small>prestige</small></div>
+    <div id="speed">
+      <button class="sp" data-act="speed" data-arg="0" title="Pause (Espace)">⏸</button>
+      <button class="sp" data-act="speed" data-arg="1">x1</button>
+      <button class="sp" data-act="speed" data-arg="3">x3</button>
+      <button class="sp" data-act="speed" data-arg="8">x8</button>
+      <button class="sp" id="skipBtn" data-act="skip" title="Passer au lendemain (station vide)">⏭</button>
+    </div>
+  </div>
+  <div id="advice" hidden></div>
+  <div id="panel" hidden>
+    <div id="panelHead"><b id="panelTitle"></b><button data-act="close" aria-label="Fermer">✕</button></div>
+    <div id="panelBody"></div>
+  </div>
+  <div id="recap" hidden></div>
+  <div id="toolbar">
+    <button class="tb" data-act="panel" data-arg="build"><span>🏗️</span>Construire</button>
+    <button class="tb" data-act="panel" data-arg="domain"><span>⛷️</span>Domaine</button>
+    <button class="tb" data-act="panel" data-arg="finance"><span>💶</span>Finances</button>
+    <button class="tb" data-act="panel" data-arg="visitors"><span>👥</span>Visiteurs</button>
+    <button class="tb" data-act="panel" data-arg="research"><span>🔬</span>Recherche</button>
+    <button class="tb" data-act="panel" data-arg="career"><span>🏆</span>Carrière</button>
+    <button class="tb" data-act="panel" data-arg="weather"><span>🌨️</span>Météo</button>
+    <button class="tb" data-act="panel" data-arg="options"><span>⚙️</span>Options</button>
+  </div>
+  <div id="toasts"></div>
+  <div id="arcadeHud" hidden>
+    <div class="astats"><b id="a_speed"></b><b id="a_score"></b><b id="a_time"></b><button class="btn" data-act="arcadeStop">✕ Quitter</button></div>
+    <div id="a_msg"></div>
+    <div class="ahelp">← → tourner · ↑ schuss · ↓ freiner · Espace sauter (en l'air : ← → vrille, ↑ ↓ flip)</div>
+    <div class="apad">
+      <button id="ak_left">◀</button><button id="ak_brake">▼</button><button id="ak_jump">⤒</button><button id="ak_tuck">▲</button><button id="ak_right">▶</button>
+    </div>
+  </div>
+</div>
+<div id="modal" hidden><div id="modalBox"></div></div>
+<div id="fatal">Ce jeu nécessite WebGL. Activez l'accélération graphique ou essayez un autre navigateur.</div>
+<script src="js/three.min.js"></script>
+<script src="js/core.js"></script>
+<script src="js/terrain.js"></script>
+<script src="js/data.js"></script>
+<script src="js/game.js"></script>
+<script src="js/weather.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/models.js"></script>
+<script src="js/render.js"></script>
+<script src="js/build.js"></script>
+<script src="js/arcade.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
