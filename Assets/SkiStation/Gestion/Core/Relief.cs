@@ -152,12 +152,15 @@ namespace SkiStation.Gestion
         /// <summary>Marque une bande enneigée (les pistes recouvrent la roche).</summary>
         public void SnowAlong(IList<P3> pts, double halfW)
         {
+            int bx0 = N, bz0 = N, bx1 = 0, bz1 = 0;
             foreach (var p in pts)
             {
                 int x0 = (int)Math.Floor((p.x - halfW + HALF) / CELL), x1 = (int)Math.Ceiling((p.x + halfW + HALF) / CELL);
                 int z0 = (int)Math.Floor((p.z - halfW + HALF) / CELL), z1 = (int)Math.Ceiling((p.z + halfW + HALF) / CELL);
                 for (int iz = Math.Max(0, z0); iz <= Math.Min(N - 1, z1); iz++) for (int ix = Math.Max(0, x0); ix <= Math.Min(N - 1, x1); ix++) SnowMask[iz * N + ix] = 1;
+                bx0 = Math.Min(bx0, x0); bz0 = Math.Min(bz0, z0); bx1 = Math.Max(bx1, x1); bz1 = Math.Max(bz1, z1);
             }
+            if (bx1 >= bx0) RegionChanged?.Invoke(Math.Max(0, bx0 - 1), Math.Max(0, bz0 - 1), Math.Min(N - 1, bx1 + 1), Math.Min(N - 1, bz1 + 1));
         }
 
         // --- forêts (positions seulement : le modèle de sapin est celui du projet Unity) ---

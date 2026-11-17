@@ -17,6 +17,7 @@ namespace SkiStation
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Create()
         {
+            if (SkiStation.Arcade.ArcadeSceneIsolation.IsActive) return;
             if (FindFirstObjectByType<SkiStationStartMenu249>() != null) return;
             new GameObject("SkiStation_StartMenu_Phase54").AddComponent<SkiStationStartMenu249>();
         }

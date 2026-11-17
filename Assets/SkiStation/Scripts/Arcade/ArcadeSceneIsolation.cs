@@ -12,6 +12,8 @@ namespace SkiStation.Arcade
             {
                 var scene = SceneManager.GetActiveScene();
                 return scene.name.StartsWith("SkiStation_Arcade_Test_", System.StringComparison.Ordinal)
+                    // scène de gestion fusionnée (Assets/SkiStation/Gestion) : les anciens systèmes ne s'installent pas
+                    || scene.name.StartsWith("SkiStation_Gestion", System.StringComparison.Ordinal)
                     || Object.FindFirstObjectByType<ArcadeTestSlope>() != null;
             }
         }
