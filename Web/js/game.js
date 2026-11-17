@@ -494,23 +494,50 @@
     }
     s.stage = s.stage || 0; s.eventsHosted = Object.values(G.eventsHosted).reduce((a, b) => a + b, 0);
     s.worldCup = G.eventsHosted.worldcup || 0; s.olympics = G.eventsHosted.olympics || 0;
+    { const hs = G.history.slice(-7); s.satAvg = hs.length ? hs.reduce((a, x) => a + x.sat, 0) / hs.length : G.sat; }
+    s.luxBeds = 0; for (const b of G.buildings) { const d = D.building(b.type); if (d.type === 'lodging' && d.seg === 2) s.luxBeds += SS.bcap(b); }
+    s.restaurants = G.buildings.filter(b => D.building(b.type).type === 'food').length;
+    s.activities = new Set(G.buildings.filter(b => D.building(b.type).type === 'activity').map(b => b.type)).size;
+    s.premiumLift = G.lifts.some(l => ['funicular', 'cablecar', 'three_s'].indexOf(l.type) >= 0);
+    s.stars = SS.prestigeStars(G.prestige);
     s.fame = G.fame; s.debt = G.loan; s.machines = SS.Mgmt.groomerCount(); s.patrol = SS.Mgmt.patrolCount(); s.todayV = G.visitorsToday;
     s.capacity = G.lifts.reduce((a, l) => a + l.capacity, 0); s.minCond = G.lifts.length ? Math.min(...G.lifts.map(l => l.cond)) : 1;
     const h7 = G.history.slice(-7); s.profit7 = h7.length ? h7.reduce((a, x) => a + x.inc - x.exp, 0) / h7.length : -1;
     for (const e of D.EVENTS) s['h_' + e.id] = G.eventsHosted[e.id] || 0;
     s.medals = Object.values(G.medals).reduce((a, b) => a + b, 0); s.research_olympic = SS.researched('olympic');
-    s.bidOk = !!(G.bid && ['prep', 'games', 'done'].indexOf(G.bid.phase) >= 0) || (G.eventsHosted.olympics || 0) > 0;
+    s.bidOk = !!(G.bid && ['prep', 'games', 'done'].indexOf(G.bid.phase) >= 0) || !!G.olympicsDay1; s.olyDay1 = !!G.olympicsDay1;
     return s;
   };
+  // PRESTIGE (0-100, affiché en étoiles) : le standing de la station. Un beau domaine ne suffit pas :
+  // sans hébergement de luxe, sans loisirs variés ni remontées d'exception, le prestige reste plafonné.
   SS.updatePrestige = function () {
-    const s = SS.stats(); let p = 0;
-    p += Math.min(18, s.km * 0.9); p += Math.min(10, s.vert / 200); p += Math.min(6, (s.red > 0) * 2 + (s.black > 0) * 4);
-    let tech = 0; for (const l of G.lifts) tech = Math.max(tech, D.lift(l.type).tier); p += tech * 2;
-    const seen = {}; for (const b of G.buildings) if (!seen[b.type]) { seen[b.type] = 1; p += (D.building(b.type).prestige || 0); }
-    p += Math.min(10, s.beds / 90); p += Math.min(12, Object.keys(G.eventsHosted).reduce((a, k) => a + D.EVENTS.find(e => e.id === k).prestige * Math.min(2, G.eventsHosted[k]) * 0.5, 0));
-    p += (G.reputation - 50) * 0.24;
-    G.prestige = SS.clamp(Math.round(p), 0, 100); return s;
+    const s = SS.stats(), parts = {}, caps = [];
+    let tech = 0, prem = 0; const kinds = {};
+    for (const l of G.lifts) { const d = D.lift(l.type); tech = Math.max(tech, d.tier); kinds[d.id] = 1; }
+    prem += (kinds.funicular ? 4 : 0) + (kinds.cablecar ? 4 : 0) + (kinds.three_s ? 3 : 0) + (kinds.gondola_8 || kinds.gondola_10 ? 2 : 0) + (kinds.bubble_8 ? 1.5 : 0) + (kinds.chair_det_6 ? 1 : 0);
+    const colors = [0, 1, 2, 3].filter(d => G.pistes.some(p => p.diff === d)).length;
+    parts.domaine = Math.min(28, Math.min(12, s.km * 0.4) + Math.min(6, s.vert / 300) + colors + Math.min(6, Math.max(0, (s.topAlt - 2000) / 250)));
+    parts.remontees = Math.min(14, tech * 1.1 + Math.min(7, prem));
+    let lux = 0, nights = 0, priceSum = 0, luxRating = 0, luxN = 0;
+    for (const b of G.buildings) { const d = D.building(b.type); if (d.type !== 'lodging') continue; const c = SS.bcap(b); priceSum += b.price * c; nights += c; if (d.seg === 2) { lux += c; luxRating += b.rating; luxN++; } }
+    const avgNight = nights ? priceSum / nights : 0;
+    parts.hebergement = Math.min(24, Math.min(14, lux / 15) + Math.min(6, Math.max(0, (avgNight - 80) / 25)) + (luxN && luxRating / luxN >= 4 ? 4 : 0));
+    const acts = new Set(G.buildings.filter(b => D.building(b.type).type === 'activity').map(b => b.type));
+    const premiumFood = G.buildings.filter(b => D.building(b.type).type === 'food' && (b.range === 2 || b.type === 'gastro' || b.type === 'alt_restaurant')).length;
+    parts.loisirs = Math.min(20, acts.size * 2 + (s.gastro ? 4 : 0) + (s.spa ? 3 : 0) + Math.min(3, premiumFood));
+    parts.evenements = Math.min(8, Object.keys(G.eventsHosted).reduce((a, k) => { const e = D.EVENTS.find(x => x.id === k); return a + (e ? e.prestige * Math.min(2, G.eventsHosted[k]) * 0.35 : 0); }, 0));
+    const rated = G.buildings.filter(b => SS.Mgmt.isService(b) || D.building(b.type).type === 'lodging'), avgR = rated.length ? rated.reduce((a, b) => a + b.rating, 0) / rated.length : 3;
+    parts.service = SS.clamp((avgR - 3) * 3, 0, 6);
+    let p = Object.values(parts).reduce((a, b) => a + b, 0);
+    if (!lux) caps.push([55, 'aucun hébergement de luxe']);
+    if (acts.size < 3) caps.push([60, 'moins de 3 loisirs différents']);
+    if (!prem || prem < 2) caps.push([72, 'aucune remontée d\'exception (télécabine, téléphérique, 3S, funiculaire)']);
+    if (!s.gastro && !s.spa) caps.push([80, 'ni table gastronomique ni spa']);
+    for (const c of caps) p = Math.min(p, c[0]);
+    G.prestige = SS.clamp(Math.round(p), 0, 100); G.prestigeParts = parts; G.prestigeCaps = caps.map(c => c[1] + ' (plafond ' + c[0] + ')');
+    return s;
   };
+  SS.prestigeStars = p => Math.round(SS.clamp(p, 0, 100) / 10) / 2;          // 0 à 5 étoiles, par demi-étoile
   // attractivité du domaine : sert à la demande et à la « juste valeur » du forfait
   SS.attract = function () {
     const s = SS.stats(); let km = 0; const kinds = [0, 0, 0, 0];

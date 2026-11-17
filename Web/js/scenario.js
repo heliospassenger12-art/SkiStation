@@ -19,17 +19,36 @@
     return s;
   };
 
-  // ---------- notoriété : lente à gagner, lente à perdre ----------
+  // ---------- NOTORIÉTÉ : la renommée, portée par l'humeur des visiteurs et le rapport qualité/prix ----------
+  // Une station modeste mais où tout le monde est heureux et paie le juste prix peut avoir une notoriété excellente.
+  Sc.valueForMoney = function () {
+    G = SS.G; const fair = SS.Sim.today && SS.Sim.today.fair || 26;
+    let v = 55 + 70 * (1 - SS.passNow() / fair);                                        // forfait vs juste prix
+    let w = 0, r = 0, q = 0;
+    for (const b of G.buildings) {
+      const d = D.building(b.type); if (!(SS.Mgmt.isService(b) || d.type === 'lodging') || !b.price) continue;
+      const k = Math.max(1, b.visits + (b.guests || 0)); w += k; r += k * b.price / (SS.Mgmt.refPrice(b) || b.price); q += k * (b.rating - 3);
+    }
+    if (w) { v += 30 * (1 - r / w) + 8 * (q / w); }
+    return SS.clamp(v, 0, 100);
+  };
+  Sc.fameParts = function () {
+    G = SS.G; const s = SS.stats(), parts = {};
+    parts.humeur = 0.5 * s.satAvg;
+    parts.qualitePrix = 0.2 * Sc.valueForMoney();
+    parts.frequentation = 0.15 * Math.min(100, 100 * Math.log10(1 + G.bestDay) / Math.log10(1501));
+    parts.prestige = 0.1 * G.prestige;
+    parts.evenements = Math.min(15, Object.keys(G.eventsHosted).reduce((a, k) => { const e = D.EVENTS.find(x => x.id === k); return a + (e ? Math.min(2, G.eventsHosted[k]) * e.fameGain * 0.5 : 0); }, 0));
+    parts.marketing = (G.marketing.tv > 0 ? 5 : 0) + (G.marketing.social > 0 ? 3 : 0);
+    return parts;
+  };
   Sc.fameTarget = function () {
-    G = SS.G; let t = (0.45 * G.prestige + 0.45 * G.reputation) * SS.clamp(0.25 + G.totalVisitors / 2500, 0.25, 1);       // sans clientèle, pas de notoriété
-    for (const k in G.eventsHosted) { const e = D.EVENTS.find(x => x.id === k); if (e) t += Math.min(2, G.eventsHosted[k]) * e.fameGain * 0.35; }
-    if (G.marketing.tv > 0) t += 4; if (G.marketing.social > 0) t += 2;
-    if (G.sat < 50) t -= 6;
-    return SS.clamp(t, 0, 100);
+    G = SS.G; const p = Sc.fameParts(), base = Object.values(p).reduce((a, b) => a + b, 0);
+    return SS.clamp(base * SS.clamp(0.25 + G.totalVisitors / 2500, 0.25, 1), 0, 100);          // sans clientèle, pas de renommée
   };
   Sc.dailyFame = function () {
     G = SS.G; const t = Sc.fameTarget();
-    G.fame = SS.clamp(G.fame + (t - G.fame) * (t > G.fame ? 0.07 : 0.04), 0, 100);
+    G.fame = SS.clamp(G.fame + (t - G.fame) * (t > G.fame ? 0.05 : 0.04), 0, 100);
   };
 
   // ---------- création d'une partie de scénario ----------
@@ -106,53 +125,107 @@
     }
   };
 
-  // ---------- candidature olympique ----------
-  const REQ = [
-    ['Stade olympique construit', s => s.olympic >= 1, s => s.olympic + ' / 1'],
-    ['Héliport de secours', s => s.heli >= 1, s => s.heli + ' / 1'],
-    ['900 lits touristiques', s => s.beds >= 900, s => SS.num(s.beds) + ' / 900'],
-    ['Un snowpark', s => s.snowpark >= 1, s => s.snowpark + ' / 1'],
-    ['12 pisteurs au moins', s => s.patrol >= 12, s => s.patrol + ' / 12'],
-    ['40 km de pistes dont 2 noires', s => s.km >= 40 && s.black >= 2, s => s.km.toFixed(0) + ' km · ' + s.black + ' noire(s)'],
-    ['Débit des remontées de 12 000 pers./h', s => s.capacity >= 12000, s => SS.num(s.capacity) + ' / 12 000'],
-    ['Satisfaction d\'au moins 70 %', s => s.sat >= 70, s => s.sat + ' %'],
-    ['Notoriété d\'au moins 80 %', s => s.fame >= 80, s => Math.round(s.fame) + ' %']
-  ];
-  Sc.BID_REQ = REQ; Sc.BID_COST = 400000;
+  // ---------- CRITÈRES DES GRANDS ÉVÉNEMENTS INTERNATIONAUX ----------
+  // Les critères olympiques reprennent tous ceux des X Games, avec des seuils plus élevés : on peut organiser
+  // les X Games sans viser les Jeux, mais on ne peut pas prétendre aux Jeux sans le niveau X Games.
+  const C = (text, test, val) => [text, test, val];
+  const pct = k => s => Math.round(s[k]) + ' %', n = k => s => SS.num(s[k] || 0);
+  Sc.CRIT = {
+    xgames: [
+      C('Notoriété d\'au moins 60 %', s => s.fame >= 60, pct('fame')),
+      C('Prestige ★★½ (45)', s => s.prestige >= 45, s => s.prestige + ' / 45'),
+      C('Satisfaction moyenne (7 jours) d\'au moins 72 %', s => s.satAvg >= 72, pct('satAvg')),
+      C('Snowpark et scène de concerts', s => s.snowpark >= 1 && s.stage >= 1, s => (s.snowpark ? '✔' : '✘') + ' / ' + (s.stage ? '✔' : '✘')),
+      C('800 lits touristiques', s => s.beds >= 800, s => SS.num(s.beds) + ' / 800'),
+      C('30 km de pistes dont 2 noires', s => s.km >= 30 && s.black >= 2, s => s.km.toFixed(0) + ' km · ' + s.black + ' noire(s)'),
+      C('Débit des remontées de 9 000 pers./h', s => s.capacity >= 9000, s => SS.num(s.capacity) + ' / 9 000'),
+      C('10 pisteurs répartis sur 2 postes de secours', s => s.patrol >= 10 && s.rescue >= 2, s => s.patrol + ' pisteurs · ' + s.rescue + ' poste(s)'),
+      C('5 restaurants', s => s.restaurants >= 5, s => s.restaurants + ' / 5'),
+      C('Une Coupe d\'Europe déjà organisée', s => s.h_europe >= 1, n('h_europe'))
+    ],
+    olympics: [
+      C('Notoriété d\'au moins 82 %', s => s.fame >= 82, pct('fame')),
+      C('Prestige ★★★½ (72)', s => s.prestige >= 72, s => s.prestige + ' / 72'),
+      C('Satisfaction moyenne (7 jours) d\'au moins 78 %', s => s.satAvg >= 78, pct('satAvg')),
+      C('Snowpark, scène, stade de slalom et stade olympique', s => s.snowpark >= 1 && s.stage >= 1 && s.stadium >= 1 && s.olympic >= 1, s => [s.snowpark, s.stage, s.stadium, s.olympic].map(x => x ? '✔' : '✘').join(' ')),
+      C('1 400 lits dont 250 de luxe', s => s.beds >= 1400 && s.luxBeds >= 250, s => SS.num(s.beds) + ' lits · ' + SS.num(s.luxBeds) + ' luxe'),
+      C('55 km de pistes dont 4 noires, sommet au-dessus de 3 000 m', s => s.km >= 55 && s.black >= 4 && s.topAlt >= 3000, s => s.km.toFixed(0) + ' km · ' + s.black + ' noires · ' + SS.num(s.topAlt) + ' m'),
+      C('Débit de 16 000 pers./h et une remontée d\'exception', s => s.capacity >= 16000 && s.premiumLift, s => SS.num(s.capacity) + ' / 16 000 · ' + (s.premiumLift ? 'exception ✔' : 'exception ✘')),
+      C('18 pisteurs, 3 postes de secours et un héliport', s => s.patrol >= 18 && s.rescue >= 3 && s.heli >= 1, s => s.patrol + ' · ' + s.rescue + ' postes · héliport ' + (s.heli ? '✔' : '✘')),
+      C('8 restaurants', s => s.restaurants >= 8, s => s.restaurants + ' / 8'),
+      C('6 dameuses et la neige de culture', s => s.machines >= 6 && SS.researched('snowmaking'), s => s.machines + ' dameuses · ' + (SS.researched('snowmaking') ? 'neige ✔' : 'neige ✘')),
+      C('Une Coupe d\'Europe et une Coupe du monde organisées', s => s.h_europe >= 1 && s.h_worldcup >= 1, s => s.h_europe + ' · ' + s.h_worldcup),
+      C('Dette inférieure à 1 M€', s => s.debt < 1000000, s => SS.num(s.debt) + ' €')
+    ]
+  };
+  Sc.critState = function (id) { const s = Sc.stats(); return Sc.CRIT[id].map(c => ({ text: c[0], ok: !!c[1](s), val: c[2](s) })); };
+  Sc.critOk = id => Sc.critState(id).every(c => c.ok);
+  Sc.critShare = id => { const st = Sc.critState(id); return st.filter(c => c.ok).length / st.length; };
+
+  // ---------- CANDIDATURE OLYMPIQUE : longue et sélective ----------
+  // 1. Dépôt (prérequis : niveau X Games atteint, Coupe du monde, recherche, notoriété 75 %, prestige 60).
+  // 2. Évaluation par la commission du CIO pendant 25 jours, face à 3 villes rivales.
+  // 3. Vote : le meilleur dossier l'emporte. 4. Préparation de 100 jours, inspection à mi-parcours.
+  // 5. Inspection finale : tous les critères olympiques. 6. Jour 1 des Jeux = victoire de la partie.
+  const RIVALS = ['Val d\'Argent', 'Hochfeld', 'Nordvik', 'Montsorel', 'Sankt Albrun', 'Lago Bianco', 'Kirovsk-Ouest', 'Shiramine'];
+  Sc.BID_COST = 600000; Sc.EVAL_DAYS = 25; Sc.PREP_DAYS = 100;
+  Sc.VICTORY = 'olympics_day1';                       // condition de victoire réutilisable (mode compétition Alpine Empires)
   Sc.bidCan = function () {
     G = SS.G; const s = Sc.stats(), why = [];
-    if (G.bid && (G.bid.phase === 'dossier' || G.bid.phase === 'prep' || G.bid.phase === 'games' || G.bid.phase === 'done')) return { ok: false, why: ['Une candidature est déjà en cours.'] };
+    if (G.bid && ['eval', 'prep', 'games', 'done'].indexOf(G.bid.phase) >= 0) return { ok: false, why: ['Une candidature est déjà en cours.'] };
     if (G.bid && G.bid.phase === 'refused' && G.elapsed < G.bid.retry) why.push('Nouvelle candidature possible dans ' + (G.bid.retry - G.elapsed) + ' jours.');
     if (!SS.researched('olympic')) why.push('Recherche « Dossier olympique » requise.');
-    if (s.fame < 70) why.push('Notoriété de 70 % requise (' + Math.round(s.fame) + ' %).');
+    if (!Sc.critOk('xgames')) why.push('Le niveau X Games doit être atteint (tous ses critères remplis).');
     if (!(s.h_worldcup >= 1)) why.push('Il faut avoir organisé une Coupe du monde.');
+    if (s.fame < 75) why.push('Notoriété de 75 % requise (' + Math.round(s.fame) + ' %).');
+    if (s.prestige < 60) why.push('Prestige de 60 requis (' + s.prestige + ').');
     if (!SS.canPay(Sc.BID_COST)) why.push('Il faut ' + SS.eur(Sc.BID_COST) + ' pour monter le dossier.');
     return { ok: !why.length, why };
+  };
+  Sc.dossierScore = function () {                     // 0-100 : ce que voit la commission d'évaluation
+    const s = Sc.stats();
+    return SS.clamp(55 * Sc.critShare('olympics') + 0.15 * s.fame + 0.12 * s.prestige + 0.1 * s.satAvg + 2 * Math.min(4, s.h_worldcup + s.h_xgames + s.h_europe), 0, 100);
   };
   Sc.bidStart = function () {
     G = SS.G; const c = Sc.bidCan(); if (!c.ok) return c.why[0];
     if (!SS.spend(Sc.BID_COST, 'Événements')) return 'Fonds insuffisants.';
-    G.bid = { phase: 'dossier', due: G.elapsed + 12 }; SS.log('📁 Dossier de candidature olympique déposé. Réponse du CIO dans 12 jours.', 'info'); return null;
+    const pool = RIVALS.slice().sort(() => Math.random() - 0.5).slice(0, 3);
+    G.bid = { phase: 'eval', due: G.elapsed + Sc.EVAL_DAYS, rivals: pool.map(n => ({ name: n, score: Math.round(74 + Math.random() * 16) })), tries: ((G.bid && G.bid.tries) || 0) + 1 };
+    SS.log('📁 Dossier de candidature olympique déposé. La commission du CIO évalue les 4 candidatures pendant ' + Sc.EVAL_DAYS + ' jours.', 'info'); return null;
   };
-  Sc.dossierScore = function () {                 // 0-100 : ce que voit le jury du CIO
-    const s = Sc.stats();
-    return SS.clamp(0.34 * s.fame + 0.2 * s.sat + 0.14 * Math.min(100, s.beds / 9) + 0.1 * Math.min(100, s.capacity / 120) + 0.1 * Math.min(100, (s.h_worldcup + s.h_xgames + s.h_europe) * 33) + 0.07 * Math.min(100, s.patrol * 8) + 0.05 * (s.heli >= 1 ? 100 : 0), 0, 100);
-  };
-  Sc.bidChance = function () { return SS.clamp((Sc.dossierScore() - 58) / 28, 0, 1); };
-  Sc.bidReqState = function () { const s = Sc.stats(); return REQ.map(r => ({ text: r[0], ok: !!r[1](s), val: r[2](s) })); };
+  Sc.bidReqState = () => Sc.critState('olympics');
 
   Sc.dailyBid = function (report) {
     G = SS.G; const b = G.bid; if (!b) return;
-    if (b.phase === 'dossier' && G.elapsed >= b.due) {
-      const score = Sc.dossierScore(), ch = Sc.bidChance();
-      if (Math.random() < ch) { b.phase = 'prep'; b.due = G.elapsed + 70; b.score = Math.round(score); report.notes.push('🏛️ Le CIO vous attribue les Jeux Olympiques d\'hiver ! Vous avez 70 jours pour remplir le cahier des charges (stade olympique, 900 lits, héliport…).'); }
-      else { b.phase = 'refused'; b.retry = G.elapsed + 40; b.score = Math.round(score); report.notes.push('🏛️ Le CIO a retenu une autre candidature (dossier noté ' + Math.round(score) + ' / 100). Renforcez votre station et recandidatez dans 40 jours.'); }
-    } else if (b.phase === 'prep' && G.elapsed >= b.due) {
-      if (G.summer) { b.late = true; return; }                       // les Jeux se tiennent en hiver : on attend la saison
-      const st = Sc.bidReqState(), ok = st.every(r => r.ok);
-      if (ok) { b.phase = 'games'; G.event = { id: 'olympics', day: G.day + 1, left: 6 }; report.notes.push('🔥 La flamme olympique arrive demain : les Jeux Olympiques d\'hiver commencent chez vous !'); }
-      else { b.phase = 'refused'; b.retry = G.elapsed + 60; G.reputation = Math.max(0, G.reputation - 12); G.fame = Math.max(0, G.fame - 18); report.notes.push('😱 Cahier des charges non respecté (' + st.filter(r => !r.ok).map(r => r.text).slice(0, 3).join(', ') + '…) : le CIO retire les Jeux. Réputation −12, notoriété −18.'); }
-    } else if (b.phase === 'games' && !G.event) { b.phase = 'done'; }
+    if (b.phase === 'eval') {
+      for (const r of b.rivals) r.score = SS.clamp(r.score + (Math.random() - 0.45) * 0.6, 60, 97);   // les rivaux progressent aussi
+      if (G.elapsed < b.due) return;
+      const me = Math.round(Sc.dossierScore()), best = b.rivals.reduce((a, r) => r.score > a.score ? r : a, b.rivals[0]);
+      b.score = me;
+      if (me > best.score) { b.phase = 'prep'; b.due = G.elapsed + Sc.PREP_DAYS; b.mid = G.elapsed + Math.round(Sc.PREP_DAYS / 2); report.notes.push('🏛️ Vote du CIO : votre dossier (' + me + ' / 100) devance ' + b.rivals.map(r => r.name + ' (' + Math.round(r.score) + ')').join(', ') + '. Les Jeux Olympiques vous sont attribués ! ' + Sc.PREP_DAYS + ' jours pour remplir tout le cahier des charges.'); }
+      else { b.phase = 'refused'; b.retry = G.elapsed + 60; report.notes.push('🏛️ Vote du CIO : ' + best.name + ' l\'emporte (' + Math.round(best.score) + ' contre ' + me + ' pour vous). Renforcez la station et recandidatez dans 60 jours.'); }
+    } else if (b.phase === 'prep') {
+      if (b.mid && G.elapsed >= b.mid) { b.mid = 0; const miss = Sc.critState('olympics').filter(c => !c.ok); report.notes.push(miss.length ? '🔍 Inspection de mi-parcours : ' + miss.length + ' critère(s) encore non rempli(s) — ' + miss.slice(0, 3).map(c => c.text).join(', ') + (miss.length > 3 ? '…' : '') + '.' : '🔍 Inspection de mi-parcours : tout est conforme, continuez ainsi.'); }
+      if (G.elapsed < b.due) return;
+      if (G.summer) { b.late = true; return; }                       // les Jeux se tiennent en hiver
+      const miss = Sc.critState('olympics').filter(c => !c.ok);
+      if (!miss.length) { b.phase = 'games'; G.event = { id: 'olympics', day: G.day + 1, left: 6 }; report.notes.push('🔥 Inspection finale réussie : la flamme olympique arrive demain. Les Jeux Olympiques d\'hiver commencent chez vous !'); }
+      else { b.phase = 'refused'; b.retry = G.elapsed + 80; G.reputation = Math.max(0, G.reputation - 12); G.fame = Math.max(0, G.fame - 18); report.notes.push('😱 Inspection finale : ' + miss.length + ' critère(s) non rempli(s) (' + miss.slice(0, 3).map(c => c.text).join(', ') + '…). Le CIO retire les Jeux. Réputation −12, notoriété −18.'); }
+    } else if (b.phase === 'games' && !G.event) b.phase = 'done';
+  };
+  // appelé au début de chaque journée : le jour 1 des Jeux Olympiques marque la victoire
+  Sc.dayStart = function (report) {
+    G = SS.G;
+    if (G.event && G.event.id === 'olympics' && G.event.day === G.day && !G.olympicsDay1) {
+      G.olympicsDay1 = G.elapsed;
+      report.notes.push('🏅 Jour 1 des Jeux Olympiques d\'hiver : la cérémonie d\'ouverture se tient à ' + G.name + '. Partie gagnée !');
+      const sc = Sc.cur();
+      if (sc && sc.bid && !G.scn.done) {                      // la campagne est gagnée dès l'ouverture des Jeux
+        G.scn.stage = sc.stages.length - 1; G.scn.done = true; G.scn.stars = 3; saveRecord(sc.id, 3, G.elapsed);
+        report.victory = true; report.victoryText = sc.victory; report.stars = 3; report.elapsed = G.elapsed; SS.emit('career');
+      } else if (sc) SS.checkCareer(report);
+      if (!G.scn) { report.victory = true; report.victoryText = 'Les Jeux Olympiques d\'hiver s\'ouvrent chez vous : vous avez gagné la partie. Vous pouvez continuer à jouer.'; }
+    }
   };
 
   Sc.free = function () { G = SS.G; G.scn = null; G.mode = 'sandbox'; };

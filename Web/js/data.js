@@ -154,8 +154,8 @@
         { title: 'L\'adresse des Alpes', reward: 500000, goals: [
           ['Un palace ★★★★★', s => s.palace >= 1, v('palace')], ['2 chalets de prestige', s => s.luxchalet >= 2, v('luxchalet')], ['Notoriété d\'au moins 55 %', s => s.fame >= 55, s => Math.round(s.fame) + ' %'], ['Prestige d\'au moins 65', s => s.prestige >= 65, v('prestige')], ['Organiser 2 événements', s => s.eventsHosted >= 2, v('eventsHosted')], ['Satisfaction d\'au moins 80 %', s => s.sat >= 80, s => s.sat + ' %']] }] },
     { id: 'olympic', name: 'La route des Jeux', tag: 'Campagne', diff: 2, bid: true,
-      brief: 'La grande campagne : de la première remontée aux Jeux Olympiques d\'hiver. Gagnez en notoriété, organisez des compétitions, les X Games puis une Coupe du monde, et obtenez la candidature olympique. Pas de limite de temps.',
-      start: { money: 650000, seed: 1337, fame: 5, research: [] }, deadline: 0, victory: 'Les Jeux Olympiques d\'hiver se sont tenus chez vous. Votre station est entrée dans la légende !',
+      brief: 'La grande campagne, longue et exigeante : de la première remontée aux Jeux Olympiques d\'hiver. Il faudra exceller partout (domaine, prestige, notoriété, sécurité, hébergement), atteindre le niveau X Games, organiser une Coupe du monde, puis battre les villes rivales devant le CIO. L\'ouverture des Jeux marque la victoire. Pas de limite de temps.',
+      start: { money: 650000, seed: 1337, fame: 5, research: [] }, deadline: 0, victory: 'La flamme olympique est allumée chez vous : les Jeux Olympiques d\'hiver s\'ouvrent et votre station entre dans la légende. Partie gagnée !',
       stages: [
         { title: 'Premiers flocons', reward: 60000, goals: [
           ['Construire une remontée', s => s.lifts >= 1, v('lifts')], ['Relier une piste au front de neige', s => s.connected >= 1, v('connected')], ['40 visiteurs en une journée', s => s.bestDay >= 40, s => s.bestDay + ' / 40']] },
@@ -165,14 +165,16 @@
           ['École de ski et Jardin des Piou-Piou', s => s.school >= 1 && s.kids >= 1, s => (s.school >= 1 ? '✔' : '✘') + ' / ' + (s.kids >= 1 ? '✔' : '✘')], ['6 km de pistes', s => s.km >= 6, s => s.km.toFixed(1) + ' km'], ['Garage à dameuses et poste de secours', s => s.garage >= 1 && s.rescue >= 1, s => (s.garage >= 1 ? '✔' : '✘') + ' / ' + (s.rescue >= 1 ? '✔' : '✘')], ['100 lits touristiques', s => s.beds >= 100, s => SS.num(s.beds) + ' / 100'], ['400 visiteurs en une journée', s => s.bestDay >= 400, s => s.bestDay + ' / 400'], ['Notoriété de 20 %', s => s.fame >= 20, s => Math.round(s.fame) + ' %']] },
         { title: 'Terre de compétition', reward: 400000, fame: 35, goals: [
           ['Une piste rouge et une piste noire', s => s.red >= 1 && s.black >= 1, s => s.red + ' rouge · ' + s.black + ' noire'], ['Un stade de slalom', s => s.stadium >= 1, v('stadium')], ['Organiser une course régionale', s => s.h_regional >= 1, v('h_regional')], ['600 visiteurs en une journée', s => s.bestDay >= 600, s => s.bestDay + ' / 600'], ['Notoriété de 35 %', s => s.fame >= 35, s => Math.round(s.fame) + ' %']] },
-        { title: 'Les X Games', reward: 700000, fame: 50, goals: [
-          ['Un snowpark et une scène de concerts', s => s.snowpark >= 1 && s.stage >= 1, s => (s.snowpark >= 1 ? '✔' : '✘') + ' / ' + (s.stage >= 1 ? '✔' : '✘')], ['300 lits touristiques', s => s.beds >= 300, s => SS.num(s.beds) + ' / 300'], ['Organiser les X Games d\'hiver', s => s.h_xgames >= 1, v('h_xgames')], ['Notoriété de 55 %', s => s.fame >= 55, s => Math.round(s.fame) + ' %']] },
-        { title: 'Coupe du monde', reward: 1000000, fame: 62, goals: [
-          ['Une remontée arrivant au-dessus de 3 000 m', s => s.topAlt >= 3000, s => SS.num(s.topAlt) + ' m'], ['15 km de pistes', s => s.km >= 15, s => s.km.toFixed(1) + ' km'], ['500 lits touristiques', s => s.beds >= 500, s => SS.num(s.beds) + ' / 500'], ['Organiser une Coupe du monde', s => s.h_worldcup >= 1, v('h_worldcup')], ['Notoriété de 70 %', s => s.fame >= 70, s => Math.round(s.fame) + ' %']] },
-        { title: 'Candidature olympique', reward: 1500000, fame: 70, goals: [
-          ['Dossier « Jeux Olympiques » étudié', s => s.research_olympic, s => s.research_olympic ? '✔' : '✘'], ['Héliport de secours', s => s.heli >= 1, v('heli')], ['700 lits touristiques', s => s.beds >= 700, s => SS.num(s.beds) + ' / 700'], ['Candidature acceptée par le CIO', s => s.bidOk, s => s.bidOk ? '✔' : '✘'], ['Notoriété de 80 %', s => s.fame >= 80, s => Math.round(s.fame) + ' %']] },
-        { title: 'Les Jeux Olympiques', reward: 3000000, fame: 80, goals: [
-          ['Stade olympique', s => s.olympic >= 1, v('olympic')], ['Organiser les Jeux Olympiques d\'hiver', s => s.h_olympics >= 1, v('h_olympics')]] }] }
+        { title: 'Niveau international', reward: 600000, fame: 45, goals: [
+          ['Organiser une Coupe d\'Europe', s => s.h_europe >= 1, v('h_europe')], ['Prestige ★★ (40)', s => s.prestige >= 40, s => s.prestige + ' / 40'], ['Notoriété de 50 %', s => s.fame >= 50, s => Math.round(s.fame) + ' %'], ['20 km de pistes', s => s.km >= 20, s => s.km.toFixed(1) + ' km'], ['Satisfaction moyenne de 70 %', s => s.satAvg >= 70, s => Math.round(s.satAvg) + ' %']] },
+        { title: 'Le niveau X Games', reward: 900000, fame: 60, goals: [
+          ['Remplir tous les critères X Games (les organiser reste facultatif)', s => SS.Scn.critOk('xgames'), s => Math.round(SS.Scn.critShare('xgames') * 100) + ' %']] },
+        { title: 'Coupe du monde', reward: 1200000, fame: 68, goals: [
+          ['Organiser une Coupe du monde', s => s.h_worldcup >= 1, v('h_worldcup')], ['Prestige ★★★ (60)', s => s.prestige >= 60, s => s.prestige + ' / 60'], ['Notoriété de 75 %', s => s.fame >= 75, s => Math.round(s.fame) + ' %'], ['Dossier « Jeux Olympiques » étudié', s => s.research_olympic, s => s.research_olympic ? '✔' : '✘']] },
+        { title: 'Candidature olympique', reward: 2000000, fame: 75, goals: [
+          ['Candidature retenue par le CIO face aux villes rivales', s => s.bidOk, s => s.bidOk ? '✔' : '✘']] },
+        { title: 'Les Jeux Olympiques', reward: 0, fame: 82, goals: [
+          ['Réussir l\'inspection finale et ouvrir les Jeux (jour 1 = victoire)', s => s.olyDay1, s => s.olyDay1 ? '✔' : '✘']] }] }
   ];
 
   // fame : notoriété minimale ; fameGain : notoriété gagnée si l'événement est réussi (satisfaction ≥ 50 %)
@@ -180,10 +182,10 @@
     { id: 'fete', name: 'Fête du village', cost: 15000, boost: 1.25, prestige: 1, fame: 0, fameGain: 0.8, days: 1, need: s => true, needTxt: 'Aucun prérequis' },
     { id: 'concert', name: 'Festival de concerts', cost: 60000, boost: 1.4, prestige: 2, fame: 10, fameGain: 1.8, days: 2, need: s => s.stage >= 1 && s.fame >= 10, needTxt: 'Scène de concerts · notoriété 10 %' },
     { id: 'regional', name: 'Course régionale', cost: 40000, boost: 1.3, prestige: 3, fame: 18, fameGain: 3, days: 1, comp: true, need: s => s.stadium >= 1 && s.red >= 1 && s.fame >= 18, needTxt: 'Stade de slalom, piste rouge · notoriété 18 %' },
-    { id: 'europe', name: 'Coupe d\'Europe', cost: 150000, boost: 1.5, prestige: 6, fame: 35, fameGain: 5, days: 2, comp: true, need: s => s.stadium >= 1 && s.black >= 1 && s.fame >= 35, needTxt: 'Stade, piste noire · notoriété 35 %' },
-    { id: 'xgames', name: 'X Games d\'hiver', cost: 320000, boost: 1.9, prestige: 8, fame: 50, fameGain: 9, days: 3, comp: true, need: s => s.snowpark >= 1 && s.stage >= 1 && s.beds >= 250 && s.rescue >= 1 && s.fame >= 50, needTxt: 'Snowpark, scène de concerts, 250 lits, poste de secours · notoriété 50 %' },
-    { id: 'worldcup', name: 'Coupe du monde', cost: 500000, boost: 1.8, prestige: 10, fame: 62, fameGain: 10, days: 3, comp: true, need: s => s.stadium >= 1 && s.black >= 1 && s.beds >= 300 && s.fame >= 62, needTxt: 'Stade, piste noire, 300 lits · notoriété 62 %' },
-    { id: 'olympics', name: 'Jeux Olympiques d\'hiver', cost: 3000000, boost: 2.2, prestige: 25, fame: 80, fameGain: 20, days: 6, comp: true, bid: true, need: s => false, needTxt: 'Uniquement via la candidature olympique (notoriété 70 % pour candidater)' }
+    { id: 'europe', name: 'Coupe d\'Europe', cost: 150000, boost: 1.5, prestige: 6, fame: 35, fameGain: 5, days: 2, comp: true, need: s => s.stadium >= 1 && s.black >= 1 && s.beds >= 250 && s.fame >= 35 && s.prestige >= 30, needTxt: 'Stade, piste noire, 250 lits · notoriété 35 %, prestige 30' },
+    { id: 'xgames', name: 'X Games d\'hiver', cost: 450000, boost: 1.9, prestige: 9, fame: 60, fameGain: 9, days: 3, comp: true, need: s => SS.Scn.critOk('xgames'), needTxt: 'Tous les critères X Games (voir Carrière) · notoriété 60 %, prestige 45' },
+    { id: 'worldcup', name: 'Coupe du monde', cost: 600000, boost: 1.8, prestige: 10, fame: 68, fameGain: 10, days: 3, comp: true, need: s => s.stadium >= 1 && s.black >= 2 && s.beds >= 600 && s.h_europe >= 1 && s.fame >= 68 && s.prestige >= 50 && s.satAvg >= 72, needTxt: 'Stade, 2 pistes noires, 600 lits, une Coupe d\'Europe, satisfaction 72 % · notoriété 68 %, prestige 50' },
+    { id: 'olympics', name: 'Jeux Olympiques d\'hiver', cost: 3000000, boost: 2.2, prestige: 25, fame: 80, fameGain: 20, days: 6, comp: true, bid: true, need: s => false, needTxt: 'Uniquement via la candidature olympique' }
   ];
 
   D.ACH = [
@@ -202,7 +204,7 @@
     { id: 'nightowl', name: 'Oiseaux de nuit', desc: 'Vendre des forfaits nocturnes.', test: s => s.night },
     { id: 'science', name: 'Bureau d\'études', desc: 'Terminer 10 recherches.', test: s => s.research >= 10 },
     { id: 'host', name: 'Terre d\'événements', desc: 'Organiser 5 événements.', test: s => s.eventsHosted >= 5 },
-    { id: 'stars5', name: 'Cinq étoiles', desc: 'Prestige de 90 ou plus.', test: s => s.prestige >= 90 },
+    { id: 'stars5', name: 'Cinq étoiles', desc: 'Prestige ★★★★★ (95 ou plus).', test: s => s.prestige >= 95 },
     { id: 'season', name: 'Une saison au compteur', desc: 'Terminer une saison d\'hiver.', test: s => s.year >= 2 },
     { id: 'olympic', name: 'Flamme olympique', desc: 'Organiser les Jeux Olympiques d\'hiver.', test: s => s.olympics >= 1 }
   ];

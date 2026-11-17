@@ -11,6 +11,7 @@
   const btn = (label, act, arg, cls, dis) => '<button class="btn ' + (cls || '') + '" data-act="' + act + '"' + (arg !== undefined ? ' data-arg="' + esc(arg) + '"' : '') + (dis ? ' disabled' : '') + '>' + label + '</button>';
   const pct = v => Math.round(v * 100) + ' %';
   const stars = p => { const n = Math.round(p / 20); let s = ''; for (let i = 1; i <= 5; i++) s += '<i class="st' + (n >= i ? ' on' : '') + '">★</i>'; return s; };
+  UI.starHtml = n => { let h = ''; for (let i = 1; i <= 5; i++) h += n >= i ? '<i class="st on">★</i>' : n >= i - 0.5 ? '<i class="st half">★</i>' : '<i class="st">★</i>'; return h; };
   UI.H = { row, btn, dot, eur, esc, pct, stars };
   const OPEX = o => Object.keys(o).filter(k => k !== 'Construction' && k !== 'Recherche').reduce((a, k) => a + o[k], 0);
 
@@ -138,7 +139,7 @@
     $('t_weather').textContent = w.icon + ' ' + G.weather.temp + '°'; $('t_weather').title = w.name;
     $('t_money').textContent = G.unlimited ? '∞' : eur(G.money); $('t_money').classList.toggle('neg', G.money < 0);
     $('t_vis').textContent = Sim.present + ' / ' + (Sim.expected || 0);
-    $('t_sat').textContent = G.sat + ' %'; $('t_stars').textContent = Math.round(G.fame) + ' %'; $('t_stars').title = 'Notoriété ' + Math.round(G.fame) + ' % · prestige ' + G.prestige + ' / 100 · réputation ' + Math.round(G.reputation) + ' / 100';
+    $('t_sat').textContent = G.sat + ' %'; $('t_prest').innerHTML = UI.starHtml(SS.prestigeStars(G.prestige)); $('t_prest').title = 'Prestige ' + G.prestige + ' / 100 : le standing de la station (luxe, loisirs, remontées d\'exception)'; $('t_stars').textContent = Math.round(G.fame) + ' %'; $('t_stars').title = 'Notoriété ' + Math.round(G.fame) + ' % · prestige ' + G.prestige + ' / 100 · réputation ' + Math.round(G.reputation) + ' / 100';
     document.querySelectorAll('#speed .sp').forEach(b => b.classList.toggle('on', b.dataset.arg === '0' ? G.paused : !G.paused && +b.dataset.arg === G.speed));
     $('skipBtn').disabled = Sim.present > 0 || (Sim.arrivals.length > 0 && G.time < 17 * 3600);
   }

@@ -659,7 +659,6 @@
         const ok = G.sat >= 50; G.eventsHosted[ev.id] = (G.eventsHosted[ev.id] || 0) + 1;
         G.reputation = SS.clamp(G.reputation + (ok ? ev.prestige * 0.6 : -3), 0, 100); G.fame = SS.clamp(G.fame + (ok ? ev.fameGain : -ev.fameGain * 0.6), 0, 100);
         report.notes.push((ok ? '🏆 ' + ev.name + ' : un succès ! Réputation en hausse.' : '😕 ' + ev.name + ' : organisation critiquée (satisfaction trop basse).'));
-        if (ev.id === 'olympics' && ok) report.victory = true;
         G.event = null;
       }
     }
@@ -679,6 +678,7 @@
     G.time = SS.DAY_START; Sim.lastTouch = 0;
     for (const n of report.notes) { G.log.unshift({ t: SS.DAY_START, d: G.day, msg: n, kind: 'good' }); if (G.log.length > 60) G.log.pop(); }
     Sim.startDay();
+    SS.Scn.dayStart(report);
     SS.Events.morning();
     SS.save();
     SS.emit('day:end', report);
