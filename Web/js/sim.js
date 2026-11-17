@@ -21,7 +21,7 @@
     const mk = 1 + (G.marketing.social > 0 ? 0.15 : 0) + (G.marketing.tv > 0 ? 0.35 : 0);
     const ev = G.event && G.event.day <= G.day ? D.EVENTS.find(e => e.id === G.event.id).boost : 1;
     const rental = s.rental > 0 || G.summer ? 1 : 0.74;
-    const demand = base * rep * cal * W.def().demand * priceF * mk * ev * rental * (SS.AE && SS.AE.on() ? SS.AE.marketMul() : 1);
+    const demand = base * rep * cal * W.def().demand * priceF * mk * ev * rental * (SS.AE && SS.AE.on() ? SS.AE.marketMul() : 1) * (SS.Loyal ? SS.Loyal.demandMul() : 1);
     const lodgers = Mg.allocateLodging(demand, cal, ev);
     const day = Math.round(Math.min(demand, s.access));
     const cap = 1500, total = Math.min(cap, day + lodgers);
@@ -51,12 +51,13 @@
     const comp = G.event && G.event.day <= G.day && D.EVENTS.find(e => e.id === G.event.id).comp;
     const parkings = G.buildings.filter(b => D.building(b.type).type === 'parking' && b.open);
     const hasKids = s.kids > 0, hasSchool = s.school > 0;
-    const mk = (home, lodger, pr, grp) => {
+    const mk = (home, lodger, pr, grp, mem) => {
       pr = pr || pickProfile(comp); let r = Math.random(), skill = 0;
       for (let i = 0; i < 4; i++) { r -= pr.skill[i]; if (r <= 0) { skill = i; break; } }
+      if (mem) skill = mem.s;
       const arrive = grp && grp.arrive ? grp.arrive + Math.random() * 240 : lodger ? tri(8.4, 9.0, 10.2) * 3600 : tri(8.0, 9.2, 11.6) * 3600;
       const v = {
-        id: Sim.nextV++, name: SS.pick(D.FIRST) + ' ' + (grp && grp.last || SS.pick(D.LAST)), prof: pr, skill, child: !!pr.child, color: SS.pick(COLORS),
+        id: Sim.nextV++, name: (mem ? mem.f : SS.pick(D.FIRST)) + ' ' + (grp && grp.last || SS.pick(D.LAST)), prof: pr, skill, child: !!pr.child, color: mem && mem.col || SS.pick(COLORS),
         home, lodger, arriveT: arrive, leaveT: (lodger ? SS.range(15.6, 16.9) : Math.min(17.0, Math.max(arrive / 3600 + 3.5, SS.range(14.6, 17.0)))) * 3600,
         hunger: SS.range(0.08, 0.35), energy: SS.range(0.85, 1), sat: 0.62, spent: 0, runs: 0, km: 0,
         patience: SS.range(0.7, 1.4), spend: lodger ? [0.72, 1.05, 1.85][D.building(home.type).seg || 0] * SS.range(0.85, 1.2) : pr.spend * SS.range(0.7, 1.4),
@@ -87,8 +88,21 @@
       for (let i = 0; i < n; i++) mk(home, lodger, fam ? PF(i < adults ? 'famille' : 'enfant') : pr, grp);
       return n;
     };
-    let k = 0;
-    for (let i = 0; i < d.day;) {
+    // les habitués d'abord : ils reviennent avec les mêmes membres, prennent leurs places parmi les visiteurs à la journée
+    let k = 0, ret = 0;
+    if (SS.Loyal && d.day > 0) for (const c of SS.Loyal.pickToday(d.day)) {
+      let home = SS.ARRIVAL; if (parkings.length) { home = parkings[k % parkings.length]; k++; }
+      const n0 = Sim.arrivals.length, many = c.members.length > 1;
+      const grp = many ? { id: Sim.nextV, fam: c.fam, last: c.last, name: c.fam ? 'Famille ' + c.last : 'Groupe d\'amis', members: [], target: null, targetT: -1e9, eatT: -1e9, eatNode: -1, maxDiff: 3 } : { last: c.last, members: [], fake: true };
+      for (const m of c.members) mk(home, false, PF(m.p) || PF('famille'), grp, m);
+      for (let i = n0; i < Sim.arrivals.length; i++) {
+        const v = Sim.arrivals[i]; v.clientId = c.id; v.visitNo = c.vs + 1; v.fav = c.fav; v.loyalSince = c.since;
+        if (!many) { v.grp = null; }
+        if (c.pass === G.year) { v.pass = true; v.hasPass = true; }
+      }
+      ret += c.members.length;
+    }
+    for (let i = ret; i < d.day;) {
       let home = SS.ARRIVAL;
       if (parkings.length) { home = parkings[k % parkings.length]; k++; }
       i += party(home, false, d.day - i);
@@ -278,6 +292,7 @@
       const dd = p.diff - v.skill;
       let sc = (dd === 0 ? 1 : dd === -1 ? 0.7 : dd === 1 ? 0.35 : 0.3) + W.quality(p, v.skill) * 0.6 - Math.min(1, p.on / (p.len * p.width / 500)) * 0.5 - t1 / 3600 * 0.7 + Math.random() * 0.55;
       if (p === v.lastPiste) sc -= 0.25;
+      if (v.fav && p.name === v.fav) sc += 0.3;                    // l'habitué retourne sur sa piste préférée
       if (grp && p.diff > grp.maxDiff) sc -= 0.9;                // on choisit pour le moins à l'aise du groupe
       if (v.prof.id === 'contemplatif' || v.prof.id === 'sportif') sc += (p.topAlt - 1650) / 2500 * 0.3;
       if (sc > bs) { bs = sc; best = p; }
@@ -568,7 +583,7 @@
           if (crowd > 0.8 && Math.random() < 0.2) think(v, 'Trop de monde sur ' + p.name, 'Pistes surchargées', -0.02);
           if (dd > 1) think(v, p.name + ' est trop difficile pour moi', 'Pistes inadaptées au niveau', -0.06);
           v.energy -= e.len / 1000 * (0.03 + 0.016 * p.diff + (dd > 0 ? 0.03 : 0)); v.km += e.len / 1000;
-          if (e.to === p.nb) v.runs++;
+          if (e.to === p.nb) { v.runs++; (v.pc || (v.pc = {}))[p.name] = (v.pc[p.name] || 0) + 1; }
           arriveNode(v, e.to);
         }
         break;
@@ -598,6 +613,7 @@
     while (Sim.arrivals.length && Sim.arrivals[0].arriveT <= G.time) {
       const v = Sim.arrivals.shift(); v.state = 'walk'; v.y = T.getH(v.x, v.z); v.dn = 0;
       if (v.lodger && !v.hasPass) { v.hasPass = true; const pr = SS.passNow() * (v.child ? 0.6 : 0.88) * Sim.yieldMul(); SS.earn(pr, 'Forfaits'); v.spent += pr; }
+      if (v.clientId) think(v, v.pass ? 'Forfait saison en poche : je reviens skier !' : 'Content de revenir à ' + G.name + ' (' + v.visitNo + 'e venue cette saison)', null, 0.02);
       Sim.visitors.push(v); Sim.present++; G.visitorsToday++; G.totalVisitors++; decide(v);
     }
     if (G.time - Sim.lastTouch > 600 || G.time < Sim.lastTouch) {
@@ -673,6 +689,7 @@
     if (SS.AE && SS.AE.on()) SS.AE.daily(report);
     SS.checkCareer(report);
     SS.checkAch(report);
+    if (SS.Loyal) SS.Loyal.endDay(Sim.visitors, report);
     G.day++; W.next();
     if (G.summer) { if (G.day >= SS.SUMMER_DAYS) endSummer(report); }
     else if (G.day >= SS.SEASON_DAYS) { if (SS.researched('summer')) startSummer(report); else seasonEnd(report); }
@@ -684,8 +701,8 @@
     SS.save();
     SS.emit('day:end', report);
   };
-  function winterReset() {
-    G.day = 0; G.year++; G.snowBase = 45; Mg.newSeason();
+  function winterReset(report) {
+    G.day = 0; G.year++; G.snowBase = 45; Mg.newSeason(); if (SS.Loyal) SS.Loyal.newSeason(report);
     for (const p of G.pistes) { p.depth = 45 + (p.topAlt - 1650) * 0.03; p.ice = 0; p.slush = 0; p.groomed = 0.8; p.snowClosed = false; p.avaUntil = 0; }
   }
   function startSummer(report) {
@@ -695,7 +712,7 @@
     W.init(); Net.touch(); SS.emit('season');
   }
   function endSummer(report) {
-    G.summer = false; winterReset();
+    G.summer = false; winterReset(report);
     report.notes.push('❄️ Fin de l\'été : les premières neiges tombent. Saison d\'hiver ' + G.year + ' !');
     W.init(); Net.touch(); SS.emit('season');
   }
@@ -710,7 +727,7 @@
   function seasonEnd(report) {
     let summer = 0;
     if (SS.researched('summer')) { for (const b of G.buildings) { const def = D.building(b.type); summer += (def.summer || 0) * 90 * 9 + (def.type === 'lodging' ? SS.bcap(b) * b.price * 0.25 * 70 : 0); } for (const l of G.lifts) if (D.lift(l.type).kind !== 'tow') summer += 2500; }
-    G.money += summer; G.day = 0; G.year++; G.snowBase = 45; Mg.newSeason();
+    G.money += summer; G.day = 0; G.year++; G.snowBase = 45; Mg.newSeason(); if (SS.Loyal) SS.Loyal.newSeason(report);
     for (const p of G.pistes) { p.depth = 45 + (p.topAlt - 1650) * 0.03; p.ice = 0; p.slush = 0; p.groomed = 0.8; p.snowClosed = false; }
     report.notes.push('🌞 Fin de saison ' + (G.year - 1) + '. ' + (summer > 0 ? 'Recettes d\'été (VTT, randonnée, hébergement) : ' + SS.eur(summer) + '.' : 'Recherchez « Saison d\'été » pour générer des recettes hors saison.') + ' Nouvelle saison d\'hiver !');
     W.init();

@@ -24,6 +24,7 @@ tout est en JavaScript, three.js est fourni dans `js/three.min.js`.
 | Temps | Horloge unique, pause / x1 / x3 / x8, journée de 07:30 à minuit, cycle jour-nuit |
 | Ski nocturne | Recherche dédiée, éclairage des pistes, remontées ouvertes de 18 h 30 à 21 h, forfait du soir, damage décalé après la nocturne |
 | Visiteurs | Familles et groupes d'amis qui arrivent, skient et déjeunent ensemble (le groupe choisit pour le moins à l'aise). Budget temps, faim, énergie, profil, niveau. Décision Skier / Manger / Repos / Rentrer, fiche en lecture seule |
+| Fidélité | Les visiteurs contents deviennent des **habitués** (familles, groupes, skieurs seuls, avec leurs prénoms et leur niveau) : ils reviennent plusieurs fois dans la saison, surtout le week-end et pendant les vacances, et d'une saison à l'autre ; ils retournent sur leur piste préférée, les enfants gardent leur progression. Les plus fidèles achètent le **forfait saison** au début de l'hiver (prix réglable dans Finances). Les déçus espacent leurs venues puis disparaissent. Bouche-à-oreille sur la demande et la notoriété. Panneau Visiteurs › Fidélité |
 | GPS du domaine | Piste cible persistante, trajet par remontées (montée) et pistes (descente), temps de trajet + attente + retour vérifiés, aucune téléportation |
 | Services | Restauration (snack à table gastronomique), bar, location, magasin, activités : gamme, personnel, horaires (midi / midi et soir), prix, note des clients, marge, agrandissement |
 | Hébergements | Du gîte (50 lits) au palace et au chalet de prestige : trois segments de clientèle (économique, confort, luxe) avec demande propre, demi-pension, spa, navette, note, occupation, prix de la nuitée |
@@ -69,6 +70,7 @@ tout est en JavaScript, three.js est fourni dans `js/three.min.js`.
 - `js/events.js` événements du matin
 - `js/manage.js` règles de gestion (services, hébergements, banque, recherche, pisteurs, dameuses)
 - `js/scenario.js` scénarios, notoriété, candidature olympique, station préconstruite
+- `js/loyalty.js` fidélité : habitués, retours, forfait saison, bouche-à-oreille
 - `js/ae.js` Alpine Empires : concessions, stations rivales gérées par l'ordinateur, marché partagé, course aux Jeux
 - `js/ui_scn.js` panneau Carrière
 - `js/ui_mgmt.js` panneaux Finances, Recherche, Exploitation et fiche de gestion d'un bâtiment

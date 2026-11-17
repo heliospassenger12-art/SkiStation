@@ -131,6 +131,7 @@
     if (k === 'station') { if (String(val).trim()) G.name = String(val).slice(0, 28); return; }
     if (k === 'spass') { G.summerPass = +val; const o = $('spassOut'); if (o) o.textContent = val + ' €'; return; }
     if (k === 'night') { G.nightPrice = +val; const o = $('nightOut'); if (o) o.textContent = val + ' €'; }
+    else if (k === 'spass2') { G.seasonPassPrice = +val; const o = $('spass2Out'); if (o) o.textContent = val + ' €'; }
     else if (k === 'pass') { G.passPrice = +val; const o = $('passOut'); if (o) o.textContent = val + ' €'; }
     else if (k === 'bprice') { UI.sel.obj.price = +val; const o = $('bpriceOut'); if (o) o.textContent = val + ' €'; }
   }
@@ -293,6 +294,12 @@
       h += '<h4>Que font-ils ?</h4>' + (Object.keys(lab).filter(k => c[k]).map(k => row(lab[k], c[k])).join('') || '<p class="fine">Personne sur la station pour l\'instant.</p>');
       const fb = Sim.fb, ks = Object.keys(fb).sort((a, b) => fb[b] - fb[a]);
       h += '<h4>Remarques du jour</h4>' + (ks.length ? ks.map(k => row(k, fb[k], 'fbk')).join('') : '<p class="fine">Aucune plainte : bravo !</p>');
+      if (SS.Loyal) {
+        const ls = SS.Loyal.stats();
+        h += '<h4>Fidélité de la clientèle</h4><div class="grid">' + row('Habitués enregistrés', ls.clients + ' groupes (' + ls.people + ' personnes)') + row('Très fidèles', ls.loyal) + row('Forfaits saison ' + G.year, ls.pass) + row('Habitués présents aujourd\'hui', ls.today) + row('Venues par habitué', ls.avgVisits.toFixed(1)) + row('Effet bouche-à-oreille', '×' + SS.Loyal.demandMul().toFixed(2)) + '</div>';
+        if (ls.top.length) h += '<div class="jtab">' + ls.top.map(c => '<div class="jrow"><span>' + esc(SS.Loyal.label(c)) + (c.pass === G.year ? ' 🎫' : '') + '</span><span>' + c.visits + (c.visits > 1 ? ' venues' : ' venue') + '</span><span>' + Math.round(c.loy * 100) + ' %</span><span>' + (c.fav ? esc(c.fav) : '—') + '</span></div>').join('') + '</div>';
+        h += '<p class="fine">Les visiteurs contents deviennent des habitués : ils reviennent plusieurs fois dans la saison (surtout le week-end et pendant les vacances) et d\'une saison à l\'autre, retournent sur leur piste préférée et les plus fidèles achètent le forfait saison. Les déçus espacent leurs venues puis disparaissent.</p>';
+      }
       const md = Object.keys(G.medals); if (md.length) h += '<h4>Médailles délivrées par l\'école</h4><div class="medals">' + D.MEDALS.filter(m => G.medals[m]).map(m => '<span>🏅 ' + m + ' × ' + G.medals[m] + '</span>').join('') + '</div>';
       h += '<p class="fine">Cliquez un visiteur dans la vue 3D pour ouvrir sa fiche : besoins, décision en cours et raison.</p>';
       return h;
@@ -360,7 +367,7 @@
       if (s.kind === 'visitor') {
         UI.title = o.name; const bar = (v, c) => '<div class="bar"><i style="width:' + Math.round(SS.clamp(v, 0, 1) * 100) + '%;background:' + c + '"></i></div>';
         const stl = { ski: 'Skie', ride: 'Sur une remontée', queueL: 'Dans la file' + (o.lift ? ' du ' + o.lift.name : ''), walk: 'Marche', inS: 'Dans un service', queueS: 'Fait la queue', rest: 'En pause', lesson: 'En cours de ski', hurt: 'Blessé', down: 'Se relève', gone: 'Reparti', pending: 'Pas encore arrivé' };
-        return '<p>' + o.prof.name + ' · ' + D.SKILL[o.skill] + (o.lodger ? ' · résident' : ' · à la journée') + '</p><div class="grid">' + row('État', stl[o.state] || o.state) + (o.grp ? row('Groupe', esc(o.grp.name) + ' (' + o.grp.members.length + ')') : '') + row('Décision', o.decision) + row('Raison', o.reason || '—') + row('Départ prévu', SS.hhmm(o.leaveT)) + row('Temps disponible', o.remain > 0 ? Math.round(o.remain / 60) + ' min' : '—') + (o.mode ? row('Activité', o.mode === 'vtt' ? 'VTT de descente' : 'Randonnée') : '') + row('Descentes', o.runs + ' (' + o.km.toFixed(1) + ' km)') + row('Dépensé', eur(o.spent)) + '</div>' +
+        return '<p>' + o.prof.name + ' · ' + D.SKILL[o.skill] + (o.lodger ? ' · résident' : ' · à la journée') + '</p>' + (o.clientId ? '<p class="fine">🔁 Habitué depuis la saison ' + o.loyalSince + ' · ' + o.visitNo + 'e venue cette saison' + (o.pass ? ' · 🎫 forfait saison' : '') + (o.fav ? ' · piste préférée : ' + esc(o.fav) : '') + '</p>' : '') + '<div class="grid">' + row('État', stl[o.state] || o.state) + (o.grp ? row('Groupe', esc(o.grp.name) + ' (' + o.grp.members.length + ')') : '') + row('Décision', o.decision) + row('Raison', o.reason || '—') + row('Départ prévu', SS.hhmm(o.leaveT)) + row('Temps disponible', o.remain > 0 ? Math.round(o.remain / 60) + ' min' : '—') + (o.mode ? row('Activité', o.mode === 'vtt' ? 'VTT de descente' : 'Randonnée') : '') + row('Descentes', o.runs + ' (' + o.km.toFixed(1) + ' km)') + row('Dépensé', eur(o.spent)) + '</div>' +
           '<div class="needs"><span>Faim</span>' + bar(o.hunger, '#f28a1c') + '<span>Énergie</span>' + bar(o.energy, '#35d07f') + '<span>Satisfaction</span>' + bar(o.sat, '#4fc3f7') + '</div>' +
           (o.thoughts.length ? '<h4>Pensées</h4>' + o.thoughts.map(t => '<div class="thought">« ' + esc(t) + ' »</div>').join('') : '') + '<div class="actions">' + btn('🎥 Suivre ce visiteur', 'vfollow') + '</div><p class="fine">Fiche en lecture seule : le visiteur décide seul selon l\'heure, ses besoins et le domaine.</p>';
       }

@@ -45,6 +45,7 @@ namespace SkiStation.Gestion
             double ev = 0; foreach (var kv in G.eventsHosted) { var e = Catalog.Event(kv.Key); if (e != null) ev += Math.Min(2, kv.Value) * e.fameGain * 0.5; }
             parts["evenements"] = Math.Min(15, ev);
             parts["marketing"] = (G.marketing.tv > 0 ? 5 : 0) + (G.marketing.social > 0 ? 3 : 0);
+            parts["fidelite"] = Loyalty.FamePart();
             return parts;
         }
         public static double FameTarget() { double b = FameParts().Values.Sum(); return GMath.Clamp(b * GMath.Clamp(0.25 + G.totalVisitors / 2500.0, 0.25, 1), 0, 100); }

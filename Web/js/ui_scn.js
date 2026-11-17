@@ -8,7 +8,7 @@
   const goalHtml = g => `<div class="goal ${g.ok ? 'ok' : ''}">${g.ok ? '✔' : '○'} ${g.text}${g.val ? `<small>${g.val}</small>` : ''}</div>`;
   const bar = (v, c) => `<div class="bar"><i style="width:${Math.round(SS.clamp(v, 0, 1) * 100)}%;background:${c}"></i></div>`;
   const LABP = { domaine: 'Domaine skiable (max 28)', remontees: 'Remontées et technologie (max 14)', hebergement: 'Hébergement haut de gamme (max 24)', loisirs: 'Loisirs, gastronomie, spa (max 20)', evenements: 'Compétitions accueillies (max 8)', service: 'Qualité de service (max 6)' };
-  const LABF = { humeur: 'Humeur des visiteurs', qualitePrix: 'Rapport qualité / prix', frequentation: 'Fréquentation', prestige: 'Part du prestige', evenements: 'Événements réussis', marketing: 'Marketing en cours' };
+  const LABF = { humeur: 'Humeur des visiteurs', qualitePrix: 'Rapport qualité / prix', frequentation: 'Fréquentation', prestige: 'Part du prestige', evenements: 'Événements réussis', marketing: 'Marketing en cours', fidelite: 'Bouche-à-oreille des habitués' };
 
   function twoGauges() {
     const parts = G.prestigeParts || {}, fp = Sc.fameParts(), t = Sc.fameTarget();

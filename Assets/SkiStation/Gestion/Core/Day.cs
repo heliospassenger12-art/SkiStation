@@ -53,6 +53,7 @@ namespace SkiStation.Gestion
             UpdatePrestige(); G.elapsed++; Scenarios.DailyFame(); Scenarios.DailyBid(report);
             Scenarios.CheckCareer(report);
             CheckAch(report);
+            Loyalty.EndDay(Sim.Visitors, report);
             G.day++; Weather.Next();
             if (G.summer) { if (G.day >= Const.SUMMER_DAYS) EndSummer(report); }
             else if (G.day >= Const.SEASON_DAYS) { if (Researched("summer")) StartSummer(report); else SeasonEnd(report); }
@@ -64,9 +65,9 @@ namespace SkiStation.Gestion
             AutoSave();
             Emit("day:end", report);
         }
-        static void WinterReset()
+        static void WinterReset(DayReport report)
         {
-            G.day = 0; G.year++; G.snowBase = 45; Mgmt.NewSeason();
+            G.day = 0; G.year++; G.snowBase = 45; Mgmt.NewSeason(); Loyalty.NewSeason(report);
             foreach (var p in G.pistes) { p.depth = 45 + (p.topAlt - 1650) * 0.03; p.ice = 0; p.slush = 0; p.groomed = 0.8; p.snowClosed = false; p.avaUntil = 0; }
         }
         static void StartSummer(DayReport report)
@@ -78,7 +79,7 @@ namespace SkiStation.Gestion
         }
         static void EndSummer(DayReport report)
         {
-            G.summer = false; WinterReset();
+            G.summer = false; WinterReset(report);
             report.notes.Add("❄️ Fin de l'été : les premières neiges tombent. Saison d'hiver " + G.year + " !");
             Weather.Init(); Net.Touch(); Emit("season");
         }
@@ -95,7 +96,7 @@ namespace SkiStation.Gestion
         {
             double summer = 0;
             if (Researched("summer")) { foreach (var b in G.buildings) { var d = b.Def; summer += d.summer * 90 * 9 + (d.type == "lodging" ? Bcap(b) * b.price * 0.25 * 70 : 0); } foreach (var l in G.lifts) if (Catalog.Lift(l.type).kind != "tow") summer += 2500; }
-            G.money += summer; G.day = 0; G.year++; G.snowBase = 45; Mgmt.NewSeason();
+            G.money += summer; G.day = 0; G.year++; G.snowBase = 45; Mgmt.NewSeason(); Loyalty.NewSeason(report);
             foreach (var p in G.pistes) { p.depth = 45 + (p.topAlt - 1650) * 0.03; p.ice = 0; p.slush = 0; p.groomed = 0.8; p.snowClosed = false; }
             report.notes.Add("🌞 Fin de saison " + (G.year - 1) + ". " + (summer > 0 ? "Recettes d'été (VTT, randonnée, hébergement) : " + GMath.Eur(summer) + "." : "Recherchez « Saison d'été » pour générer des recettes hors saison.") + " Nouvelle saison d'hiver !");
             Weather.Init();

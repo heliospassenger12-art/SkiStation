@@ -40,6 +40,7 @@
     parts.prestige = 0.1 * G.prestige;
     parts.evenements = Math.min(15, Object.keys(G.eventsHosted).reduce((a, k) => { const e = D.EVENTS.find(x => x.id === k); return a + (e ? Math.min(2, G.eventsHosted[k]) * e.fameGain * 0.5 : 0); }, 0));
     parts.marketing = (G.marketing.tv > 0 ? 5 : 0) + (G.marketing.social > 0 ? 3 : 0);
+    parts.fidelite = SS.Loyal ? SS.Loyal.famePart() : 0;                // bouche-à-oreille des habitués
     return parts;
   };
   Sc.fameTarget = function () {
