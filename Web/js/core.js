@@ -10,7 +10,8 @@
   SS.VILLAGE = { x: 0, z: 2750, h: 1650 };
   SS.HUB = { x: 0, z: 2480 };            // front de neige
   SS.ARRIVAL = { x: 60, z: 2990 };
-  SS.HUB_R = 320;                        // rayon du front de neige : toute gare ou fin de piste dans ce cercle s'y raccorde       // route d'accès / parking de départ
+  SS.HUB_R = 320;
+  SS.inHub = (x, z) => Math.hypot(x - SS.HUB.x, z - SS.HUB.z) < SS.HUB_R;   // le front de neige : espace libre, tout ce qui y finit y est raccordé                        // rayon du front de neige : toute gare ou fin de piste dans ce cercle s'y raccorde       // route d'accès / parking de départ
 
   // Une seule horloge : tout est exprimé en secondes de jeu.
   SS.CLOCK_RATE = 30;         // secondes de jeu par seconde réelle à x1

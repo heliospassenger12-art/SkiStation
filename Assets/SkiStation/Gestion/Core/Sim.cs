@@ -26,6 +26,7 @@ namespace SkiStation.Gestion
         public double tx, tz, wspeed = 1; public string then; public Building svc; public double until, waitStart, svcWait, restGain, skipFood, balked, qPen, remain;
         public string state0 = ""; public List<Edge> path; public Piste target, lastPiste; public Lift lift; public int veh; public Edge edge; public double s, fallAt = -1;
         public int dn, waits, apres; public bool pOnDone;
+        public Edge nextEdge;
         public int clientId, visitNo, loyalSince; public string fav; public bool pass; public Dictionary<string, int> pc = new Dictionary<string, int>();
     }
     public sealed class Rescue { public string kind; public double x, z, y, speed, t0; public Visitor v; public string phase; public Building post, src; public bool slow; public double sx, sz; }
@@ -442,6 +443,8 @@ namespace SkiStation.Gestion
         {
             if (e == null || e.id >= Net.edges.Count || Net.edges[e.id] != e) { v.path = null; v.target = null; Decide(v); return; }
             bool forced = v.decision == "Rentrer";
+            double sx, sz; if (e.kind == "lift") { sx = e.lift.a.x; sz = e.lift.a.z; } else { var st0 = Game.PisteAt(e.piste, e.s0); sx = st0.x; sz = st0.z; }
+            if (v.state != "walk" && GMath.Hypot(v.x - sx, v.z - sz) > 25) { v.nextEdge = e; var nd = v.node >= 0 && v.node < Net.nodes.Count ? Net.nodes[v.node] : null; WalkTo(v, sx + Jitter(6), sz + Jitter(6), "edge", nd != null && nd.hub ? WALK * 2.5 : WALK * 1.4); return; }
             if (e.kind == "lift")
             {
                 var l = e.lift;
@@ -460,7 +463,8 @@ namespace SkiStation.Gestion
                 v.fallAt = Rnd() < risk * e.len / 1000 ? Rand.Range(e.s0, e.s1) : -1;
             }
         }
-        static void ArriveNode(Visitor v, Node node) { v.node = node.id; v.x = node.x + Jitter(8); v.z = node.z + Jitter(8); Advance(v); }
+        // à l'arrivée, le skieur reste où il est ; au front de neige il glisse ensuite librement jusqu'à son prochain départ
+        static void ArriveNode(Visitor v, Node node) { v.node = node.id; if (GMath.Hypot(v.x - node.x, v.z - node.z) > (node.hub ? Relief.HUB_R + 40 : 120)) { v.x = node.x + Jitter(8); v.z = node.z + Jitter(8); } Advance(v); }
 
         // ---------------- cours de ski ----------------
         static void JoinLesson(Visitor v, Building b)
@@ -655,6 +659,7 @@ namespace SkiStation.Gestion
                             v.x = v.tx; v.z = v.tz;
                             if (v.then == "service") TryEnter(v);
                             else if (v.then == "exit") Finalize(v);
+                            else if (v.then == "edge") { var ne = v.nextEdge; v.nextEdge = null; v.state = "idle"; TakeEdge(v, ne); }
                             else if (v.then == "lesson") { v.state = "lesson"; v.until = Math.Max(G.time + 3600, v.lessonAt + 7200); }
                             else Decide(v);
                         }
