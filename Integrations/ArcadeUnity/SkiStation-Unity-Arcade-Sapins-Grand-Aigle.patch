@@ -1,0 +1,267 @@
+diff --git a/Assets/SkiStation/Scripts/Arcade/ArcadeAlpineScenery.cs b/Assets/SkiStation/Scripts/Arcade/ArcadeAlpineScenery.cs
+index 069386d4deb0ec9f0935ac3779eafb8fce702c50..5dd3dd44bf4bd0231995ba75d113010038f65922 100644
+--- a/Assets/SkiStation/Scripts/Arcade/ArcadeAlpineScenery.cs
++++ b/Assets/SkiStation/Scripts/Arcade/ArcadeAlpineScenery.cs
+@@ -167,22 +167,53 @@ namespace SkiStation.Arcade
+                 float a = i * Mathf.PI * 2f / sides, b = (i+1) * Mathf.PI * 2f / sides;
+                 Vector3 p0 = p + new Vector3(Mathf.Cos(a)*radius,0f,Mathf.Sin(a)*radius);
+                 Vector3 p1 = p + new Vector3(Mathf.Cos(b)*radius,0f,Mathf.Sin(b)*radius);
+-                Face(p0,p0+Vector3.up*height,p1,new Color(.20f,.16f,.12f));
+-                Face(p1,p0+Vector3.up*height,p1+Vector3.up*height,new Color(.20f,.16f,.12f));
++                Face(p0,p0+Vector3.up*height,p1,new Color(.20f,.16f,.12f,0f));
++                Face(p1,p0+Vector3.up*height,p1+Vector3.up*height,new Color(.20f,.16f,.12f,0f));
+             }
+         }
+         void AddCone(Vector3 p, float radius, float height, Color color, bool snow)
+         {
+             int sides = treeLod==0?12:treeLod==1?8:5;
++            Vector3 tip = p + Vector3.up * height + new Vector3(treeStyle==4?.18f:0,0,treeStyle==5?.12f:0);
++            color.a = snow ? 1f : .5f; // Vertex alpha selects bark, needles or snow in URP.
+             for (int i = 0; i < sides; i++)
+             {
+-                float a = i * Mathf.PI * 2f / sides + treeYaw, b = (i+1) * Mathf.PI * 2f / sides + treeYaw;
+-                float uneven = 1f + (treeStyle==5?.13f:.07f) * Mathf.Sin(a*3f+p.x*.17f);
+-                Vector3 p0 = p + new Vector3(Mathf.Cos(a)*radius*uneven,0f,Mathf.Sin(a)*radius*uneven*treeSkew);
+-                Vector3 p1 = p + new Vector3(Mathf.Cos(b)*radius,0f,Mathf.Sin(b)*radius*treeSkew);
+-                Face(p0,p+Vector3.up*height+new Vector3(treeStyle==4?.18f:0,0,treeStyle==5?.12f:0),p1,color * (snow ? 1f : .90f + .05f * (i%3)));
++                float a = i * Mathf.PI * 2f / sides + treeYaw;
++                float b = ((i + 1) % sides) * Mathf.PI * 2f / sides + treeYaw;
++                Vector3 left = CrownEdge(a, radius, p.x);
++                Vector3 right = CrownEdge(b, radius, p.x);
++                Color faceColor = color;
++                if (!snow)
++                {
++                    float shade = .90f + .05f * (i % 3);
++                    faceColor = new Color(color.r * shade, color.g * shade, color.b * shade, color.a);
++                }
++
++                if (treeLod != 0 || snow)
++                {
++                    // Uneven snow lips break the uniform rings without adding distant geometry.
++                    float leftY = snow && treeLod == 0 ? .05f * height * Mathf.Sin(a * 5f + p.z) : 0f;
++                    float rightY = snow && treeLod == 0 ? .05f * height * Mathf.Sin(b * 5f + p.z) : 0f;
++                    Face(p + left + Vector3.up * leftY, tip, p + right + Vector3.up * rightY, faceColor);
++                    continue;
++                }
++
++                // Fold the underside of nearby needle skirts in towards the trunk.
++                Vector3 shoulderLeft = p + left + Vector3.up * (height * .15f);
++                Vector3 shoulderRight = p + right + Vector3.up * (height * .15f);
++                Vector3 skirtLeft = p + left * .58f;
++                Vector3 skirtRight = p + right * .58f;
++                Face(skirtLeft, shoulderLeft, skirtRight, faceColor);
++                Face(skirtRight, shoulderLeft, shoulderRight, faceColor);
++                Face(shoulderLeft, tip, shoulderRight, faceColor);
+             }
+         }
++        Vector3 CrownEdge(float angle,float radius,float x)
++        {
++            float uneven = 1f + (treeStyle==5?.13f:.07f) * Mathf.Sin(angle*3f+x*.17f);
++            float extent = radius * uneven;
++            return new Vector3(Mathf.Cos(angle)*extent,0f,Mathf.Sin(angle)*extent*treeSkew);
++        }
+         void Face(Vector3 a, Vector3 b, Vector3 d, Color color)
+         {
+             var vv=treeLod==0?v:lodV[treeLod-1];var nn=treeLod==0?n:lodN[treeLod-1];
+diff --git a/Assets/SkiStation/Shaders/ArcadeScenery.shader b/Assets/SkiStation/Shaders/ArcadeScenery.shader
+index b33534ebb9a83f64f281f1f877ebdbd3d14c964c..10bd31ece3b4c809e824ad659170fbb2c9b23139 100644
+--- a/Assets/SkiStation/Shaders/ArcadeScenery.shader
++++ b/Assets/SkiStation/Shaders/ArcadeScenery.shader
+@@ -1,6 +1,197 @@
+ Shader "SkiStation/Arcade/Scenery"
+ {
+  Properties {_Color("Couleur",Color)=(1,1,1,1)}
++ SubShader
++ {
++  Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" "Queue"="Geometry" }
++  LOD 180
++
++  HLSLINCLUDE
++  #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
++  #if defined(LOD_FADE_CROSSFADE)
++   #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/LODCrossFade.hlsl"
++  #endif
++
++  CBUFFER_START(UnityPerMaterial)
++   float4 _Color;
++  CBUFFER_END
++
++  struct ForestVertex
++  {
++   float4 positionOS : POSITION;
++   float3 normalOS : NORMAL;
++   half4 color : COLOR;
++   UNITY_VERTEX_INPUT_INSTANCE_ID
++  };
++
++  struct ForestDepth
++  {
++   float4 positionCS : SV_POSITION;
++   UNITY_VERTEX_OUTPUT_STEREO
++  };
++
++  ForestDepth DepthVertex(ForestVertex input)
++  {
++   ForestDepth output = (ForestDepth)0;
++   UNITY_SETUP_INSTANCE_ID(input);
++   UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
++   output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
++   return output;
++  }
++
++  half DepthFragment(ForestDepth input) : SV_Target
++  {
++   UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
++   #if defined(LOD_FADE_CROSSFADE)
++    LODFadeCrossFade(input.positionCS);
++   #endif
++   return input.positionCS.z;
++  }
++  ENDHLSL
++
++  Pass
++  {
++   Name "ForestForward"
++   Tags { "LightMode"="UniversalForwardOnly" }
++   HLSLPROGRAM
++   #pragma target 3.0
++   #pragma vertex ForestVert
++   #pragma fragment ForestFrag
++   #pragma multi_compile_instancing
++   #pragma multi_compile_fog
++   #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
++   #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
++   #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
++   #pragma multi_compile _ LOD_FADE_CROSSFADE
++   #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
++
++   struct ForestVaryings
++   {
++    float4 positionCS : SV_POSITION;
++    float3 positionWS : TEXCOORD0;
++    half3 normalWS : TEXCOORD1;
++    half4 fogAndVertexLight : TEXCOORD2;
++    half4 color : COLOR;
++    #if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR)
++     float4 shadowCoord : TEXCOORD3;
++    #endif
++    UNITY_VERTEX_OUTPUT_STEREO
++   };
++
++   ForestVaryings ForestVert(ForestVertex input)
++   {
++    ForestVaryings output = (ForestVaryings)0;
++    UNITY_SETUP_INSTANCE_ID(input);
++    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
++    VertexPositionInputs position = GetVertexPositionInputs(input.positionOS.xyz);
++    output.positionCS = position.positionCS;
++    output.positionWS = position.positionWS;
++    output.normalWS = TransformObjectToWorldNormal(input.normalOS);
++    output.color = input.color;
++    output.fogAndVertexLight = half4(ComputeFogFactor(position.positionCS.z),
++                                    VertexLighting(position.positionWS, output.normalWS));
++    #if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR)
++     output.shadowCoord = GetShadowCoord(position);
++    #endif
++    return output;
++   }
++
++   half4 ForestFrag(ForestVaryings input) : SV_Target
++   {
++    UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
++    #if defined(LOD_FADE_CROSSFADE)
++     LODFadeCrossFade(input.positionCS);
++    #endif
++
++    float3 position = input.positionWS;
++    half3 normal = normalize(input.normalWS);
++    half snow = step(.75h, input.color.a);
++    half needles = step(.25h, input.color.a) * (1.0h - snow);
++    float pattern = position.y * 16.0 + sin(position.x * 5.0 + position.z * 7.0) * 1.8;
++    float fineDetail = (1.0 - smoothstep(18.0, 68.0, distance(position, GetCameraPositionWS())))
++                      * (1.0 - smoothstep(.65, 2.6, fwidth(pattern)));
++    float branches = sin(pattern) * fineDetail;
++    half3 albedo = input.color.rgb * _Color.rgb;
++    albedo *= lerp(1.0h, .83h + .21h * saturate(normal.y) + .16h * branches, needles);
++    albedo *= lerp(1.0h, .88h + .12h * saturate(normal.y) + .035h * branches, snow);
++
++    InputData lighting = (InputData)0;
++    lighting.positionWS = position;
++    lighting.positionCS = input.positionCS;
++    lighting.normalWS = normal;
++    lighting.viewDirectionWS = GetWorldSpaceNormalizeViewDir(position);
++    #if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR)
++     lighting.shadowCoord = input.shadowCoord;
++    #elif defined(MAIN_LIGHT_CALCULATE_SHADOWS)
++     lighting.shadowCoord = TransformWorldToShadowCoord(position);
++    #endif
++    lighting.vertexLighting = input.fogAndVertexLight.yzw;
++    lighting.bakedGI = SampleSH(normal);
++    lighting.normalizedScreenSpaceUV = GetNormalizedScreenSpaceUV(input.positionCS);
++    lighting.shadowMask = half4(1, 1, 1, 1);
++
++    SurfaceData material = (SurfaceData)0;
++    material.albedo = albedo;
++    material.smoothness = lerp(.12h, .32h, snow);
++    material.normalTS = half3(0, 0, 1);
++    material.occlusion = lerp(1.0h, .88h, needles);
++    material.alpha = 1;
++    half4 color = UniversalFragmentPBR(lighting, material);
++    color.rgb = MixFog(color.rgb, input.fogAndVertexLight.x);
++    return color;
++   }
++   ENDHLSL
++  }
++
++  Pass
++  {
++   Name "ForestShadowCaster"
++   Tags { "LightMode"="ShadowCaster" }
++   ColorMask 0
++   HLSLPROGRAM
++   #pragma target 3.0
++   #pragma vertex ShadowVertex
++   #pragma fragment DepthFragment
++   #pragma multi_compile_instancing
++   #pragma multi_compile _ LOD_FADE_CROSSFADE
++   #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
++   #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
++
++   float3 _LightDirection;
++   float3 _LightPosition;
++
++   ForestDepth ShadowVertex(ForestVertex input)
++   {
++    ForestDepth output = (ForestDepth)0;
++    UNITY_SETUP_INSTANCE_ID(input);
++    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
++    float3 position = TransformObjectToWorld(input.positionOS.xyz);
++    float3 normal = TransformObjectToWorldNormal(input.normalOS);
++    #if defined(_CASTING_PUNCTUAL_LIGHT_SHADOW)
++     float3 direction = normalize(_LightPosition - position);
++    #else
++     float3 direction = _LightDirection;
++    #endif
++    output.positionCS = ApplyShadowClamping(TransformWorldToHClip(ApplyShadowBias(position, normal, direction)));
++    return output;
++   }
++   ENDHLSL
++  }
++
++  Pass
++  {
++   Name "ForestDepthOnly"
++   Tags { "LightMode"="DepthOnly" }
++   ColorMask R
++   HLSLPROGRAM
++   #pragma target 3.0
++   #pragma vertex DepthVertex
++   #pragma fragment DepthFragment
++   #pragma multi_compile_instancing
++   #pragma multi_compile _ LOD_FADE_CROSSFADE
++   ENDHLSL
++  }
++ }
+  SubShader {
+  Tags {"RenderType"="Opaque"} LOD 180
+  CGPROGRAM
