@@ -1,0 +1,516 @@
+diff --git a/Assets/SkiStation/Resources/ArcadeA257/GrandAigleWeatherSnow.shader b/Assets/SkiStation/Resources/ArcadeA257/GrandAigleWeatherSnow.shader
+new file mode 100644
+index 0000000000000000000000000000000000000000..c1c4358b33779baf6820dc7b3cfbd977971331d4
+--- /dev/null
++++ b/Assets/SkiStation/Resources/ArcadeA257/GrandAigleWeatherSnow.shader
+@@ -0,0 +1,63 @@
++Shader "SkiStation/Arcade/WeatherSnow"
++{
++    Properties { _WeatherTint("Lumière ambiante", Color) = (1, 1, 1, 1) }
++    SubShader
++    {
++        Tags { "RenderPipeline"="UniversalPipeline" "Queue"="Transparent" "RenderType"="Transparent" }
++        Pass
++        {
++            Name "SnowBillboard"
++            Tags { "LightMode"="UniversalForwardOnly" }
++            Cull Off
++            ZWrite Off
++            Blend SrcAlpha OneMinusSrcAlpha
++
++            HLSLPROGRAM
++            #pragma vertex Vert
++            #pragma fragment Frag
++            #pragma multi_compile_fog
++            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
++
++            CBUFFER_START(UnityPerMaterial)
++                half4 _WeatherTint;
++            CBUFFER_END
++
++            struct Attributes
++            {
++                float4 positionOS : POSITION;
++                float2 uv : TEXCOORD0;
++                half4 color : COLOR;
++            };
++
++            struct Varyings
++            {
++                float4 positionCS : SV_POSITION;
++                float2 uv : TEXCOORD0;
++                half4 color : COLOR;
++                float2 depthAndFog : TEXCOORD1;
++            };
++
++            Varyings Vert(Attributes input)
++            {
++                Varyings output;
++                VertexPositionInputs position = GetVertexPositionInputs(input.positionOS.xyz);
++                output.positionCS = position.positionCS;
++                output.uv = input.uv;
++                output.color = input.color;
++                output.depthAndFog = float2(-position.positionVS.z, ComputeFogFactor(position.positionCS.z));
++                return output;
++            }
++
++            half4 Frag(Varyings input) : SV_Target
++            {
++                float2 centered = input.uv * 2.0 - 1.0;
++                half flake = 1.0 - smoothstep(.08, 1.0, dot(centered, centered));
++                half fadeNear = smoothstep(.25, 1.7, input.depthAndFog.x);
++                half fadeFar = 1.0 - smoothstep(18.0, 35.0, input.depthAndFog.x);
++                return half4(MixFog(input.color.rgb * _WeatherTint.rgb, input.depthAndFog.y), input.color.a * flake * fadeNear * fadeFar);
++            }
++            ENDHLSL
++        }
++    }
++    FallBack Off
++}
+diff --git a/Assets/SkiStation/Resources/ArcadeA257/GrandAigleWeatherSnow.shader.meta b/Assets/SkiStation/Resources/ArcadeA257/GrandAigleWeatherSnow.shader.meta
+new file mode 100644
+index 0000000000000000000000000000000000000000..9cdf2ef6352d530fd63acb54a1502761c8ffc032
+--- /dev/null
++++ b/Assets/SkiStation/Resources/ArcadeA257/GrandAigleWeatherSnow.shader.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 64c3ada7547943faa8efc3708f0b517f
+diff --git a/Assets/SkiStation/Scripts/Arcade/ArcadeGrandAigleDaylight.cs b/Assets/SkiStation/Scripts/Arcade/ArcadeGrandAigleDaylight.cs
+index 7306502ac1a12a629d335b10f63e78b9e76de2e2..c88ac255849238f804663a7b7fcc8f37450eccbd 100644
+--- a/Assets/SkiStation/Scripts/Arcade/ArcadeGrandAigleDaylight.cs
++++ b/Assets/SkiStation/Scripts/Arcade/ArcadeGrandAigleDaylight.cs
+@@ -51,11 +51,14 @@ namespace SkiStation.Arcade
+         static readonly int TwilightStrengthId = Shader.PropertyToID("_TwilightStrength");
+         static readonly Color DawnScattering = Rgb(0xFFB86C);
+         static readonly Color DuskScattering = Rgb(0xFF514D);
++        static readonly int WeatherVeilId = Shader.PropertyToID("_WeatherVeil");
++        static readonly int CloudsId = Shader.PropertyToID("_Clouds");
+         static readonly int NightId = Shader.PropertyToID("_Night");
+         static readonly Color MoonColor = new Color(.59f, .73f, 1f);
+         static readonly Color DawnSun = new Color(1f, .68f, .40f);
+         static readonly Color DuskSun = new Color(1f, .36f, .31f);
+ 
++        readonly ArcadeGrandAigleWeather weather;
+         readonly Scene scene;
+         readonly Material sky, originalSky;
+         readonly Light sun, moon, originalSun;
+@@ -95,6 +98,7 @@ namespace SkiStation.Arcade
+             originalFogColor = RenderSettings.fogColor;
+             originalFogDensity = RenderSettings.fogDensity;
+ 
++            weather = root.gameObject.AddComponent<ArcadeGrandAigleWeather>();
+             sky = new Material(source) { name = "Grand Aigle · ciel de session", hideFlags = HideFlags.DontSave };
+             sun = CreateLight(root, "Soleil Arcade", LightShadows.Soft);
+             moon = CreateLight(root, "Lune Arcade", LightShadows.None);
+@@ -104,7 +108,6 @@ namespace SkiStation.Arcade
+             RenderSettings.ambientMode = AmbientMode.Trilight;
+             RenderSettings.fog = true;
+             RenderSettings.fogMode = FogMode.ExponentialSquared;
+-            RenderSettings.fogDensity = .00012f;
+             SetHour(startHour);
+         }
+ 
+@@ -128,8 +131,10 @@ namespace SkiStation.Arcade
+         {
+             if (disposed || scene != SceneManager.GetActiveScene() || deltaSeconds <= 0f)
+                 return;
+-            cloudSeconds += deltaSeconds;
+-            clockHour = (clockHour + deltaSeconds * (24d / (60d * Mathf.Max(.25f, minutesPerDay)))) % 24d;
++            cloudSeconds += deltaSeconds * (1f + weather.Current.Wind * .45f);
++            if (!weather.HoldTime)
++                clockHour = (clockHour + deltaSeconds * (24d / (60d * Mathf.Max(.25f, minutesPerDay)))) % 24d;
++            weather.Advance((float)clockHour, deltaSeconds, ArcadeSkiSession.ActiveSession?.playerCamera);
+             ApplyHour((float)clockHour);
+         }
+ 
+@@ -138,6 +143,7 @@ namespace SkiStation.Arcade
+             if (disposed || scene != SceneManager.GetActiveScene() || float.IsNaN(hour) || float.IsInfinity(hour))
+                 return;
+             clockHour = Mathf.Repeat(hour, 24f);
++            weather.Seek((float)clockHour);
+             ApplyHour((float)clockHour);
+         }
+ 
+@@ -168,27 +174,37 @@ namespace SkiStation.Arcade
+ 
+             sun.transform.rotation = Orbit(hour);
+             sun.color = Color.Lerp(Color.Lerp(DuskSun, DawnSun, dawnSide), new Color(1f, .96f, .90f), Smooth(0f, 31f, altitude));
+-            sun.intensity = 1.18f * daylight + .36f * dawn * Smooth(-1f, 6f, altitude);
+-            sun.shadowStrength = .76f * Smooth(.4f, 7f, altitude);
++            var conditions = weather.Current;
++            sun.intensity = (1.18f * daylight + .36f * dawn * Smooth(-1f, 6f, altitude)) * conditions.Light;
++            sun.shadowStrength = .76f * Smooth(.4f, 7f, altitude) * conditions.Light;
+             moon.transform.rotation = Orbit(hour + 12f);
+-            moon.intensity = .14f * night;
++            moon.intensity = .14f * night * conditions.Light;
++
++            Color haze = Color.Lerp(Rgb(0x9AAEBE), Rgb(0x263954), night);
++            zenith = Color.Lerp(zenith, haze, conditions.Veil * .78f);
++            horizon = Color.Lerp(horizon, haze, conditions.Veil);
++            ambient = Color.Lerp(ambient, haze, conditions.Veil * .25f);
+ 
+             sky.SetColor(ZenithId, zenith);
+             sky.SetColor(HorizonId, horizon);
+             sky.SetColor(SunTintId, sun.color);
+             sky.SetVector(SunDirectionId, -sun.transform.forward);
+             sky.SetVector(MoonDirectionId, -moon.transform.forward);
+-            sky.SetFloat(SunStrengthId, Smooth(-8f, 3f, altitude));
++            sky.SetFloat(SunStrengthId, Smooth(-8f, 3f, altitude) * conditions.Light);
+             sky.SetFloat(NightId, night);
++            sky.SetFloat(CloudsId, conditions.CloudCover);
++            sky.SetFloat(WeatherVeilId, conditions.Veil);
+             sky.SetColor(TwilightTintId, Color.Lerp(DuskScattering, DawnScattering, dawnSide));
+-            sky.SetFloat(TwilightStrengthId, twilight);
++            sky.SetFloat(TwilightStrengthId, twilight * (1f - conditions.Veil));
+             sky.SetFloat(CloudTimeId, cloudSeconds);
+             RenderSettings.fogColor = Color.Lerp(horizon, ambient, twilight * .66f);
++            RenderSettings.fogDensity = conditions.FogDensity;
+ 
+             // Keep diffuse visibility on URP materials without recapturing the environment every frame.
+             var probe = new SphericalHarmonicsL2();
+             probe.AddAmbientLight(ambient);
+             RenderSettings.ambientProbe = probe;
++            weather.SetLighting(ambient);
+         }
+ 
+         public void Dispose()
+@@ -206,6 +222,11 @@ namespace SkiStation.Arcade
+                 RenderSettings.ambientMode = originalAmbientMode;
+                 RenderSettings.ambientProbe = originalProbe;
+             }
++            if (weather != null)
++            {
++                weather.Shutdown();
++                UnityEngine.Object.Destroy(weather);
++            }
+             UnityEngine.Object.Destroy(sky);
+             if (sun != null) UnityEngine.Object.Destroy(sun.gameObject);
+             if (moon != null) UnityEngine.Object.Destroy(moon.gameObject);
+diff --git a/Assets/SkiStation/Scripts/Arcade/ArcadeGrandAigleWeather.cs b/Assets/SkiStation/Scripts/Arcade/ArcadeGrandAigleWeather.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..e91e2f0714b4e9262888f16adbe6d9354539f4b1
+--- /dev/null
++++ b/Assets/SkiStation/Scripts/Arcade/ArcadeGrandAigleWeather.cs
+@@ -0,0 +1,221 @@
++using System;
++using UnityEngine;
++using UnityEngine.Rendering;
++
++namespace SkiStation.Arcade
++{
++    // Local presentation only. The Gameplay and Management weather models stay independent.
++    [DisallowMultipleComponent]
++    public sealed class ArcadeGrandAigleWeather : MonoBehaviour
++    {
++        public enum WeatherPreset { Forecast, Clear, Overcast, Fog, Snow }
++        [SerializeField] WeatherPreset preset = WeatherPreset.Forecast;
++        [SerializeField] bool holdTime;
++        public bool HoldTime { get => holdTime; set => holdTime = value; }
++        public WeatherPreset SelectedPreset => preset;
++        [SerializeField, Range(1f, 120f)] float transitionSeconds = 25f;
++
++        [Serializable]
++        public struct Look
++        {
++            [Range(0f, 1f)] public float CloudCover;
++            [Range(0f, .005f)] public float FogDensity;
++            [Range(0f, 1.5f)] public float Light;
++            [Range(0f, 1f)] public float Veil;
++            [Range(0f, 1f)] public float Snow;
++            [Range(0f, 8f)] public float Wind;
++
++            internal Look(float cloudCover, float fogDensity, float light, float veil, float snow, float wind)
++            {
++                CloudCover = cloudCover;
++                FogDensity = fogDensity;
++                Light = light;
++                Veil = veil;
++                Snow = snow;
++                Wind = wind;
++            }
++
++            internal static Look Blend(Look a, Look b, float t) => new Look(
++                Mathf.Lerp(a.CloudCover, b.CloudCover, t), Mathf.Lerp(a.FogDensity, b.FogDensity, t),
++                Mathf.Lerp(a.Light, b.Light, t), Mathf.Lerp(a.Veil, b.Veil, t),
++                Mathf.Lerp(a.Snow, b.Snow, t), Mathf.Lerp(a.Wind, b.Wind, t));
++        }
++
++        [SerializeField] Look clear = new Look(.28f, .00012f, 1f, 0f, 0f, .45f);
++        [SerializeField] Look overcast = new Look(.77f, .0004f, .58f, .52f, 0f, 1.20f);
++        [SerializeField] Look fog = new Look(.69f, .0016f, .48f, .72f, 0f, .65f);
++        [SerializeField] Look snow = new Look(.93f, .00085f, .52f, .65f, 1f, 2.25f);
++
++        Look from, into;
++        WeatherPreset target;
++        float elapsed;
++        bool initialized, triedSnowShader;
++        ParticleSystem flakes;
++        Material snowMaterial;
++
++        public Look Current { get; private set; }
++
++        public void SetPreset(WeatherPreset value)
++        {
++            if (!Enum.IsDefined(typeof(WeatherPreset), value))
++                throw new ArgumentOutOfRangeException(nameof(value));
++            preset = value;
++        }
++
++        [ContextMenu("Météo/Ciel clair")]
++        void PreviewClear() => SetPreset(WeatherPreset.Clear);
++        [ContextMenu("Météo/Couvert")]
++        void PreviewOvercast() => SetPreset(WeatherPreset.Overcast);
++        [ContextMenu("Météo/Neige")]
++        void PreviewSnow() => SetPreset(WeatherPreset.Snow);
++        [ContextMenu("Météo/Brouillard")]
++        void PreviewFog() => SetPreset(WeatherPreset.Fog);
++
++        WeatherPreset Resolve(float hour)
++        {
++            if (preset != WeatherPreset.Forecast) return preset;
++            if (hour >= 9.5f && hour < 12f) return WeatherPreset.Overcast;
++            if (hour >= 12f && hour < 15.5f) return WeatherPreset.Snow;
++            if (hour >= 15.5f && hour < 17f) return WeatherPreset.Fog;
++            return WeatherPreset.Clear;
++        }
++
++        Look Profile(WeatherPreset mode)
++        {
++            switch (mode)
++            {
++                case WeatherPreset.Overcast: return overcast;
++                case WeatherPreset.Fog: return fog;
++                case WeatherPreset.Snow: return snow;
++                default: return clear;
++            }
++        }
++
++        internal void Seek(float hour)
++        {
++            target = Resolve(hour);
++            Current = from = into = Profile(target);
++            elapsed = Mathf.Max(1f, transitionSeconds);
++            initialized = true;
++        }
++
++        internal void Advance(float hour, float deltaSeconds, Camera view)
++        {
++            if (!isActiveAndEnabled) return;
++            if (!initialized) Seek(hour);
++            var next = Resolve(hour);
++            if (next != target)
++            {
++                target = next;
++                from = Current;
++                into = Profile(next);
++                elapsed = 0f;
++            }
++            float duration = Mathf.Max(1f, transitionSeconds);
++            elapsed = Mathf.Min(elapsed + deltaSeconds, duration);
++            Current = Look.Blend(from, into, Mathf.SmoothStep(0f, 1f, elapsed / duration));
++            UpdateSnow(view);
++        }
++
++        void UpdateSnow(Camera view)
++        {
++            if (Current.Snow <= .001f || view == null)
++            {
++                if (flakes != null && flakes.isPaused) flakes.Play(false);
++                if (flakes != null && flakes.isEmitting)
++                    flakes.Stop(false, ParticleSystemStopBehavior.StopEmitting);
++                return;
++            }
++
++            if (flakes == null && !triedSnowShader) CreateSnow();
++            if (flakes == null) return;
++
++            var direction = Vector3.ProjectOnPlane(view.transform.forward, Vector3.up).normalized;
++            flakes.transform.position = view.transform.position + direction * 8f + Vector3.up * 6f;
++            var emission = flakes.emission;
++            emission.rateOverTime = 165f * Current.Snow;
++            var wind = flakes.velocityOverLifetime;
++            wind.x = Current.Wind;
++            if (flakes.isPaused || !flakes.isEmitting) flakes.Play(false);
++        }
++
++        void CreateSnow()
++        {
++            triedSnowShader = true;
++            Shader shader = Resources.Load<Shader>("ArcadeA257/GrandAigleWeatherSnow");
++            if (shader == null || !shader.isSupported)
++            {
++                Debug.LogWarning("[Grand Aigle] Shader de précipitations indisponible.", this);
++                return;
++            }
++            snowMaterial = new Material(shader) { name = "Flocons de Grand Aigle", hideFlags = HideFlags.DontSave };
++            var snowObject = new GameObject("Neige météo Arcade");
++            snowObject.SetActive(false);
++            snowObject.transform.SetParent(transform, false);
++            snowObject.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
++            flakes = snowObject.AddComponent<ParticleSystem>();
++
++            var main = flakes.main;
++            main.playOnAwake = false;
++            main.loop = true;
++            main.simulationSpace = ParticleSystemSimulationSpace.World;
++            main.startSpeed = new ParticleSystem.MinMaxCurve(1.2f, 2.7f);
++            main.startLifetime = new ParticleSystem.MinMaxCurve(2.3f, 4.3f);
++            main.startSize = new ParticleSystem.MinMaxCurve(.035f, .10f);
++            main.startColor = new Color(.92f, .96f, 1f, .73f);
++            main.maxParticles = 750;
++
++            var shape = flakes.shape;
++            shape.enabled = true;
++            shape.shapeType = ParticleSystemShapeType.Box;
++            shape.scale = new Vector3(44f, 44f, 19f);
++            var wind = flakes.velocityOverLifetime;
++            wind.enabled = true;
++            wind.space = ParticleSystemSimulationSpace.World;
++            wind.x = Current.Wind;
++            wind.y = 0f;
++            wind.z = 0f;
++
++            var renderer = flakes.GetComponent<ParticleSystemRenderer>();
++            renderer.sharedMaterial = snowMaterial;
++            renderer.shadowCastingMode = ShadowCastingMode.Off;
++            renderer.receiveShadows = false;
++            snowObject.SetActive(true);
++        }
++
++        internal void SetLighting(Color ambient)
++        {
++            if (snowMaterial != null)
++                snowMaterial.SetColor("_WeatherTint", ambient * 1.4f);
++        }
++
++        void OnDisable()
++        {
++            if (flakes != null)
++                flakes.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
++        }
++
++        void Update()
++        {
++            if (flakes == null) return;
++            var session = ArcadeSkiSession.ActiveSession;
++            if (session == null || !session.IsPlaying)
++            {
++                if (!flakes.isStopped || flakes.particleCount > 0)
++                    flakes.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
++            }
++            else if (session.IsPaused && !flakes.isPaused && !flakes.isStopped)
++                flakes.Pause(false);
++        }
++
++        internal void Shutdown()
++        {
++            if (flakes != null) Destroy(flakes.gameObject);
++            flakes = null;
++            if (snowMaterial != null) Destroy(snowMaterial);
++            snowMaterial = null;
++        }
++
++        void OnDestroy() => Shutdown();
++    }
++}
+diff --git a/Assets/SkiStation/Scripts/Arcade/ArcadeGrandAigleWeather.cs.meta b/Assets/SkiStation/Scripts/Arcade/ArcadeGrandAigleWeather.cs.meta
+new file mode 100644
+index 0000000000000000000000000000000000000000..c56b7e92561f422f98379bb9385e6071cf6263f0
+--- /dev/null
++++ b/Assets/SkiStation/Scripts/Arcade/ArcadeGrandAigleWeather.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 98709777a80b42808fbc3c214aec9de0
+diff --git a/Assets/SkiStation/Shaders/ArcadeAlpineSky257.shader b/Assets/SkiStation/Shaders/ArcadeAlpineSky257.shader
+index 751283635a59659d5ce56a35114eebd37a64293e..5f3167f59d1ec9fe533de774261b21eba15edb02 100644
+--- a/Assets/SkiStation/Shaders/ArcadeAlpineSky257.shader
++++ b/Assets/SkiStation/Shaders/ArcadeAlpineSky257.shader
+@@ -1,12 +1,12 @@
+ Shader "SkiStation/Arcade/AlpineSky257" {
+- Properties {_Zenith("Zenith",Color)=(.19,.36,.58,1) _Horizon("Horizon",Color)=(.63,.74,.82,1) _Clouds("Nuages",Range(0,1))=.25 _Clock("Temps domaine",Float)=0 _SunDir("Soleil",Vector)=(.5,.5,-.5,0) _SunTint("Couleur soleil",Color)=(1,.96,.90,1) _SunStrength("Intensite",Float)=1 _DetailQuality("Detail",Float)=1 _MoonDir("Lune",Vector)=(0,1,0,0) _Night("Nuit",Range(0,1))=0 _TwilightTint("Lueur horizon",Color)=(1,.5,.4,1) _TwilightStrength("Intensite crepuscule",Range(0,1))=0}
++ Properties {_Zenith("Zenith",Color)=(.19,.36,.58,1) _Horizon("Horizon",Color)=(.63,.74,.82,1) _Clouds("Nuages",Range(0,1))=.25 _Clock("Temps domaine",Float)=0 _SunDir("Soleil",Vector)=(.5,.5,-.5,0) _SunTint("Couleur soleil",Color)=(1,.96,.90,1) _SunStrength("Intensite",Float)=1 _DetailQuality("Detail",Float)=1 _MoonDir("Lune",Vector)=(0,1,0,0) _Night("Nuit",Range(0,1))=0 _TwilightTint("Lueur horizon",Color)=(1,.5,.4,1) _TwilightStrength("Intensite crepuscule",Range(0,1))=0 _WeatherVeil("Voile meteo",Range(0,1))=0}
+  SubShader {Tags {"Queue"="Background" "RenderType"="Background" "PreviewType"="Skybox"} Cull Off ZWrite Off
+  Pass {CGPROGRAM
+  #pragma vertex vert
+  #pragma fragment frag
+  #pragma target 3.0
+  #include "UnityCG.cginc"
+- float4 _Zenith,_Horizon,_SunDir,_SunTint,_MoonDir,_TwilightTint;float _Clouds,_Clock,_SunStrength,_DetailQuality,_Night,_TwilightStrength;
++ float4 _Zenith,_Horizon,_SunDir,_SunTint,_MoonDir,_TwilightTint;float _Clouds,_Clock,_SunStrength,_DetailQuality,_Night,_TwilightStrength,_WeatherVeil;
+  struct app{float4 vertex:POSITION;};struct v2f{float4 position:SV_POSITION;float3 direction:TEXCOORD0;};
+  v2f vert(app v){v2f o;o.position=UnityObjectToClipPos(v.vertex);o.direction=mul((float3x3)unity_ObjectToWorld,v.vertex.xyz);return o;}
+  float hash(float2 p){return frac(sin(dot(p,float2(127.1,311.7)))*43758.5453);}
+@@ -17,15 +17,32 @@ Shader "SkiStation/Arcade/AlpineSky257" {
+   return smoothstep(.46,.71,layers*.72+filaments*.28);
+  }
+ 
+- float ShaftCloud(float3 direction){
+-  direction=normalize(direction);
+-  float2 azimuth=normalize(direction.xz+float2(.00001,0));
+-  return TwilightStrata(azimuth,saturate(direction.y))*smoothstep(.015,.09,direction.y);
++ float CloudCoverage(float3 direction)
++ {
++  direction = normalize(direction);
++  float elevation = saturate(direction.y);
++  float2 azimuth = normalize(direction.xz + float2(.00001, 0));
++  float2 uv = direction.xz / max(.12, direction.y) * 1.45 + float2(_Clock * .0004, 0);
++  // Domain-warped noise breaks up the outline of individual cloud banks.
++  uv += float2(n(uv * .65 + 13), n(uv * .65 - 27)) * .18;
++  float broad = n(uv) * .64 + n(uv * 2.1 + 17) * .25;
++  if (_DetailQuality > .4) broad += n(uv * 4.3 - 19) * .11;
++
++  float cloud = smoothstep(.72 - _Clouds * .37, .83 - _Clouds * .37, broad);
++  float upperSky = smoothstep(.02, .18, direction.y);
++  cloud *= upperSky * saturate(_Clouds * 2);
++  float blanket = (.84 + broad * .12) * smoothstep(0, .08, direction.y);
++  cloud = lerp(cloud, max(cloud, blanket), smoothstep(.58, .94, _Clouds));
++
++  float strata = TwilightStrata(azimuth, elevation);
++  strata *= smoothstep(.01, .075, elevation) * (1 - smoothstep(.3, .53, elevation));
++  float twilight = _TwilightStrength * (1 - _WeatherVeil);
++  return saturate(lerp(cloud, strata * .53, twilight * .88));
+  }
+ 
+  float SunShafts(float3 view,float3 sun,float cosine,float coverage){
+   float lowSun=smoothstep(.005,.065,sun.y)*(1-smoothstep(.22,.46,sun.y));
+-  float strength=lowSun*_TwilightStrength*saturate(_Clouds*4);
++  float strength=lowSun*_TwilightStrength*saturate(_Clouds*4)*(1-_WeatherVeil);
+   if(strength<.002 || cosine<.80 || view.y<.015)return 0;
+ 
+   // Compare the opening on this spoke with cloud on either side of it.
+@@ -35,8 +52,8 @@ Shader "SkiStation/Arcade/AlpineSky257" {
+   float3 spoke=radial/max(radius,.0001);
+   float3 flank=cross(sun,spoke)*.050;
+   float3 nearSun=sun+spoke*.16;
+-  float opening=ShaftCloud(nearSun);
+-  float neighbours=max(ShaftCloud(nearSun+flank),ShaftCloud(nearSun-flank));
++  float opening=CloudCoverage(nearSun);
++  float neighbours=max(CloudCoverage(nearSun+flank),CloudCoverage(nearSun-flank));
+   float contrast=smoothstep(.035,.34,neighbours-opening);
+   float lengthFade=smoothstep(.04,.12,radius)*(1-smoothstep(.24,.57,radius));
+   return strength*contrast*(1-opening)*lengthFade*smoothstep(.015,.09,view.y)*(1-coverage)*.22;
+@@ -50,18 +67,12 @@ Shader "SkiStation/Arcade/AlpineSky257" {
+   float sunSide=smoothstep(-.15,.95,dot(azimuth,sunAzimuth));
+   float rim=exp2(-h*9)*(.46+.54*sunSide)*_TwilightStrength;
+   col=lerp(col,_TwilightTint.rgb,rim*.88);
+-  // Infinite distant cloud layer, world-direction projection, no billboard attached to rider.
+-  float2 p=d.xz/max(.12,d.y)*1.45+float2(_Clock*.0004,0);
+-  float cloud=n(p)*.64+n(p*2.1+17)*.25;
+-  if(_DetailQuality>.4)cloud+=n(p*4.3-19)*.11;
+-  float coverage=smoothstep(.72-_Clouds*.25,.83-_Clouds*.25,cloud)*smoothstep(.05,.22,d.y)*saturate(_Clouds*2);
+-  // At low light, stretched strata replace part of the broad daytime cloud shapes.
+-  float strata=TwilightStrata(azimuth,h);
+-  strata*=smoothstep(.01,.075,h)*(1-smoothstep(.3,.53,h));
+-  coverage=lerp(coverage,strata*.53,_TwilightStrength*.88);
+-  float shade=saturate(.67+.2*dot(d,sun)+cloud*.12);
+-  float3 cloudColor=lerp(_Horizon.rgb*.85,_SunTint.rgb*.95,shade*(1-_Night));
+-  cloudColor=lerp(cloudColor,_TwilightTint.rgb,_TwilightStrength*(.12+.48*sunSide)*exp2(-h*4));
++  float coverage = CloudCoverage(d);
++  float shade = saturate(.67 + .2 * dot(d, sun));
++  float sunlight = shade * (1 - _Night) * (1 - _WeatherVeil);
++  float3 cloudColor = lerp(_Horizon.rgb * .85, _SunTint.rgb * .95, sunlight);
++  cloudColor = lerp(cloudColor, _TwilightTint.rgb,
++                   _TwilightStrength * (.12 + .48 * sunSide) * exp2(-h * 4));
+   col=lerp(col,cloudColor,coverage*.75);
+   col+=lerp(_SunTint.rgb,_TwilightTint.rgb,.25)*SunShafts(d,sun,sd,coverage);
+   float disc=smoothstep(.99984,.99996,sd)*smoothstep(-.02,.04,sun.y);col+=_SunTint.rgb*disc*1.4*_SunStrength*(1-coverage*.75);

@@ -1,0 +1,272 @@
+diff --git a/Assets/SkiStation/Scripts/Arcade/ArcadeAlpineTerrain.cs b/Assets/SkiStation/Scripts/Arcade/ArcadeAlpineTerrain.cs
+index 6dce0761836d46e6982ef839fc6fa3e1efc4a91a..6c35aa1f9e83d5ce2fa47ebe711a99d2b5f9bac4 100644
+--- a/Assets/SkiStation/Scripts/Arcade/ArcadeAlpineTerrain.cs
++++ b/Assets/SkiStation/Scripts/Arcade/ArcadeAlpineTerrain.cs
+@@ -206,20 +206,28 @@ namespace SkiStation.Arcade
+         void BuildTile(int x0, int z0, int cx, int cz)
+         {
+             Vector3[] vertices = new Vector3[(cx + 1) * (cz + 1)], normals = new Vector3[vertices.Length];
+-            Vector2[] uv = new Vector2[vertices.Length]; Color[] colors = new Color[vertices.Length];
++            Vector2[] uv = new Vector2[vertices.Length], course = new Vector2[vertices.Length];
++            Color[] colors = new Color[vertices.Length];
+             int[] triangles = new int[cx * cz * 6];
+             Vector3 anchor = new Vector3(originX + x0 * spacing, 0f, originZ + z0 * spacing);
+-            for (int z = 0; z <= cz; z++) for (int x = 0; x <= cx; x++)
++            for (int z = 0; z <= cz; z++)
+             {
+-                int i = z * (cx + 1) + x, gx = x0 + x, gz = z0 + z;
+-                float wx = originX + gx * spacing, wz = originZ + gz * spacing;
+-                vertices[i] = new Vector3(x * spacing, At(gx, gz), z * spacing);
+-                normals[i] = new Vector3(At(gx - 1, gz) - At(gx + 1, gz), spacing * 2f,
+-                    At(gx, gz - 1) - At(gx, gz + 1)).normalized;
+-                uv[i] = new Vector2(wx / 16f, wz / 16f);
+-                float rock = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(.72f, .38f, normals[i].y));
+-                float groomed = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(26f, 56f, Mathf.Abs(wx - CenterX(wz))));
+-                colors[i] = new Color(rock, groomed, 0f, 1f);
++                float wz = originZ + (z0 + z) * spacing;
++                float center = CenterX(wz);
++                float heading = (CenterX(wz + 1f) - CenterX(wz - 1f)) * .5f;
++                for (int x = 0; x <= cx; x++)
++                {
++                    int i = z * (cx + 1) + x, gx = x0 + x, gz = z0 + z;
++                    float wx = originX + gx * spacing;
++                    vertices[i] = new Vector3(x * spacing, At(gx, gz), z * spacing);
++                    normals[i] = new Vector3(At(gx - 1, gz) - At(gx + 1, gz), spacing * 2f,
++                        At(gx, gz - 1) - At(gx, gz + 1)).normalized;
++                    uv[i] = new Vector2(wx / 16f, wz / 16f);
++                    float rock = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(.72f, .38f, normals[i].y));
++                    float groomed = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(26f, 56f, Mathf.Abs(wx - center)));
++                    course[i] = new Vector2(wx - center, heading);
++                    colors[i] = new Color(rock, groomed, 0f, 1f);
++                }
+             }
+             int t = 0;
+             for (int z = 0; z < cz; z++) for (int x = 0; x < cx; x++)
+@@ -230,7 +238,7 @@ namespace SkiStation.Arcade
+             }
+             var mesh = new Mesh { name = "Grand Aigle " + x0 + ":" + z0,
+                 indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 };
+-            mesh.vertices = vertices; mesh.normals = normals; mesh.uv = uv; mesh.colors = colors;
++            mesh.vertices = vertices; mesh.normals = normals; mesh.uv = uv; mesh.uv3 = course; mesh.colors = colors;
+             mesh.triangles = triangles; mesh.RecalculateBounds(); ownedMeshes.Add(mesh);
+             var go = new GameObject(mesh.name); go.transform.SetParent(transform, false); go.transform.localPosition = anchor;
+             go.AddComponent<MeshFilter>().sharedMesh = mesh;
+diff --git a/Assets/SkiStation/Shaders/ArcadeAlpineSnow.shader b/Assets/SkiStation/Shaders/ArcadeAlpineSnow.shader
+index 933b8998985dd51de759490803afdf94854f5cf5..c26c82451958ecd3d9648d83d0be79e3ab276d9c 100644
+--- a/Assets/SkiStation/Shaders/ArcadeAlpineSnow.shader
++++ b/Assets/SkiStation/Shaders/ArcadeAlpineSnow.shader
+@@ -25,6 +25,214 @@ Shader "SkiStation/Arcade/AlpineSnow"
+   _CliffStart ("Normale seuil falaise",Range(0,1))=.67
+   _CliffEnd ("Normale falaise verticale",Range(0,1))=.24
+  }
++ SubShader
++ {
++  Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" "Queue"="Geometry" }
++  LOD 300
++
++  HLSLINCLUDE
++  #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
++
++  CBUFFER_START(UnityPerMaterial)
++   float4 _SnowColor, _RockColor;
++   float _Detail, _Masks, _RockBias, _Groomed, _Wind, _Ground, _SnowLine, _AltitudeSpan;
++   float _CliffStart, _CliffEnd;
++   float _ProfileSnowCoverage, _ProfileSnowStart, _ProfileSnowFull;
++   float _ProfileSnowGentle, _ProfileSnowSteep, _ProfileSnowIntensity;
++  CBUFFER_END
++
++  struct TerrainVertex
++  {
++   float4 positionOS : POSITION;
++   float3 normalOS : NORMAL;
++   float4 masks : COLOR;
++   float2 course : TEXCOORD2;
++   UNITY_VERTEX_INPUT_INSTANCE_ID
++  };
++  ENDHLSL
++
++  Pass
++  {
++   Name "AlpineSnowForward"
++   Tags { "LightMode"="UniversalForwardOnly" }
++   HLSLPROGRAM
++   #pragma target 3.0
++   #pragma vertex SnowVertex
++   #pragma fragment SnowFragment
++   #pragma multi_compile_instancing
++   #pragma multi_compile_fog
++   #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
++   #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
++   #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
++   #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
++   #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceData.hlsl"
++
++   struct SnowVaryings
++   {
++    float4 positionCS : SV_POSITION;
++    float3 positionWS : TEXCOORD0;
++    half3 normalWS : TEXCOORD1;
++    half2 masks : TEXCOORD2;
++    float2 course : TEXCOORD3;
++    half4 fogAndVertexLight : TEXCOORD4;
++    #if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR)
++     float4 shadowCoord : TEXCOORD5;
++    #endif
++    UNITY_VERTEX_OUTPUT_STEREO
++   };
++
++   SnowVaryings SnowVertex(TerrainVertex input)
++   {
++    SnowVaryings output = (SnowVaryings)0;
++    UNITY_SETUP_INSTANCE_ID(input);
++    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
++    VertexPositionInputs position = GetVertexPositionInputs(input.positionOS.xyz);
++    output.positionCS = position.positionCS;
++    output.positionWS = position.positionWS;
++    output.normalWS = TransformObjectToWorldNormal(input.normalOS);
++    output.masks = input.masks.rg;
++    output.course = input.course;
++    output.fogAndVertexLight = half4(ComputeFogFactor(position.positionCS.z),
++                                    VertexLighting(position.positionWS, output.normalWS));
++    #if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR)
++     output.shadowCoord = GetShadowCoord(position);
++    #endif
++    return output;
++   }
++
++   float SnowHash(float2 cell)
++   {
++    float3 p = frac(float3(cell.x, cell.y, cell.x) * 0.1031);
++    p += dot(p, p.yzx + 33.33);
++    return frac((p.x + p.y) * p.z);
++   }
++
++   float SnowNoise(float2 position)
++   {
++    float2 cell = floor(position);
++    float2 f = frac(position);
++    f *= f * (3.0 - 2.0 * f);
++    return lerp(lerp(SnowHash(cell), SnowHash(cell + float2(1, 0)), f.x),
++                lerp(SnowHash(cell + float2(0, 1)), SnowHash(cell + 1), f.x), f.y);
++   }
++
++   half4 SnowFragment(SnowVaryings input) : SV_Target
++   {
++    UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
++    float3 p = input.positionWS;
++    float3 normal = normalize(input.normalWS);
++    float distanceToEye = distance(p, GetCameraPositionWS());
++    float macro = SnowNoise(p.xz * 0.018);
++    float altitude = saturate((p.y - _SnowLine) / max(100.0, _AltitudeSpan));
++    float rock = max(input.masks.x * _Masks,
++                     1.0 - smoothstep(_CliffEnd, _CliffStart, normal.y + (macro - 0.5) * 0.09));
++    float accumulation = smoothstep(0.28, 0.88, normal.y + (macro - 0.5) * 0.14);
++    rock = saturate(lerp(rock, 1.0 - accumulation * 0.72, _RockBias));
++    float piste = max(_Groomed, input.masks.y * _Masks);
++    if (_ProfileSnowCoverage > 0.5)
++    {
++     float cover = smoothstep(_ProfileSnowStart, max(_ProfileSnowStart + 1.0, _ProfileSnowFull), p.y)
++                 * smoothstep(_ProfileSnowSteep, max(_ProfileSnowSteep + 0.001, _ProfileSnowGentle), normal.y);
++     rock = max(rock, 1.0 - max(saturate(cover * _ProfileSnowIntensity), piste));
++    }
++    float groom = piste * (1.0 - rock);
++
++    // The world-space grooves follow the same curve as the groomed mesh mask.
++    const float grooveFrequency = 26.0;
++    float phase = input.course.x * grooveFrequency + sin(p.z * 0.58) * 0.3;
++    float grooveVisibility = groom * (1.0 - smoothstep(0.8, 2.5, fwidth(phase)))
++                                  * (1.0 - smoothstep(32.0, 94.0, distanceToEye));
++    float grain = (SnowNoise(p.xz * 8.0) - 0.5) * (1.0 - smoothstep(13.0, 38.0, distanceToEye));
++    float3 across = float3(1.0, 0.0, -input.course.y);
++    across = SafeNormalize(across - normal * dot(across, normal));
++    normal = normalize(normal + across * (cos(phase) * grooveVisibility * 0.095));
++    float gusts = saturate(_Wind + altitude * 0.3 + max(0.0, macro - 0.65));
++
++    SurfaceData material = (SurfaceData)0;
++    half3 snow = _SnowColor.rgb * (0.94 + (macro - 0.5) * 0.13
++                     + grain * _Detail * 0.18 - sin(phase) * grooveVisibility * 0.044);
++    snow *= lerp(half3(1.0, 0.995, 0.975), half3(0.975, 0.99, 1.015), altitude);
++    half3 stone = _RockColor.rgb * (0.88 + macro * 0.22);
++    material.albedo = lerp(lerp(snow, half3(0.37, 0.33, 0.28), _Ground * 0.45), stone, rock);
++    material.smoothness = lerp(0.21 + groom * 0.21 + gusts * 0.06 + grain * 0.04, 0.12, rock);
++    material.normalTS = half3(0, 0, 1);
++    material.occlusion = 1;
++    material.alpha = 1;
++
++    InputData lighting = (InputData)0;
++    lighting.positionWS = p;
++    lighting.positionCS = input.positionCS;
++    lighting.normalWS = normal;
++    lighting.viewDirectionWS = GetWorldSpaceNormalizeViewDir(p);
++    #if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR)
++     lighting.shadowCoord = input.shadowCoord;
++    #elif defined(MAIN_LIGHT_CALCULATE_SHADOWS)
++     lighting.shadowCoord = TransformWorldToShadowCoord(p);
++    #endif
++    lighting.fogCoord = input.fogAndVertexLight.x;
++    lighting.vertexLighting = input.fogAndVertexLight.yzw;
++    lighting.bakedGI = SampleSH(normal);
++    lighting.normalizedScreenSpaceUV = GetNormalizedScreenSpaceUV(input.positionCS);
++    lighting.shadowMask = half4(1, 1, 1, 1);
++    half4 color = UniversalFragmentPBR(lighting, material);
++    color.rgb = MixFog(color.rgb, lighting.fogCoord);
++    return color;
++   }
++   ENDHLSL
++  }
++
++  Pass
++  {
++   Name "AlpineSnowShadowCaster"
++   Tags { "LightMode"="ShadowCaster" }
++   ColorMask 0
++   HLSLPROGRAM
++   #pragma target 3.0
++   #pragma vertex ShadowVertex
++   #pragma fragment ShadowFragment
++   #pragma multi_compile_instancing
++   #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
++   #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
++
++   float3 _LightDirection;
++   float3 _LightPosition;
++
++   float4 ShadowVertex(TerrainVertex input) : SV_POSITION
++   {
++    UNITY_SETUP_INSTANCE_ID(input);
++    float3 p = TransformObjectToWorld(input.positionOS.xyz);
++    float3 normal = TransformObjectToWorldNormal(input.normalOS);
++    #if defined(_CASTING_PUNCTUAL_LIGHT_SHADOW)
++     float3 direction = normalize(_LightPosition - p);
++    #else
++     float3 direction = _LightDirection;
++    #endif
++    return ApplyShadowClamping(TransformWorldToHClip(ApplyShadowBias(p, normal, direction)));
++   }
++   half4 ShadowFragment() : SV_Target { return 0; }
++   ENDHLSL
++  }
++
++  Pass
++  {
++   Name "AlpineSnowDepth"
++   Tags { "LightMode"="DepthOnly" }
++   ColorMask R
++   HLSLPROGRAM
++   #pragma target 3.0
++   #pragma vertex DepthVertex
++   #pragma fragment DepthFragment
++   #pragma multi_compile_instancing
++
++   float4 DepthVertex(TerrainVertex input) : SV_POSITION
++   {
++    UNITY_SETUP_INSTANCE_ID(input);
++    return TransformObjectToHClip(input.positionOS.xyz);
++   }
++   half DepthFragment(float4 positionCS : SV_POSITION) : SV_Target { return positionCS.z; }
++   ENDHLSL
++  }
++ }
+  SubShader {
+   Tags {"RenderType"="Opaque"} LOD 300
+   CGPROGRAM
