@@ -223,7 +223,7 @@ namespace SkiStation.Gestion
             }
             return seen;
         }
-        public bool InReach(byte[] mask, double x, double z) { int gi = (int)Math.Round((z + HALF) / CELL) * N + (int)Math.Round((x + HALF) / CELL); return gi >= 0 && gi < mask.Length && mask[gi] != 0; }
+        public bool InReach(byte[] mask, double x, double z) { int gi = (int)Math.Floor((z + HALF) / CELL + 0.5) * N + (int)Math.Floor((x + HALF) / CELL + 0.5); return gi >= 0 && gi < mask.Length && mask[gi] != 0; }
     }
 
     /// <summary>Point 3D (x, y, z) avec abscisse curviligne s.</summary>
