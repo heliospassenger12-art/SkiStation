@@ -51,7 +51,8 @@
     ctx.globalAlpha = 1;
     for (const l of G.lifts) {
       const bad = !SS.liftBoarding(l) && G.time > SS.LIFT_OPEN && G.time < SS.LIFT_CLOSE;
-      ctx.strokeStyle = bad ? '#ff5d5d' : '#1b1f27'; ctx.lineWidth = 1.6; ctx.setLineDash([3, 2]);
+      const tun = SS.Data.lift(l.type).kind === 'funi';                 // funiculaire : tracé souterrain, pointillés légers
+      ctx.strokeStyle = bad ? '#ff5d5d' : tun ? 'rgba(27,31,39,0.45)' : '#1b1f27'; ctx.lineWidth = tun ? 1.2 : 1.6; ctx.setLineDash(tun ? [1, 4] : [3, 2]);
       ctx.beginPath(); ctx.moveTo(W2M(l.a.x), W2M(l.a.z)); ctx.lineTo(W2M(l.b.x), W2M(l.b.z)); ctx.stroke(); ctx.setLineDash([]);
     }
     ctx.fillStyle = '#ffb238';

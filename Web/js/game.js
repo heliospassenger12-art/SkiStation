@@ -232,7 +232,19 @@
     if (r.len < 60) { r.err = 'Ligne trop courte (minimum 60 m).'; if (!force) return r; }
     if (r.len > r.maxLen) { r.err = 'Portée dépassée : ' + Math.round(r.len) + ' m pour ' + r.maxLen + ' m maximum. Rapprochez la gare ou choisissez un autre modèle.'; if (!force) return r; }
     if (r.vert < (def.kind === 'carpet' ? 2 : 10)) { r.err = 'La gare d\'arrivée doit être plus haute que la gare de départ.'; if (!force) return r; }
-    if (T.slope(a.x, a.z) > 0.9 || T.slope(b.x, b.z) > 0.9) { r.err = 'Terrain trop raide pour une gare.'; if (!force) return r; }
+    if (T.slope(a.x, a.z) > (def.kind === 'funi' ? 1.6 : 0.9) || T.slope(b.x, b.z) > (def.kind === 'funi' ? 1.6 : 0.9)) { r.err = 'Terrain trop raide pour une gare.'; if (!force) return r; }
+    // FUNICULAIRE SOUTERRAIN : un tunnel en ligne droite sous le relief, quelle que soit la pente ; seules les gares sont visibles
+    if (def.kind === 'funi') {
+      const ay1 = ay + 1.2, by1 = by + 1.2, n = Math.max(1, Math.ceil(hl / 120)), path = [{ x: a.x, z: a.z, y: ay1, g: ay }];
+      for (let i = 1; i < n; i++) { const t = i / n, x = SS.lerp(a.x, b.x, t), z = SS.lerp(a.z, b.z, t), g = T.getH(x, z); path.push({ x, z, y: Math.min(SS.lerp(ay1, by1, t), g - 30), g, tunnel: true }); }
+      path.push({ x: b.x, z: b.z, y: by1, g: by });
+      let s = 0; path[0].s = 0;
+      for (let i = 1; i < path.length; i++) { s += Math.hypot(path[i].x - path[i - 1].x, path[i].y - path[i - 1].y, path[i].z - path[i - 1].z); path[i].s = s; }
+      r.path = path; r.L = s; r.a = { x: a.x, z: a.z, y: ay }; r.b = { x: b.x, z: b.z, y: by }; r.tunnel = true;
+      r.trees = T.treesNearPath([a, a], 14, false) + T.treesNearPath([b, b], 14, false); r.cost += r.trees * 120;
+      if (!SS.canPay(r.cost)) r.warn = 'Fonds insuffisants.';
+      r.ok = !r.err; return r;
+    }
     // profil du terrain sous la ligne
     const steps = Math.max(4, Math.ceil(hl / 20)), prof = [];
     for (let i = 0; i <= steps; i++) { const t = i / steps, x = SS.lerp(a.x, b.x, t), z = SS.lerp(a.z, b.z, t); prof.push({ x, z, y: T.getH(x, z), t }); }
@@ -279,7 +291,7 @@
     l.a = an.a; l.b = an.b; l.path = an.path; l.L = an.L; l.len = an.len; l.vert = an.vert; l.capacity = an.capacity; l.maint = an.maint;
     l.n = an.vehicles; l.D = 2 * l.L / l.n; l.phase = 0; l.veh = []; for (let i = 0; i < l.n; i++) l.veh.push([]);
     l.queue = []; l.brokenUntil = 0; l.windStop = false; l.rides = 0;
-    T.treesNearPath([l.a, l.b], 9, true);
+    if (def.kind === 'funi') { T.treesNearPath([l.a, l.a], 14, true); T.treesNearPath([l.b, l.b], 14, true); } else T.treesNearPath([l.a, l.b], 9, true);
     for (const st of [l.a, l.b]) { T.flatten(st.x, st.z, 12, st.y, 14); if (!loaded) G.flats.push([st.x, st.z, 12, st.y, 14]); }
     if (!loaded) { G.lifts.push(l); SS.reattachPistes(l); SS.Net.rebuild(); SS.emit('lift:add', l); SS.emit('world'); }
     return l;
@@ -430,7 +442,7 @@
     if (r.slope > (def.r > 25 ? 0.4 : 0.65)) { r.err = 'Terrain trop raide ici (' + Math.round(r.slope * 100) + ' %).'; return r; }
     for (const d of SS.DECOR) if (Math.hypot(d.x - x, d.z - z) < d.r + def.r) { r.err = 'Emplacement occupé par une maison du village.'; return r; }
     for (const b of G.buildings) if (Math.hypot(b.x - x, b.z - z) < D.building(b.type).r + def.r) { r.err = 'Emplacement occupé par : ' + D.building(b.type).name + '.'; return r; }
-    for (const l of G.lifts) if (SS.segDist(x, z, l.a.x, l.a.z, l.b.x, l.b.z).d < def.r + 8) { r.err = 'Trop près de la ligne du ' + l.name + '.'; return r; }
+    for (const l of G.lifts) if (D.lift(l.type).kind === 'funi' ? Math.min(Math.hypot(x - l.a.x, z - l.a.z), Math.hypot(x - l.b.x, z - l.b.z)) < def.r + 16 : SS.segDist(x, z, l.a.x, l.a.z, l.b.x, l.b.z).d < def.r + 8) { r.err = (D.lift(l.type).kind === 'funi' ? 'Trop près d\'une gare du ' : 'Trop près de la ligne du ') + l.name + '.'; return r; }
     for (const p of G.pistes) if (def.look !== 'snowpark' && def.look !== 'stadium' && closestS(p, x, z).d < def.r + p.width / 2 - 4) { r.err = 'Sur la piste ' + p.name + ' : décalez le bâtiment sur le bord.'; return r; }
     if (def.road && !SS.inVillage(x, z) && !SS.nearRoad(x, z, 130)) { r.err = 'Doit être desservi par une route (à moins de 130 m) ou placé au village.'; return r; }
     const nd = SS.Net.nearestNode(x, z);
