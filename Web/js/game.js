@@ -91,7 +91,7 @@
     }
     return out;
   }
-  SS.analyzePiste = function (ctrl, width) {
+  function analyzePiste0(ctrl, width) {
     const r = { ok: false, width: width || 30 };
     if (ctrl.length < 2) { r.err = 'Placez au moins deux points : le départ en haut, l\'arrivée en bas.'; return r; }
     const pts = r.pts = spline(ctrl);
@@ -117,6 +117,48 @@
     for (const l of G.lifts) if (D.lift(l.type).kind === 'tow' && crossesLine(pts, l, 45)) { r.err = 'Traversée du ' + l.name + ' interdite : une piste ne coupe pas un téléski.'; return r; }
     if (!SS.canPay(r.cost)) r.warn = 'Fonds insuffisants.';
     r.ok = true; return r;
+  }
+  // JONCTIONS : une piste ne chevauche jamais une autre. Elle peut partir d'une piste existante (embranchement) et,
+  // dès qu'elle en touche une autre, elle s'arrête dessus et la rejoint : le réseau du domaine les relie à cet endroit.
+  SS.pistePool = null;                                   // pistes à prendre en compte (null = celles du joueur)
+  function bbox(p, m) { if (!p._bb) { let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9; for (const q of p.pts) { x0 = Math.min(x0, q.x); z0 = Math.min(z0, q.z); x1 = Math.max(x1, q.x); z1 = Math.max(z1, q.z); } p._bb = [x0, z0, x1, z1]; } const b = p._bb; return [b[0] - m, b[1] - m, b[2] + m, b[3] + m]; }
+  SS.findJunction = function (pts, width, pool) {
+    pool = (pool || SS.pistePool || G.pistes).filter(o => o.pts && o.pts.length > 1);
+    if (!pool.length || pts.length < 3) return null;
+    const start = new Set();
+    for (const o of pool) if (closestS(o, pts[0].x, pts[0].z).d < (width + o.width) / 2 + 6) start.add(o);
+    let left = !start.size, apart = 0;
+    for (let i = 1; i < pts.length; i++) {
+      const p = pts[i];
+      if (!left) { let inside = false; for (const o of start) if (closestS(o, p.x, p.z).d < (width + o.width) / 2 * 0.9) { inside = true; break; } if (!inside) left = true; }
+      if (left) apart += Math.hypot(p.x - pts[i - 1].x, p.z - pts[i - 1].z);
+      for (const o of pool) {
+        const lim = (width + o.width) / 2 * 0.95, b = bbox(o, lim);
+        if (p.x < b[0] || p.x > b[2] || p.z < b[1] || p.z > b[3]) continue;
+        const c = closestS(o, p.x, p.z); if (c.d >= lim) continue;
+        if (start.has(o) && p.s < 170) continue;          // embranchement : on quitte la piste de départ
+        const j = SS.pisteAt(o, c.s, {});
+        return { i, piste: o, s: p.s, at: { x: j.x, z: j.z }, apart };
+      }
+    }
+    return null;
+  };
+  SS.analyzePiste = function (ctrl, width) {
+    const pts0 = ctrl.length >= 2 ? spline(ctrl) : null;
+    if (pts0) for (let i = 1, s = 0; i < pts0.length; i++) { s += Math.hypot(pts0[i].x - pts0[i - 1].x, pts0[i].z - pts0[i - 1].z); pts0[i].s = s; }
+    const j = pts0 ? SS.findJunction(pts0.map((p, i) => ({ x: p.x, z: p.z, s: i ? p.s : 0 })), width || 30) : null;
+    if (!j) { const r = analyzePiste0(ctrl, width); r.ctrl = ctrl; return r; }
+    // on garde les points de contrôle situés avant la jonction, puis la jonction elle-même
+    const keep = [ctrl[0]];
+    for (let k = 1; k < ctrl.length; k++) {
+      let best = 1e9, bs = 0; for (const p of pts0) { const d = Math.hypot(p.x - ctrl[k].x, p.z - ctrl[k].z); if (d < best) { best = d; bs = p.s || 0; } }
+      if (bs < j.s - 25) keep.push(ctrl[k]); else break;
+    }
+    keep.push({ x: Math.round(j.at.x), z: Math.round(j.at.z) });
+    const r = analyzePiste0(keep, width); r.ctrl = keep; r.joins = j.piste.name; r.joinPiste = j.piste;
+    if (r.ok && j.apart < 60) { r.ok = false; r.err = 'Ce tracé suit la piste ' + j.piste.name + ' : écartez-le pour créer une vraie nouvelle piste (elle pourra la rejoindre plus bas).'; }
+    if (r.ok && r.len < 80) { r.ok = false; r.err = 'La piste rejoint ' + j.piste.name + ' trop tôt : écartez le tracé de la piste existante.'; }
+    return r;
   };
   function crossesLine(pts, l, margin) {
     const dx = l.b.x - l.a.x, dz = l.b.z - l.a.z, len = Math.hypot(dx, dz), ux = dx / len, uz = dz / len;
@@ -127,6 +169,7 @@
   }
   SS.commitPiste = function (ctrl, an, loaded) {
     if (!loaded && !SS.spend(an.cost, 'Construction')) return null;
+    if (!loaded && an.ctrl) ctrl = an.ctrl;
     const used = G.pistes.map(p => p.name);
     const p = loaded || {
       id: G.nextId++, name: D.PISTE_NAMES.find(n => used.indexOf(n) < 0) || 'Piste ' + G.nextId, ctrl: ctrl.map(c => ({ x: Math.round(c.x), z: Math.round(c.z) })),
@@ -282,6 +325,7 @@
     const nbs = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]];
     const hg = to(gi); let iter = 0, reached = -1;
     const tows = G.lifts.filter(l => D.lift(l.type).kind === 'tow').map(l => { const dx = l.b.x - l.a.x, dz = l.b.z - l.a.z, n = Math.hypot(dx, dz) || 1, m = 45; return { a: { x: l.a.x + dx / n * m, z: l.a.z + dz / n * m }, b: { x: l.b.x - dx / n * m, z: l.b.z - dz / n * m } }; });
+    const corr = new Set(); for (const o of (SS.pistePool || G.pistes)) if (o.pts) for (const q of o.pts) corr.add(ci(q.x, q.z));
     const push = (f, i) => { open.push([f, i]); let k = open.length - 1; while (k > 0) { const p = (k - 1) >> 1; if (open[p][0] <= open[k][0]) break; [open[p], open[k]] = [open[k], open[p]]; k = p; } };
     const pop = () => { const t = open[0], l = open.pop(); if (open.length) { open[0] = l; let k = 0; for (; ;) { let a = k * 2 + 1, b = a + 1, m = k; if (a < open.length && open[a][0] < open[m][0]) m = a; if (b < open.length && open[b][0] < open[m][0]) m = b; if (m === k) break; [open[m], open[k]] = [open[k], open[m]]; k = m; } } return t; };
     while (open.length && iter++ < 60000) {
@@ -299,6 +343,7 @@
         T.grad(q.x, q.z, g); const cross = Math.hypot(g.x, g.z), eff = Math.max(along, 0.26 * cross);
         let pen = 1 + wt * Math.max(0, eff - thr) + 3 * Math.max(0, along < 0.03 ? 0.03 - along : 0) * 10 + 4 * Math.max(0, cross - 0.5);
         if (T.slope(q.x, q.z) > 1.0) pen += 30;
+        if (corr.has(j) && Math.hypot(q.x - start.x, q.z - start.z) > 200) pen += 2.5;   // ne pas longer une piste existante (la rejoindre reste possible)
         const nc = cost.get(i) + len * pen; if (nc >= (cost.has(j) ? cost.get(j) : 1e18)) continue;
         cost.set(j, nc); prev.set(j, i); push(nc + Math.hypot(q.x - hg.x, q.z - hg.z), j);
       }
@@ -361,9 +406,28 @@
   SS.upgradeCost = b => Math.round(D.building(b.type).cost * 0.6 * b.level);
 
   // ---------- routes ----------
+  // une route qui en rencontre une autre s'y raccorde (elle s'arrête au carrefour) au lieu de la chevaucher
+  SS.roadJunction = function (pts) {
+    let walked = 0;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i], b = pts[i + 1], d = Math.hypot(b.x - a.x, b.z - a.z), n = Math.max(1, Math.ceil(d / 8));
+      for (let k = 1; k <= n; k++) {
+        const x = SS.lerp(a.x, b.x, k / n), z = SS.lerp(a.z, b.z, k / n), w = walked + d * k / n; if (w < 60) continue;
+        for (const rd of G.roads) for (let m = 0; m < rd.pts.length - 1; m++) {
+          const c = SS.segDist(x, z, rd.pts[m].x, rd.pts[m].z, rd.pts[m + 1].x, rd.pts[m + 1].z); if (c.d > 9) continue;
+          const jx = SS.lerp(rd.pts[m].x, rd.pts[m + 1].x, c.t), jz = SS.lerp(rd.pts[m].z, rd.pts[m + 1].z, c.t);
+          return pts.slice(0, i + 1).concat([{ x: Math.round(jx), z: Math.round(jz) }]);
+        }
+      }
+      walked += d;
+    }
+    return null;
+  };
   SS.analyzeRoad = function (pts) {
     const r = { ok: false, len: 0, maxSlope: 0 };
     if (pts.length < 2) { r.err = 'Placez au moins deux points.'; return r; }
+    const jn = SS.roadJunction(pts); if (jn) { pts = jn; r.joins = true; }
+    r.pts = pts;
     if (!SS.inVillage(pts[0].x, pts[0].z) && !SS.nearRoad(pts[0].x, pts[0].z, 90)) { r.err = 'Une route doit partir du village ou d\'une route existante.'; return r; }
     for (let i = 0; i < pts.length - 1; i++) {
       const a = pts[i], b = pts[i + 1], d = Math.hypot(b.x - a.x, b.z - a.z), n = Math.max(1, Math.ceil(d / 25));
@@ -382,6 +446,7 @@
   };
   SS.commitRoad = function (pts, an) {
     if (!SS.spend(an.cost, 'Construction')) return null;
+    if (an.pts) pts = an.pts;
     T.treesNearPath(pts, 8, true);
     const r = { id: G.nextId++, pts: pts.map(p => ({ x: Math.round(p.x), z: Math.round(p.z) })) };
     G.roads.push(r); SS.emit('world'); return r;

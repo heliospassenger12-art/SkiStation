@@ -184,7 +184,7 @@
       body += '<div class="chips">Largeur ' + [20, 30, 40].map(w => btn(w + ' m', 'width', w, 'chip' + (t.width === w ? ' on' : ''))).join('') + '</div>';
       if (an && an.pts) {
         const a = an.pts[0], z = an.pts[an.pts.length - 1];
-        body += '<div class="grid">' + row('Longueur', SS.num(an.len) + ' m') + row('Dénivelé', SS.num(an.drop) + ' m') + row('Pente moy. / forte', Math.round(an.avg * 100) + ' % / ' + Math.round(an.p90 * 100) + ' %') + row('Difficulté', dot(an.diff) + D.DIFF[an.diff].name) + row('Arbres à couper', an.trees) + row('Départ', B.describe(a.x, a.z) || '<em class="warn">non raccordé</em>') + row('Arrivée', B.describe(z.x, z.z) || '<em class="warn">non raccordée</em>') + row('Coût', eur(an.cost), 'cost') + '</div>';
+        body += '<div class="grid">' + row('Longueur', SS.num(an.len) + ' m') + row('Dénivelé', SS.num(an.drop) + ' m') + row('Pente moy. / forte', Math.round(an.avg * 100) + ' % / ' + Math.round(an.p90 * 100) + ' %') + row('Difficulté', dot(an.diff) + D.DIFF[an.diff].name) + row('Arbres à couper', an.trees) + row('Départ', B.describe(a.x, a.z) || '<em class="warn">non raccordé</em>') + row('Arrivée', an.joins ? '↘ jonction avec ' + esc(an.joins) : B.describe(z.x, z.z) || '<em class="warn">non raccordée</em>') + row('Coût', eur(an.cost), 'cost') + '</div>';
       }
     } else if (t.kind === 'lift') {
       const def = D.lift(t.type); title = '🚡 ' + def.name; help = !t.a ? 'Cliquez l\'emplacement exact de la gare de départ (en bas).' : !t.b ? 'Cliquez la gare d\'arrivée (en haut). Portée max. ' + SS.maxLen(def) + ' m.' : 'Vérifiez le devis puis validez. Un nouveau clic déplace la gare d\'arrivée.';
@@ -194,7 +194,7 @@
       if (an) body += '<div class="grid">' + row('Altitude', SS.num(an.y) + ' m') + row('Pente du terrain', Math.round(an.slope * 100) + ' %') + row('Terrassement', eur(an.earth)) + row('Arbres à couper', an.trees) + row('Charges', eur(def.upkeep) + ' / jour') + row('Coût total', eur(an.cost), 'cost') + '</div>';
     } else if (t.kind === 'road') {
       title = '🛣️ Tracé de route'; help = 'Partez du village ou d\'une route existante. Pente max. 16 % : tracez des lacets.';
-      if (an && an.len) body += '<div class="grid">' + row('Longueur', SS.num(an.len) + ' m') + row('Pente max.', Math.round(an.maxSlope * 100) + ' %', an.maxSlope > 0.16 ? 'bad' : '') + row('Arbres à couper', an.trees || 0) + row('Coût', eur(an.cost || 0), 'cost') + '</div>';
+      if (an && an.len) body += '<div class="grid">' + row('Longueur', SS.num(an.len) + ' m') + (an.joins ? row('Fin', '↘ carrefour avec une route existante') : '') + row('Pente max.', Math.round(an.maxSlope * 100) + ' %', an.maxSlope > 0.16 ? 'bad' : '') + row('Arbres à couper', an.trees || 0) + row('Coût', eur(an.cost || 0), 'cost') + '</div>';
     } else if (t.kind === 'demolish') { title = '🧨 Démolition'; help = 'Cliquez une piste, une remontée, une route ou un bâtiment.'; }
     const msg = an && an.err ? '<div class="msg bad">⛔ ' + an.err + '</div>' : an && an.warn ? '<div class="msg warn">⚠️ ' + an.warn + '</div>' : '';
     const key = title + help + body + msg + canOk;

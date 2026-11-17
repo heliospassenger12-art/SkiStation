@@ -45,7 +45,7 @@
       const pts = t.ctrl.slice(); if (hover && !R.coarse && pts.length) pts.push(hover);
       if (pts.length >= 2) {
         const an = t.kind === 'piste' ? SS.analyzePiste(pts, t.width) : SS.analyzeRoad(pts);
-        if (t.kind === 'piste') R.previewPath(an.pts || pts, an.ok, t.width, t.ctrl); else R.previewPath(pts, an.ok, 9, t.ctrl);
+        if (t.kind === 'piste') R.previewPath(an.pts || pts, an.ok, t.width, t.ctrl); else R.previewPath(an.pts || pts, an.ok, 9, t.ctrl);
         B.an = t.ctrl.length >= 2 ? (t.kind === 'piste' ? SS.analyzePiste(t.ctrl, t.width) : SS.analyzeRoad(t.ctrl)) : null; B.live = an;
       } else { R.previewPath(pts, true, 0, t.ctrl); B.live = null; }
     } else if (t.kind === 'lift') {

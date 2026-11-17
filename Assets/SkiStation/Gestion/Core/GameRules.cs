@@ -117,7 +117,7 @@ namespace SkiStation.Gestion
             }
             return o;
         }
-        public static PisteAnalysis AnalyzePiste(IList<P2> ctrl, double width = 30)
+        static PisteAnalysis AnalyzePiste0(IList<P2> ctrl, double width)
         {
             var r = new PisteAnalysis { width = width > 0 ? width : 30 };
             if (ctrl.Count < 2) { r.err = "Placez au moins deux points : le départ en haut, l'arrivée en bas."; return r; }
@@ -146,6 +146,51 @@ namespace SkiStation.Gestion
             if (!CanPay(r.cost)) r.warn = "Fonds insuffisants.";
             r.ok = true; return r;
         }
+        // JONCTIONS : une piste ne chevauche jamais une autre. Elle peut partir d'une piste existante (embranchement) et,
+        // dès qu'elle en touche une autre, elle s'arrête dessus et la rejoint ; le réseau les relie à cet endroit.
+        public static List<Piste> PistePool;                 // pistes prises en compte (null = celles du joueur)
+        public sealed class Junction { public int i; public Piste piste; public double s, apart; public P2 at; }
+        public static Junction FindJunction(IList<P3> pts, double width, IList<Piste> pool = null)
+        {
+            var list = (pool ?? PistePool ?? G.pistes).Where(o => o.pts != null && o.pts.Count > 1).ToList();
+            if (list.Count == 0 || pts.Count < 3) return null;
+            double s0; var start = new HashSet<Piste>(list.Where(o => ClosestOnPiste(o, pts[0].x, pts[0].z, out s0) < (width + o.width) / 2 + 6));
+            bool left = start.Count == 0; double apart = 0, walked = 0;
+            for (int i = 1; i < pts.Count; i++)
+            {
+                var p = pts[i]; double step = GMath.Hypot(p.x - pts[i - 1].x, p.z - pts[i - 1].z); walked += step; double ss;
+                if (!left && !start.Any(o => ClosestOnPiste(o, p.x, p.z, out ss) < (width + o.width) / 2 * 0.9)) left = true;
+                if (left) apart += step;
+                foreach (var o in list)
+                {
+                    double lim = (width + o.width) / 2 * 0.95, cs; double d = ClosestOnPiste(o, p.x, p.z, out cs); if (d >= lim) continue;
+                    if (start.Contains(o) && walked < 170) continue;
+                    var j = PisteAt(o, cs);
+                    return new Junction { i = i, piste = o, s = walked, at = new P2(j.x, j.z), apart = apart };
+                }
+            }
+            return null;
+        }
+        public static PisteAnalysis AnalyzePiste(IList<P2> ctrl, double width = 30)
+        {
+            if (width <= 0) width = 30;
+            if (ctrl.Count < 2) { var r0 = AnalyzePiste0(ctrl, width); r0.ctrl = ctrl.ToList(); return r0; }
+            var pts0 = Spline(ctrl);
+            var j = FindJunction(pts0, width);
+            if (j == null) { var r1 = AnalyzePiste0(ctrl, width); r1.ctrl = ctrl.ToList(); return r1; }
+            var hs = new double[pts0.Count]; for (int i = 1; i < pts0.Count; i++) hs[i] = hs[i - 1] + GMath.Hypot(pts0[i].x - pts0[i - 1].x, pts0[i].z - pts0[i - 1].z);
+            var keep = new List<P2> { ctrl[0] };
+            for (int k = 1; k < ctrl.Count; k++)
+            {
+                double best = 1e9, bs = 0; for (int i = 0; i < pts0.Count; i++) { double d = GMath.Hypot(pts0[i].x - ctrl[k].x, pts0[i].z - ctrl[k].z); if (d < best) { best = d; bs = hs[i]; } }
+                if (bs < j.s - 25) keep.Add(ctrl[k]); else break;
+            }
+            keep.Add(new P2(R(j.at.x), R(j.at.z)));
+            var r = AnalyzePiste0(keep, width); r.ctrl = keep; r.joins = j.piste.name; r.joinPiste = j.piste;
+            if (r.ok && j.apart < 60) { r.ok = false; r.err = "Ce tracé suit la piste " + j.piste.name + " : écartez-le pour créer une vraie nouvelle piste (elle pourra la rejoindre plus bas)."; }
+            if (r.ok && r.len < 80) { r.ok = false; r.err = "La piste rejoint " + j.piste.name + " trop tôt : écartez le tracé de la piste existante."; }
+            return r;
+        }
         static bool CrossesLine(IList<P3> pts, P2 la, P2 lb, double margin)
         {
             double dx = lb.x - la.x, dz = lb.z - la.z, len = GMath.Hypot(dx, dz), ux = dx / len, uz = dz / len;
@@ -157,6 +202,7 @@ namespace SkiStation.Gestion
         public static Piste CommitPiste(IList<P2> ctrl, PisteAnalysis an, Piste loaded = null)
         {
             if (loaded == null && !Spend(an.cost, "Construction")) return null;
+            if (loaded == null && an.ctrl != null) ctrl = an.ctrl;
             var used = new HashSet<string>(G.pistes.Select(x => x.name));
             var p = loaded ?? new Piste
             {
@@ -309,6 +355,7 @@ namespace SkiStation.Gestion
             var cost = new Dictionary<int, double> { { si, 0 } }; var prev = new Dictionary<int, int>(); var done = new HashSet<int>();
             int[] nbx = { 1, -1, 0, 0, 1, -1, 1, -1 }, nbz = { 0, 0, 1, -1, 1, 1, -1, -1 };
             var hg = to(gi); int iter = 0, reached = -1;
+            var corr = new HashSet<int>(); foreach (var o in PistePool ?? G.pistes) if (o.pts != null) foreach (var q in o.pts) corr.Add(ci(q.x, q.z));
             var tows = new List<P2[]>();
             foreach (var l in G.lifts) if (Catalog.Lift(l.type).kind == "tow") { double dx = l.b.x - l.a.x, dz = l.b.z - l.a.z, n = GMath.Hypot(dx, dz); if (n == 0) n = 1; tows.Add(new[] { new P2(l.a.x + dx / n * 45, l.a.z + dz / n * 45), new P2(l.b.x - dx / n * 45, l.b.z - dz / n * 45) }); }
             while (heap.Count > 0 && iter++ < 60000)
@@ -329,6 +376,7 @@ namespace SkiStation.Gestion
                     double gx, gz; T.Grad(q.x, q.z, out gx, out gz); double crs = GMath.Hypot(gx, gz), eff = Math.Max(along, 0.26 * crs);
                     double pen = 1 + wt * Math.Max(0, eff - thr) + 3 * Math.Max(0, along < 0.03 ? 0.03 - along : 0) * 10 + 4 * Math.Max(0, crs - 0.5);
                     if (T.Slope(q.x, q.z) > 1.0) pen += 30;
+                    if (corr.Contains(j) && GMath.Hypot(q.x - start.x, q.z - start.z) > 200) pen += 2.5;   // ne pas longer une piste existante
                     double nc = cost[i] + len * pen, oc; if (nc >= (cost.TryGetValue(j, out oc) ? oc : 1e18)) continue;
                     cost[j] = nc; prev[j] = i; heap.Push(nc + GMath.Hypot(q.x - hg.x, q.z - hg.z), j);
                 }
@@ -404,10 +452,32 @@ namespace SkiStation.Gestion
         public static double UpgradeCost(Building b) { return R(b.Def.cost * 0.6 * b.level); }
 
         // ---------- routes ----------
+        /// <summary>Une route qui en rencontre une autre s'y raccorde (elle s'arrête au carrefour) au lieu de la chevaucher.</summary>
+        public static List<P2> RoadJunction(IList<P2> pts)
+        {
+            double walked = 0;
+            for (int i = 0; i < pts.Count - 1; i++)
+            {
+                P2 a = pts[i], b = pts[i + 1]; double d = GMath.Hypot(b.x - a.x, b.z - a.z); int n = Math.Max(1, (int)Math.Ceiling(d / 8));
+                for (int k = 1; k <= n; k++)
+                {
+                    double x = GMath.Lerp(a.x, b.x, (double)k / n), z = GMath.Lerp(a.z, b.z, (double)k / n), w = walked + d * k / n; if (w < 60) continue;
+                    foreach (var rd in G.roads) for (int m = 0; m < rd.pts.Count - 1; m++)
+                        {
+                            double t; double dd = GMath.SegDist(x, z, rd.pts[m].x, rd.pts[m].z, rd.pts[m + 1].x, rd.pts[m + 1].z, out t); if (dd > 9) continue;
+                            var o = pts.Take(i + 1).ToList(); o.Add(new P2(R(GMath.Lerp(rd.pts[m].x, rd.pts[m + 1].x, t)), R(GMath.Lerp(rd.pts[m].z, rd.pts[m + 1].z, t)))); return o;
+                        }
+                }
+                walked += d;
+            }
+            return null;
+        }
         public static RoadAnalysis AnalyzeRoad(IList<P2> pts)
         {
             var r = new RoadAnalysis();
             if (pts.Count < 2) { r.err = "Placez au moins deux points."; return r; }
+            var jn = RoadJunction(pts); if (jn != null) { pts = jn; r.joins = true; }
+            r.pts = pts.ToList();
             if (!InVillage(pts[0].x, pts[0].z) && !NearRoad(pts[0].x, pts[0].z, 90)) { r.err = "Une route doit partir du village ou d'une route existante."; return r; }
             for (int i = 0; i < pts.Count - 1; i++)
             {
@@ -429,6 +499,7 @@ namespace SkiStation.Gestion
         public static Road CommitRoad(IList<P2> pts, RoadAnalysis an)
         {
             if (!Spend(an.cost, "Construction")) return null;
+            if (an.pts != null) pts = an.pts;
             T.TreesNearPath(pts, 8, true);
             var r = new Road { id = G.nextId++, pts = pts.Select(p => new P2(R(p.x), R(p.z))).ToList() };
             G.roads.Add(r); Emit("world"); return r;

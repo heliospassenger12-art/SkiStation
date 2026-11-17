@@ -115,16 +115,17 @@
     const prefs = r.persona === 'lux' ? ['cablecar', 'gondola_10', 'gondola_8', 'chair_det_6', 'chair_det_4', 'chair_fixed_4', 'chair_fixed_2'] : ['gondola_8', 'chair_det_6', 'chair_det_4', 'chair_fixed_4', 'chair_fixed_2'];
     return prefs.filter(id => D.lift(id).tier <= r.tier);
   }
-  function tryBuildLift(r, goal) { AE.busy = true; try { return tryBuildLift0(r, goal); } finally { AE.busy = false; } }
+  function tryBuildLift(r, goal) { AE.busy = true; SS.pistePool = runtime(r).pistes; try { return tryBuildLift0(r, goal); } finally { AE.busy = false; SS.pistePool = null; } }
   function tryBuildLift0(r, goal) {
     const R = runtime(r); let types = goal === 'premium' ? ['cablecar'].filter(id => D.lift(id).tier <= r.tier) : liftTypeFor(r); if (!types.length) return null;
     let starts = [{ x: r.base.x, z: r.base.z }].concat(R.lifts.map(l => ({ x: l.b.x, z: l.b.z })), R.lifts.map(l => ({ x: l.a.x, z: l.a.z })));
+    for (const p of R.pistes) for (let k = 1; k <= 3; k++) { const q = p.pts[Math.floor(p.pts.length * k / 4)]; if (q) starts.push({ x: q.x, z: q.z }); }   // départs le long des pistes : le domaine s'étale
     if (goal === 'high' && R.lifts.length) { const top = R.lifts.slice().sort((p, q) => q.b.y - p.b.y).slice(0, 3); starts = top.map(l => ({ x: l.b.x, z: l.b.z })); }
     for (let tries = 0; tries < 26; tries++) {
       const type = types[Math.min(types.length - 1, tries % 3)], def = D.lift(type);
       const s = starts[tries < 4 && goal !== 'high' ? 0 : Math.floor(Math.random() * starts.length)];
       const ax = s.x + (Math.random() - 0.5) * 60, az = s.z + (Math.random() - 0.5) * 60, d = Math.hypot(ax, az) || 1;
-      const ang = (Math.random() - 0.5) * 70 * DEG, len = def.maxLen * (0.5 + Math.random() * 0.4);
+      const ang = (Math.random() - 0.5) * (tries < 10 ? 70 : 120) * DEG, len = Math.min(def.maxLen * (0.5 + Math.random() * 0.4), 900 + Math.random() * 1400);
       const ux = -ax / d, uz = -az / d, bx = ax + (ux * Math.cos(ang) - uz * Math.sin(ang)) * len, bz = az + (ux * Math.sin(ang) + uz * Math.cos(ang)) * len;
       if (!inWedge(r, ax, az) || !inWedge(r, bx, bz)) continue;
       if (R.lifts.some(l => Math.hypot(l.b.x - bx, l.b.z - bz) < 220 || SS.segDist(bx, bz, l.a.x, l.a.z, l.b.x, l.b.z).d < 70)) continue;
@@ -155,13 +156,13 @@
     const an = SS.analyzePiste(pts, 30);
     return an.ok && an.diff === 3 ? { ctrl: pts, an } : null;
   }
-  function buildLiftAndPiste(r, plan, silent) { AE.busy = true; try { return buildLiftAndPiste0(r, plan, silent); } finally { AE.busy = false; } }
+  function buildLiftAndPiste(r, plan, silent) { AE.busy = true; SS.pistePool = runtime(r).pistes; try { return buildLiftAndPiste0(r, plan, silent); } finally { AE.busy = false; SS.pistePool = null; } }
   function buildLiftAndPiste0(r, plan, silent) {
     const R = runtime(r), n = r.lifts.length + 1, short = { tow: 'TK', chair: 'TS', gondola: 'TC', cablecar: 'TPH', funi: 'Funi' }[plan.an.def.kind] || 'TS';
     const ld = { id: r.id + '-l' + G.ae.nextId++, type: plan.type, name: short + ' ' + r.name + ' ' + n, a: { x: Math.round(plan.an.a.x), z: Math.round(plan.an.a.z) }, b: { x: Math.round(plan.an.b.x), z: Math.round(plan.an.b.z) } };
     const l = liftObj(r, ld, plan.an); for (const st of [l.a, l.b]) G.flats.push([st.x, st.z, 12, st.y, 14]);
     r.lifts.push(ld); R.lifts.push(l);
-    const names = D.PISTE_NAMES, pd = { id: r.id + '-p' + G.ae.nextId++, name: names[(r.pistes.length * 7 + RIVALS.findIndex(x => x.id === r.id) * 13) % names.length] + ' (' + r.name + ')', ctrl: plan.pr.ctrl.map(c => ({ x: Math.round(c.x), z: Math.round(c.z) })), width: plan.pr.an.width };
+    const names = D.PISTE_NAMES, pd = { id: r.id + '-p' + G.ae.nextId++, name: names[(r.pistes.length * 7 + RIVALS.findIndex(x => x.id === r.id) * 13) % names.length] + ' (' + r.name + ')', ctrl: (plan.pr.an.ctrl || plan.pr.ctrl).map(c => ({ x: Math.round(c.x), z: Math.round(c.z) })), width: plan.pr.an.width };
     const an2 = SS.analyzePiste(pd.ctrl, pd.width); const p = pisteObj(r, pd, an2.pts ? an2 : plan.pr.an);
     r.pistes.push(pd); R.pistes.push(p);
     r.money -= plan.an.cost + plan.pr.an.cost; r.exp += plan.an.cost + plan.pr.an.cost;
@@ -195,7 +196,9 @@
     for (const r of G.ae.rivals) {
       const R = rt[r.id] = { lifts: [], pistes: [], blds: [] };
       for (const ld of r.lifts) { const an = SS.analyzeLift(ld.type, ld.a, ld.b, true); if (an.path) R.lifts.push(liftObj(r, ld, an)); }
+      SS.pistePool = R.pistes;
       for (const pd of r.pistes) { const an = SS.analyzePiste(pd.ctrl, pd.width); if (an.pts) R.pistes.push(pisteObj(r, pd, an)); }
+      SS.pistePool = null;
       for (const bd of r.blds) R.blds.push({ id: bd.id, type: bd.type, x: bd.x, z: bd.z, y: T.getH(bd.x, bd.z), rot: bd.rot, owner: r.id });
     }
     AE.busy = false;
@@ -389,10 +392,10 @@
     for (const n of needs) {
       if (n === 'domain' || n === 'premium') {
         if (!can(n === 'premium' ? 2400000 : 140000)) { if (needs.indexOf(n) === 0 && r.lifts.length) return; continue; }      // on épargne pour agrandir le domaine
-        if (r.failAt === t) continue;
+        if ((r.failAt || {})[n] === t) continue;
         const plan = tryBuildLift(r, n === 'premium' ? 'premium' : s.black < 4 && ambition && t % 2 ? 'black' : s.topAlt < 3000 && ambition ? 'high' : null);
         if (plan && can(plan.an.cost + plan.pr.an.cost)) { buildLiftAndPiste(r, plan); r.lastBuild = t; return; }
-        r.failAt = t; continue;
+        r.failAt = r.failAt || {}; r.failAt[n] = t; continue;
       }
       let type = n;
       if (n === 'food') type = P.food[Math.min(P.food.length - 1, Math.floor(s.restaurants / 2))];
@@ -423,7 +426,7 @@
       else { b.phase = 'refused'; b.retry = G.elapsed + 60; news(r, 'échoue au vote du CIO (' + Math.round(me) + ' / 100).', report, true); }
     } else if (b.phase === 'prep' && G.elapsed >= b.due && !G.summer) {
       const share = AE.critShare(r, 'olympics');
-      if (share >= 0.92) { b.phase = 'games'; r.event = { id: 'olympics', day: G.elapsed + 1, left: 6 }; news(r, 'passe l\'inspection finale : les Jeux s\'ouvrent demain chez ' + r.name + ' !', report, true); }
+      if (share >= 11 / 12 - 1e-9) { b.phase = 'games'; r.event = { id: 'olympics', day: G.elapsed + 1, left: 6 }; news(r, 'passe l\'inspection finale : les Jeux s\'ouvrent demain chez ' + r.name + ' !', report, true); }
       else { b.phase = 'refused'; b.retry = G.elapsed + 80; r.fame = Math.max(0, r.fame - 18); news(r, 'échoue à l\'inspection finale : le CIO lui retire les Jeux.', report, true); }
     } else if (b.phase === 'games' && r.event && r.event.id === 'olympics' && r.event.day === G.elapsed && !G.ae.winner) {
       G.ae.winner = r.id; b.phase = 'done';
