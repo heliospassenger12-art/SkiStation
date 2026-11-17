@@ -68,11 +68,12 @@
     const def = D.lift(l.type), g = new THREE.Group(), st = Mo.liftStatic(l, def), off = Mo.cableOffset(def);
     g.add(new THREE.Mesh(st.body, bodyMat)); if (st.windows) g.add(new THREE.Mesh(st.windows, winMat));
     const dx = l.b.x - l.a.x, dz = l.b.z - l.a.z, hl = Math.hypot(dx, dz), px = -dz / hl * off, pz = dx / hl * off;
-    if (def.kind !== 'carpet') for (const sgn of [1, -1]) {
+    if (def.kind !== 'carpet' && def.kind !== 'funi') for (const sgn of [1, -1]) {
       const pts = l.path.map(p => new THREE.Vector3(p.x + px * sgn, p.y, p.z + pz * sgn));
       g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), cableMat));
     }
     const veh = new THREE.InstancedMesh(Mo.vehicle(def), bodyMat, l.n); veh.frustumCulled = false; veh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    if (def.kind === 'funi') veh.visible = false;                       // les rames circulent dans le tunnel
     g.add(veh); g.userData = { veh, px, pz, yaw: Math.atan2(dx, dz), def }; g.children.forEach(c => c.frustumCulled = false);
     scene.add(g); R.objs.set(l, g);
   }

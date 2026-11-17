@@ -109,7 +109,7 @@ namespace SkiStation.Gestion
             new LiftDef { id = "gondola_10", name = "Télécabine 10 places", kind = "gondola", tier = 4, seats = 10, maxLen = 4000, speed = 6.5, spacing = 30, cost = 1200000, pylonH = 16, comfort = 0.95, wind = 70 },
             new LiftDef { id = "cablecar", name = "Téléphérique 80 places", kind = "cablecar", tier = 5, seats = 80, maxLen = 5200, speed = 10, spacing = 0, cost = 2900000, pylonH = 34, comfort = 0.9, wind = 60 },
             new LiftDef { id = "three_s", name = "Télécabine 3S 30 places", kind = "gondola", tier = 6, seats = 30, maxLen = 6000, speed = 8, spacing = 75, cost = 5100000, pylonH = 30, comfort = 1, wind = 105, big = true },
-            new LiftDef { id = "funicular", name = "Funiculaire 120 places", kind = "funi", tier = 6, seats = 120, maxLen = 4500, speed = 10, spacing = 0, cost = 5600000, pylonH = 0, comfort = 1, wind = 999 }
+            new LiftDef { id = "funicular", name = "Funiculaire souterrain 120 places", kind = "funi", tier = 6, seats = 120, maxLen = 8000, speed = 10, spacing = 0, cost = 5600000, pylonH = 0, comfort = 1, wind = 999 }
         };
         public static readonly BuildingDef[] BUILDINGS = {
             new BuildingDef { id = "ticket", name = "Billetterie", cat = "Accueil", type = "ticket", cost = 30000, upkeep = 260, cap = 16, r = 14, look = "kiosk", seg = -1, desc = "Vente des forfaits. Plus de guichets = moins d'attente à l'arrivée.", hasPrice = false },
@@ -157,7 +157,7 @@ namespace SkiStation.Gestion
             new ResearchDef { cat = "Remontées", id = "tier3", name = "Remontées — palier 3", cost = 150000, days = 4, desc = "Débrayable 6 places et télécabine 8 places.", tier = 3, req = "tier2" },
             new ResearchDef { cat = "Remontées", id = "tier4", name = "Remontées — palier 4", cost = 300000, days = 5, desc = "Télésiège à bulles 8 places, télécabine 10 places.", tier = 4, req = "tier3" },
             new ResearchDef { cat = "Remontées", id = "tier5", name = "Remontées — palier 5", cost = 600000, days = 6, desc = "Téléphérique 80 places : franchit les grands vides.", tier = 5, req = "tier4" },
-            new ResearchDef { cat = "Remontées", id = "tier6", name = "Remontées — palier 6", cost = 1200000, days = 8, desc = "Télécabine 3S et funiculaire, insensibles au vent.", tier = 6, req = "tier5" },
+            new ResearchDef { cat = "Remontées", id = "tier6", name = "Remontées — palier 6", cost = 1200000, days = 8, desc = "Télécabine 3S et funiculaire souterrain (tunnel invisible, toutes pentes), insensibles au vent.", tier = 6, req = "tier5" },
             new ResearchDef { cat = "Neige et pistes", id = "snowmaking", name = "Neige de culture", cost = 60000, days = 3, desc = "Permet d'équiper les pistes d'enneigeurs." },
             new ResearchDef { cat = "Neige et pistes", id = "winch", name = "Dameuses à treuil", cost = 90000, days = 3, desc = "Damage des pistes noires et +40 % de rendement.", req = "snowmaking" },
             new ResearchDef { cat = "Remontées", id = "handsfree", name = "Forfaits mains-libres", cost = 50000, days = 2, desc = "Embarquement plus fluide : +12 % de débit sur toutes les remontées." },

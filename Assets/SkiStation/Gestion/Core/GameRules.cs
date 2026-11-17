@@ -273,7 +273,22 @@ namespace SkiStation.Gestion
             if (r.len < 60) { r.err = "Ligne trop courte (minimum 60 m)."; if (!force) return r; }
             if (r.len > r.maxLen) { r.err = "Portée dépassée : " + R(r.len) + " m pour " + r.maxLen + " m maximum. Rapprochez la gare ou choisissez un autre modèle."; if (!force) return r; }
             if (r.vert < (def.kind == "carpet" ? 2 : 10)) { r.err = "La gare d'arrivée doit être plus haute que la gare de départ."; if (!force) return r; }
-            if (T.Slope(a.x, a.z) > 0.9 || T.Slope(b.x, b.z) > 0.9) { r.err = "Terrain trop raide pour une gare."; if (!force) return r; }
+            double stLim = def.kind == "funi" ? 1.6 : 0.9;
+            if (T.Slope(a.x, a.z) > stLim || T.Slope(b.x, b.z) > stLim) { r.err = "Terrain trop raide pour une gare."; if (!force) return r; }
+            // FUNICULAIRE SOUTERRAIN : tunnel en ligne droite sous le relief, quelle que soit la pente ; seules les gares sont visibles
+            if (def.kind == "funi")
+            {
+                double ay1 = ay + 1.2, by1 = by + 1.2; int nseg = Math.Max(1, (int)Math.Ceiling(hl / 120));
+                var tp = new List<CablePt> { new CablePt { x = a.x, z = a.z, y = ay1, g = ay } };
+                for (int i = 1; i < nseg; i++) { double t = (double)i / nseg, x = GMath.Lerp(a.x, b.x, t), z = GMath.Lerp(a.z, b.z, t), g = T.GetH(x, z); tp.Add(new CablePt { x = x, z = z, y = Math.Min(GMath.Lerp(ay1, by1, t), g - 30), g = g }); }
+                tp.Add(new CablePt { x = b.x, z = b.z, y = by1, g = by });
+                double ts = 0; tp[0].s = 0;
+                for (int i = 1; i < tp.Count; i++) { ts += GMath.Hypot(tp[i].x - tp[i - 1].x, tp[i].y - tp[i - 1].y, tp[i].z - tp[i - 1].z); tp[i].s = ts; }
+                r.path = tp; r.L = ts; r.a = new P3(a.x, ay, a.z); r.b = new P3(b.x, by, b.z);
+                r.trees = T.TreesNearPath(new List<P2> { a, a }, 14, false) + T.TreesNearPath(new List<P2> { b, b }, 14, false); r.cost += r.trees * 120;
+                if (!CanPay(r.cost)) r.warn = "Fonds insuffisants.";
+                r.ok = r.err == null; return r;
+            }
             int steps = Math.Max(4, (int)Math.Ceiling(hl / 20)); var prof = new double[steps + 1];
             for (int i = 0; i <= steps; i++) { double t = (double)i / steps; prof[i] = T.GetH(GMath.Lerp(a.x, b.x, t), GMath.Lerp(a.z, b.z, t)); }
             if (def.kind == "tow" || def.kind == "carpet" || def.kind == "funi")
@@ -326,7 +341,7 @@ namespace SkiStation.Gestion
             l.a = an.a; l.b = an.b; l.path = an.path; l.L = an.L; l.len = an.len; l.vert = an.vert; l.capacity = an.capacity; l.maint = an.maint;
             l.n = an.vehicles; l.D = 2 * l.L / l.n; l.phase = 0; l.veh = new List<List<Visitor>>(); for (int i = 0; i < l.n; i++) l.veh.Add(new List<Visitor>());
             l.queue = new List<Visitor>(); l.brokenUntil = 0; l.windStop = false; l.rides = 0;
-            T.TreesNearPath(new List<P2> { l.a.Xz, l.b.Xz }, 9, true);
+            if (def.kind == "funi") { T.TreesNearPath(new List<P2> { l.a.Xz, l.a.Xz }, 14, true); T.TreesNearPath(new List<P2> { l.b.Xz, l.b.Xz }, 14, true); } else T.TreesNearPath(new List<P2> { l.a.Xz, l.b.Xz }, 9, true);
             foreach (var st in new[] { l.a, l.b }) { T.Flatten(st.x, st.z, 12, st.y, 14); if (loaded == null) G.flats.Add(new Flat { x = st.x, z = st.z, r = 12, h = st.y, blend = 14 }); }
             if (loaded == null) { G.lifts.Add(l); ReattachPistes(l); Net.Rebuild(); Emit("lift:add", l); Emit("world"); }
             return l;
@@ -482,7 +497,12 @@ namespace SkiStation.Gestion
             if (r.slope > (def.r > 25 ? 0.4 : 0.65)) { r.err = "Terrain trop raide ici (" + R(r.slope * 100) + " %)."; return r; }
             foreach (var d in Const.DECOR) if (GMath.Hypot(d.x - x, d.z - z) < d.r + def.r) { r.err = "Emplacement occupé par une maison du village."; return r; }
             foreach (var b in G.buildings) if (GMath.Hypot(b.x - x, b.z - z) < b.Def.r + def.r) { r.err = "Emplacement occupé par : " + b.Def.name + "."; return r; }
-            foreach (var l in G.lifts) if (GMath.SegDist(x, z, l.a.x, l.a.z, l.b.x, l.b.z) < def.r + 8) { r.err = "Trop près de la ligne du " + l.name + "."; return r; }
+            foreach (var l in G.lifts)
+            {
+                bool funi = Catalog.Lift(l.type).kind == "funi";
+                if (funi ? Math.Min(GMath.Hypot(x - l.a.x, z - l.a.z), GMath.Hypot(x - l.b.x, z - l.b.z)) < def.r + 16 : GMath.SegDist(x, z, l.a.x, l.a.z, l.b.x, l.b.z) < def.r + 8)
+                { r.err = (funi ? "Trop près d'une gare du " : "Trop près de la ligne du ") + l.name + "."; return r; }
+            }
             foreach (var p in G.pistes) { double s; if (def.look != "snowpark" && def.look != "stadium" && ClosestOnPiste(p, x, z, out s) < def.r + p.width / 2 - 4) { r.err = "Sur la piste " + p.name + " : décalez le bâtiment sur le bord."; return r; } }
             if (def.road && !InVillage(x, z) && !NearRoad(x, z, 130)) { r.err = "Doit être desservi par une route (à moins de 130 m) ou placé au village."; return r; }
             double nd; var nn = Net.NearestNode(x, z, out nd);

@@ -128,7 +128,7 @@
       const m = M4().makeRotationY(ry); m.setPosition(p.x, p.g - 0.5, p.z);
       for (const q of P2) { q.matrix.premultiply(m); P.push(q); }
     }
-    if (k === 'funi') for (let i = 0; i < l.path.length - 1; i++) {
+    if (k === 'funi' && false) for (let i = 0; i < l.path.length - 1; i++) {      // funiculaire souterrain : aucune voie visible
       const a = l.path[i], b = l.path[i + 1], len = Math.hypot(b.x - a.x, b.z - a.z), m = M4().makeRotationY(ry); m.multiply(M4().makeRotationX(-Math.atan2(b.y - a.y, len))); m.setPosition((a.x + b.x) / 2, (a.y + b.y) / 2 - 0.9, (a.z + b.z) / 2);
       P.push({ geo: new THREE.BoxGeometry(7.5, 0.7, Math.hypot(len, b.y - a.y) + 0.5), matrix: m, color: 0x6a6f78 });
     }

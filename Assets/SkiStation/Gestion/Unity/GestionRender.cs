@@ -140,10 +140,11 @@ namespace SkiStation.GestionUnity
                 if (def.kind != "carpet" && def.kind != "funi") Obj("Poulie", g.transform, cylinder, steel, c + Vector3.up * (float)(def.kind == "tow" ? 5 : 7.5), rot, new Vector3(8, .4f, 8) * big);
             }
             foreach (var cp in l.path) if (cp.pylon) { var bot = W.U(cp.x, cp.g, cp.z); float h = (float)(cp.y - cp.g); Obj("Pylone", g.transform, cylinder, steel, bot + Vector3.up * h / 2, Quaternion.identity, new Vector3(1.2f * big, h / 2, 1.2f * big)); Obj("Traverse", g.transform, box, steel, bot + Vector3.up * h, rot, new Vector3(8 * big, .5f, .8f)); }
-            if (def.kind == "funi" || def.kind == "carpet")
+            if (def.kind == "funi") { }                                    // funiculaire souterrain : rien de visible entre les gares
+            else if (def.kind == "carpet")
             {
-                var rail = Ribbon("Voie", new[] { l.a.Xz, l.b.Xz }, def.kind == "funi" ? 5 : 2, .4f, W.Mat(def.kind == "funi" ? "Voie" : "Tapis", def.kind == "funi" ? new Color(.3f, .27f, .24f) : new Color(.1f, .35f, .55f)), null, 0, g.transform);
-                rail.name = "Voie";
+                var rail = Ribbon("Tapis", new[] { l.a.Xz, l.b.Xz }, 2, .4f, W.Mat("Tapis", new Color(.1f, .35f, .55f)), null, 0, g.transform);
+                rail.name = "Tapis";
             }
             else
             {
@@ -241,7 +242,7 @@ namespace SkiStation.GestionUnity
                 else if (def.kind == "chair") { chairs.Add(Matrix4x4.TRS(pos - Vector3.up * 2.6f, rot, new Vector3(def.seats * .6f, .5f, .8f))); seat = pos - Vector3.up * 1.8f; }
                 else if (def.kind == "gondola") { cabins.Add(Matrix4x4.TRS(pos - Vector3.up * 3.2f, rot, new Vector3(2.4f, 2.6f, 2.4f) * big)); seat = pos - Vector3.up * 3f; }
                 else if (def.kind == "cablecar") { bigCabins.Add(Matrix4x4.TRS(pos - Vector3.up * 5f, rot, new Vector3(6, 4.2f, 9))); seat = pos - Vector3.up * 5f; }
-                else if (def.kind == "funi") { var gp = W.Ground(p.x, p.z, 2); bigCabins.Add(Matrix4x4.TRS(gp, rot, new Vector3(4, 3.6f, 14))); seat = gp; }
+                else if (def.kind == "funi") continue;                         // les rames circulent dans le tunnel
                 else { seat = W.Ground(p.x, p.z, .6); }
                 if (l.veh != null && i < l.veh.Count) { int k = 0; foreach (var v in l.veh[i]) { List<Matrix4x4> list; if (!people.TryGetValue(v.color, out list)) people[v.color] = list = new List<Matrix4x4>(); list.Add(Matrix4x4.TRS(seat + right * (k++ - l.veh[i].Count / 2f) * .7f + Vector3.up * .5f * ps, rot, new Vector3(.7f, .85f, .7f) * ps)); } }
             }
