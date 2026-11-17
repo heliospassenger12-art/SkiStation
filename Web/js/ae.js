@@ -115,13 +115,14 @@
     const prefs = r.persona === 'lux' ? ['cablecar', 'gondola_10', 'gondola_8', 'chair_det_6', 'chair_det_4', 'chair_fixed_4', 'chair_fixed_2'] : ['gondola_8', 'chair_det_6', 'chair_det_4', 'chair_fixed_4', 'chair_fixed_2'];
     return prefs.filter(id => D.lift(id).tier <= r.tier);
   }
-  function tryBuildLift(r) { AE.busy = true; try { return tryBuildLift0(r); } finally { AE.busy = false; } }
-  function tryBuildLift0(r) {
-    const R = runtime(r), types = liftTypeFor(r); if (!types.length) return null;
-    const starts = [{ x: r.base.x, z: r.base.z }].concat(R.lifts.map(l => ({ x: l.b.x, z: l.b.z })), R.lifts.map(l => ({ x: l.a.x, z: l.a.z })));
+  function tryBuildLift(r, goal) { AE.busy = true; try { return tryBuildLift0(r, goal); } finally { AE.busy = false; } }
+  function tryBuildLift0(r, goal) {
+    const R = runtime(r); let types = goal === 'premium' ? ['cablecar'].filter(id => D.lift(id).tier <= r.tier) : liftTypeFor(r); if (!types.length) return null;
+    let starts = [{ x: r.base.x, z: r.base.z }].concat(R.lifts.map(l => ({ x: l.b.x, z: l.b.z })), R.lifts.map(l => ({ x: l.a.x, z: l.a.z })));
+    if (goal === 'high' && R.lifts.length) { const top = R.lifts.slice().sort((p, q) => q.b.y - p.b.y).slice(0, 3); starts = top.map(l => ({ x: l.b.x, z: l.b.z })); }
     for (let tries = 0; tries < 26; tries++) {
       const type = types[Math.min(types.length - 1, tries % 3)], def = D.lift(type);
-      const s = starts[tries < 4 ? 0 : Math.floor(Math.random() * starts.length)];
+      const s = starts[tries < 4 && goal !== 'high' ? 0 : Math.floor(Math.random() * starts.length)];
       const ax = s.x + (Math.random() - 0.5) * 60, az = s.z + (Math.random() - 0.5) * 60, d = Math.hypot(ax, az) || 1;
       const ang = (Math.random() - 0.5) * 70 * DEG, len = def.maxLen * (0.5 + Math.random() * 0.4);
       const ux = -ax / d, uz = -az / d, bx = ax + (ux * Math.cos(ang) - uz * Math.sin(ang)) * len, bz = az + (ux * Math.sin(ang) + uz * Math.cos(ang)) * len;
@@ -130,8 +131,9 @@
       const an = SS.analyzeLift(type, { x: ax, z: az }, { x: bx, z: bz }); if (!an.ok) continue;
       // une piste doit redescendre de l'arrivée vers la base (ou la gare de départ)
       let pr = null;
-      for (const goal of [{ x: r.base.x, z: r.base.z }, { x: ax, z: az }]) {
-        const res = SS.autoPiste({ x: bx, z: bz }, goal, r.persona === 'lux' ? 35 : 30, [1, 2, 0, 3, 1][R.pistes.length % 5]);
+      if (goal === 'black') pr = fallLine(r, bx, bz, Math.min(T.getH(ax, az), T.getH(bx, bz) - 150));
+      for (const g2 of [{ x: r.base.x, z: r.base.z }, { x: ax, z: az }]) {
+        const res = SS.autoPiste({ x: bx, z: bz }, g2, r.persona === 'lux' ? 35 : 30, goal === 'black' ? 3 : [1, 2, 0, 3, 1][R.pistes.length % 5]);
         if (res.err || res.bad || !res.an.ok) continue;
         if (res.an.pts.every(p => inWedge(r, p.x, p.z))) { pr = res; break; }
       }
@@ -139,6 +141,19 @@
       return { type, an, pr };
     }
     return null;
+  }
+  // piste noire : suit la ligne de plus grande pente depuis l'arrivée jusqu'à l'altitude visée
+  function fallLine(r, x, z, hEnd) {
+    const pts = [{ x, z }], g = {};
+    for (let i = 0; i < 80; i++) {
+      T.grad(x, z, g); const n = Math.hypot(g.x, g.z); if (n < 0.05) break;
+      x -= g.x / n * 45; z -= g.z / n * 45; if (!inWedge(r, x, z)) break;
+      if (i % 3 === 2) pts.push({ x, z });
+      if (T.getH(x, z) <= hEnd) { pts.push({ x, z }); break; }
+    }
+    if (pts.length < 3) return null;
+    const an = SS.analyzePiste(pts, 30);
+    return an.ok && an.diff === 3 ? { ctrl: pts, an } : null;
   }
   function buildLiftAndPiste(r, plan, silent) { AE.busy = true; try { return buildLiftAndPiste0(r, plan, silent); } finally { AE.busy = false; } }
   function buildLiftAndPiste0(r, plan, silent) {
@@ -155,9 +170,11 @@
   }
   function addBld(r, type, silent) {
     const def = D.building(type), R = runtime(r);
-    for (let k = 0; k < 80; k++) {
-      const ang = Math.random() * Math.PI * 2, rad = 50 + Math.random() * (90 + R.blds.length * 14);
-      const x = r.base.x + Math.cos(ang) * rad, z = r.base.z + Math.sin(ang) * rad;
+    const anchors = [r.base].concat(R.lifts.map(l => l.a));
+    for (let k = 0; k < 240; k++) {
+      const c = k < 120 ? r.base : anchors[k % anchors.length];
+      const ang = Math.random() * Math.PI * 2, rad = def.r + 30 + Math.random() * (120 + R.blds.length * 16 + k * 2);
+      const x = c.x + Math.cos(ang) * rad, z = c.z + Math.sin(ang) * rad;
       if (!inWedge(r, x, z) || !T.inside(x, z, 120) || T.slope(x, z) > (def.r > 25 ? 0.4 : 0.55)) continue;
       if (R.blds.some(b => Math.hypot(b.x - x, b.z - z) < D.building(b.type).r + def.r + 6)) continue;
       if (R.lifts.some(l => SS.segDist(x, z, l.a.x, l.a.z, l.b.x, l.b.z).d < def.r + 10)) continue;
@@ -208,7 +225,7 @@
       if (def.type === 'activity') acts.add(def.id);
     }
     s.activities = acts.size;
-    s.patrol = (s.rescue || 0) * 5; s.machines = (s.garage || 0) * 3; s.heli = s.heli || 0;
+    s.patrol = (s.rescue || 0) * 6; s.machines = (s.garage || 0) * 3; s.heli = s.heli || 0;
     s.premiumLift = R.lifts.some(l => ['funicular', 'cablecar', 'three_s'].indexOf(l.type) >= 0);
     s.fame = r.fame; s.prestige = r.prestige; s.sat = Math.round(r.sat); s.satAvg = r.satHist.length ? r.satHist.reduce((a, b) => a + b, 0) / r.satHist.length : r.sat;
     s.bestDay = r.bestDay; s.debt = r.loan; s.money = r.money; s.snowmaking = r.tier >= 2;
@@ -291,7 +308,7 @@
     if (r.money < -40000) { r.loan += 300000; r.money += 300000; r.rep = Math.max(0, r.rep - 1); }
     // satisfaction, réputation, notoriété, prestige
     const crowd = s.capacity ? vis / (s.capacity * 2.4) : 0;
-    let sat = 60 + P.quality + 10 * (fair - r.price) / fair - 16 * (1 - Math.min(1, foodCap / Math.max(1, vis / 4))) - 22 * Math.max(0, crowd - 1) + 2 * Math.min(4, new Set(R.pistes.map(p => p.diff)).size) + Math.min(6, acts * 1.5) - (s.km > 3 && !s.rescue ? 6 : 0) + (Math.random() - 0.5) * 6;
+    let sat = 58 + P.quality + 10 * (fair - r.price) / fair - 16 * (1 - Math.min(1, foodCap / Math.max(1, vis / 4))) - 22 * Math.max(0, crowd - 1) + 2 * Math.min(4, new Set(R.pistes.map(p => p.diff)).size) + Math.min(6, acts * 1.5) - (s.km > 3 && !s.rescue ? 6 : 0) + (s.beds >= vis * 0.4 ? 2 : 0) + Math.min(3, s.km / 15) + (s.spa ? 1.5 : 0) + (s.gastro ? 1.5 : 0) + (Math.random() - 0.5) * 6;
     if (!vis) sat = r.sat;
     r.sat = SS.clamp(r.sat + (sat - r.sat) * 0.5, 15, 96);
     r.satHist.push(Math.round(r.sat)); if (r.satHist.length > 7) r.satHist.shift();
@@ -317,54 +334,76 @@
   const LADDER = ['fete', 'concert', 'regional', 'europe', 'xgames', 'worldcup'];
   function decide(r, s, vis) {
     const P = PERSONA[r.persona], t = G.elapsed, reserve = 30000 + t * 250;
+    const room = () => r.money - reserve, can = c => room() >= c;
+    // trésorerie excédentaire : dividendes versés aux actionnaires (garde les comptes lisibles)
+    if (r.money > 6000000) { const div = (r.money - 6000000) * 0.04; r.money -= div; r.exp += div; }
     // recherche (palier technologique) : grimpe avec le temps et l'argent
     const wantTier = Math.min(6, Math.floor(1 + t / (r.persona === 'lux' ? 26 : 32)));
-    if (r.tier < wantTier && r.money > reserve + 120000 * (r.tier + 1)) { const c = 120000 * (r.tier + 1); r.money -= c; r.exp += c; r.tier++; return; }
-    if (t - r.lastBuild < 1) return;
-    const room = r.money - reserve, can = c => room >= c;
-    const kmTarget = Math.min(70, (3 + t * 0.16) * P.domain);
-    const needs = [];
-    if (!r.lifts.length || s.km < kmTarget || (s.capacity && vis > s.capacity * 2.2)) needs.push('domain');
-    if (!s.rental) needs.push('rental');
-    if (s.restaurants * 55 < vis / 4) needs.push('food');
-    if (s.beds < vis * 0.45) needs.push('lodge');
-    if ((s.rescue || 0) < 1 + Math.floor(s.km / 10)) needs.push('rescue');
-    if ((s.garage || 0) < Math.ceil(s.km / 12)) needs.push('garage');
-    if (s.activities < 1 + Math.floor(t / 22)) needs.push('act');
-    if (t > 50 && !s.stadium) needs.push('stadium');
-    if (s.access < vis * 1.1) needs.push('parking');
-    if (r.persona === 'lux' && t > 40 && !s.luxBeds) needs.unshift('lodge');
-    if (t > 140 && critShare(s, 'xgames') > 0.7 && !s.heliport) needs.push('heliport');
-    if (r.bid && (r.bid.phase === 'prep' || r.bid.phase === 'eval') && !s.olympic) needs.unshift('olympic');
-    for (const n of needs) {
-      if (n === 'domain') {
-        if (!can(140000)) { if (needs.indexOf('domain') === 0 && r.lifts.length) return; continue; }      // on épargne pour agrandir le domaine
-        if (r.failAt === t) continue;
-        const plan = tryBuildLift(r); if (plan && can(plan.an.cost + plan.pr.an.cost)) { buildLiftAndPiste(r, plan); r.lastBuild = t; return; }
-        r.failAt = t; continue;
-      }
-      let type = n;
-      if (n === 'food') type = P.food[Math.min(P.food.length - 1, Math.floor(s.restaurants / 2))];
-      if (n === 'lodge') type = P.lodge[Math.min(P.lodge.length - 1, (s.lodging || 0))];
-      if (n === 'act') { type = P.acts.find(a => !s[a]) || null; if (!type) continue; }
-      if (n === 'heliport') type = 'heliport';
-      const def = D.building(type); if (!def || !can(def.cost)) continue;
-      if (addBld(r, type)) { r.lastBuild = t; if (def.cost >= 250000) news(r, 'inaugure : ' + def.name.toLowerCase() + '.'); return; }
-    }
+    if (r.tier < wantTier && can(120000 * (r.tier + 1))) { const c = 120000 * (r.tier + 1); r.money -= c; r.exp += c; r.tier++; }
     // événements : on grimpe l'échelle quand les conditions sont réunies
     if (!r.event && r.tier >= 2) {
       for (let i = LADDER.length - 1; i >= 0; i--) {
         const ev = D.EVENTS.find(e => e.id === LADDER[i]); if (ev.id === 'xgames' && !P.xgames) continue;
         if ((r.hosted[ev.id] || 0) >= 3) continue;
-        if (ev.need(s) && can(ev.cost) && (ev.prestige >= 3 || (r.hosted[ev.id] || 0) < 1)) { r.money -= ev.cost; r.exp += ev.cost; r.event = { id: ev.id, day: G.elapsed + 3, left: ev.days }; if (ev.prestige >= 6) news(r, 'annonce : ' + ev.name + ' dans 3 jours.', null, true); break; }
+        const ok = ev.id === 'xgames' ? critShare(s, 'xgames') === 1 : ev.need(s);
+        if (ok && can(ev.cost) && (ev.prestige >= 3 || (r.hosted[ev.id] || 0) < 1)) { r.money -= ev.cost; r.exp += ev.cost; r.event = { id: ev.id, day: G.elapsed + 3, left: ev.days }; if (ev.prestige >= 6) news(r, 'annonce : ' + ev.name + ' dans 3 jours.', null, true); break; }
       }
     }
-    // candidature olympique
+    // candidature olympique (mêmes conditions que le joueur)
     if (!r.bid || (r.bid.phase === 'refused' && G.elapsed >= r.bid.retry)) {
       if (r.tier >= 5 && critShare(s, 'xgames') === 1 && s.h_worldcup >= 1 && r.fame >= 75 && r.prestige >= 60 && r.money > 900000 && !AE.editionHolder()) {
         r.money -= SS.Scn.BID_COST; r.exp += SS.Scn.BID_COST; r.bid = { phase: 'eval', due: G.elapsed + SS.Scn.EVAL_DAYS, tries: ((r.bid && r.bid.tries) || 0) + 1 };
         news(r, 'dépose sa candidature aux Jeux Olympiques !', null, true);
       }
+    }
+    if (t - r.lastBuild < 1) return;
+    // besoins : d'abord faire tourner la station, puis viser les X Games et les Jeux (cahier des charges)
+    const ambition = t > (r.persona === 'lux' ? 70 : 90), kmTarget = Math.min(70, (3 + t * 0.16) * P.domain);
+    const needs = [];
+    const want = (n, c) => { if (c && needs.indexOf(n) < 0) needs.push(n); };
+    want('domain', !r.lifts.length || s.km < kmTarget || (s.capacity && vis > s.capacity * 2.2));
+    want('rental', !s.rental);
+    want('food', s.restaurants * 55 < vis / 4);
+    want('lodge', s.beds < vis * 0.45);
+    want('rescue', (s.rescue || 0) < 1 + Math.floor(s.km / 10));
+    want('garage', (s.garage || 0) < Math.ceil(s.km / 12));
+    want('parking', s.access < vis * 1.1);
+    want('act', s.activities < 1 + Math.floor(t / 22));
+    want('stadium', t > 50 && !s.stadium);
+    if (r.persona === 'lux' && t > 40 && !s.luxBeds) needs.unshift('luxe');
+    if (ambition) {
+      want('stage', !s.stage); want('snowpark', !s.snowpark);
+      want('food', s.restaurants < 8);
+      want('rescue', (s.rescue || 0) < 3);
+      want('garage', s.machines < 6);
+      want('lodge', s.beds < 1400);
+      want('luxe', s.luxBeds < 250);
+      want('domain', s.km < 55 || s.black < 4 || s.capacity < 16000 || s.topAlt < 3000);
+      want('premium', !s.premiumLift && r.tier >= 5);
+      want('gastro', !s.gastro && t > 150); want('spa', !s.spa && t > 170);
+      want('act', s.activities < 4);
+      want('heliport', critShare(s, 'xgames') >= 0.7 && !s.heli);
+      want('olympic', !s.olympic && (critShare(s, 'xgames') === 1 || (r.bid && (r.bid.phase === 'prep' || r.bid.phase === 'eval'))));
+    }
+    if (r.bid && r.bid.phase === 'prep' && !s.olympic) needs.unshift('olympic');
+    for (const n of needs) {
+      if (n === 'domain' || n === 'premium') {
+        if (!can(n === 'premium' ? 2400000 : 140000)) { if (needs.indexOf(n) === 0 && r.lifts.length) return; continue; }      // on épargne pour agrandir le domaine
+        if (r.failAt === t) continue;
+        const plan = tryBuildLift(r, n === 'premium' ? 'premium' : s.black < 4 && ambition && t % 2 ? 'black' : s.topAlt < 3000 && ambition ? 'high' : null);
+        if (plan && can(plan.an.cost + plan.pr.an.cost)) { buildLiftAndPiste(r, plan); r.lastBuild = t; return; }
+        r.failAt = t; continue;
+      }
+      let type = n;
+      if (n === 'food') type = P.food[Math.min(P.food.length - 1, Math.floor(s.restaurants / 2))];
+      if (n === 'lodge') type = P.lodge[Math.min(P.lodge.length - 1, (s.lodging || 0))];
+      if (n === 'luxe') type = s.luxBeds < 120 || r.persona !== 'lux' ? 'hotel4' : 'palace';
+      if (n === 'act') { type = P.acts.find(a => !s[a]) || null; if (!type) continue; }
+      if (n === 'heliport') type = 'heliport';
+      if (n === 'olympic') type = 'olympic';
+      const def = D.building(type); if (!def) continue;
+      if (!can(def.cost)) { if (needs.indexOf(n) === 0 && def.cost > 1000000) return; continue; }   // on épargne pour le stade olympique
+      if (addBld(r, type)) { r.lastBuild = t; if (def.cost >= 250000) news(r, 'inaugure : ' + def.name.toLowerCase() + '.', null, def.cost >= 1000000); return; }
     }
   }
   // qui détient l'édition des Jeux (attribuée) : 'player', un id de compagnie, ou null
