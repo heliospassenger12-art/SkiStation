@@ -12,7 +12,10 @@ tout est en JavaScript, three.js est fourni dans `js/three.min.js`.
 
 | Cahier des charges | Dans la version web |
 |---|---|
-| Modes | Carrière en trois difficultés (6 étapes, du premier téléski aux Jeux Olympiques) et Bac à sable (argent illimité / catalogue libre en option) |
+| Modes | Carrière par scénarios et Bac à sable (argent illimité / catalogue libre en option) |
+| Scénarios | **Premiers pas** (420 000 €, 250 visiteurs en une journée en 70 jours) · **Station en perdition** (station endettée et vieillissante à rendre incontournable en 320 jours) · **Capitale des familles** · **Station de prestige** · **La route des Jeux** (campagne en 8 étapes jusqu'aux Jeux Olympiques). Objectifs chiffrés en direct, délai, échec (faillite ou délai dépassé), victoire notée de 1 à 3 étoiles, records gardés dans le navigateur |
+| Notoriété | Jauge de 0 à 100 % : monte avec le prestige, la réputation, les événements réussis et le marketing, baisse si les clients sont mécontents. Elle conditionne les événements : concerts 10 %, course régionale 18 %, Coupe d'Europe 35 %, **X Games 50 %**, Coupe du monde 62 %, candidature olympique 70 % |
+| Jeux Olympiques | Candidature en étapes : dossier (400 000 €, réponse du CIO sous 12 jours, chances selon la note du dossier), 70 jours de préparation pour remplir le cahier des charges (stade olympique, héliport, 900 lits, snowpark, 12 pisteurs, 40 km de pistes dont 2 noires, 12 000 pers./h, satisfaction 70 %, notoriété 80 %), inspection, puis 6 jours de Jeux. Cahier des charges non rempli : Jeux retirés |
 | Montagne 360° | Quatre choix au départ (Classique, Dents Blanches, Val Perdu, Aléatoire). Massif procédural 8 × 8 km, 1 640 → 4 200 m : vallée d'accès douce au pied du village, replats étagés (alpages, cirques, glaciers) reliés par des faces skiables, aiguilles rocheuses étroites au sommet. 30 à 45 % de la carte peut accueillir une piste reliée au front de neige |
 | Construction libre | Pistes (à la main ou **tracé assisté** : un clic sur l'arrivée d'une remontée et le jeu trouve la descente jusqu'au front de neige, avec difficulté visée), remontées, routes, bâtiments. Carte des zones desservables, front de neige signalé. Devis avant validation (prix, longueur, dénivelé, pente, difficulté, arbres). Arbres coupés seulement après validation, terrassement local sous les bâtiments et les gares |
 | Difficulté des pistes | Calculée sur le relief réellement traversé (pente le long du tracé et dévers) |
@@ -63,6 +66,8 @@ tout est en JavaScript, three.js est fourni dans `js/three.min.js`.
 - `js/arcade.js` mode arcade
 - `js/events.js` événements du matin
 - `js/manage.js` règles de gestion (services, hébergements, banque, recherche, pisteurs, dameuses)
+- `js/scenario.js` scénarios, notoriété, candidature olympique, station préconstruite
+- `js/ui_scn.js` panneau Carrière
 - `js/ui_mgmt.js` panneaux Finances, Recherche, Exploitation et fiche de gestion d'un bâtiment
 - `js/ui.js` interface
 - `js/minimap.js` mini-carte
