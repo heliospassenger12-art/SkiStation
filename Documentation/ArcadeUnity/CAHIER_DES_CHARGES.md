@@ -43,3 +43,9 @@ Le dépôt de reprise est encore basé sur le code 3.29. Les sources récentes d
 ### Essai météo dans Unity
 
 Appliquer le patch météo après le patch du cycle de lumière. En Play Mode, sélectionner le composant `ArcadeGrandAigleWeather` sur la racine générée de Grand Aigle. Le champ `Preset` permet de forcer une ambiance ou de garder `Forecast`. Dans la prévision, vérifier le ciel clair à 08 h, la couverture à 10 h, les flocons à 13 h et la brume à 16 h. Vérifier le fondu de 25 secondes de jeu actif, la pause, puis la disparition des flocons au retour au menu Arcade.
+
+### Livraison des sources météo et prompts
+
+Le dossier [Meteo](../../Integrations/ArcadeUnity/Meteo/README.md) contient les sources C# et shaders prêtes à copier, une API de sélection des quatre profils, les réglages d’inspecteur et trois prompts d’intégration, de réglage artistique et de validation dans Unity. La couverture du ciel couvert et de la neige a été renforcée. Les flocons reçoivent la couleur de la lumière ambiante. L’option `Hold Time` permet de comparer les quatre profils à une heure fixe.
+
+Le constructeur des palettes enregistre désormais l’heure de chaque palier. Cette omission dans le code précédent empêchait de parcourir correctement les palettes après minuit. Le patch cumulatif du cycle et les sources de remplacement portent la correction. Application et annulation du patch météo vérifiées sur sa base reconstruite, contrôles arithmétiques des heures et transitions effectués. Compilation C#, compilation des shaders, Play Mode et mesures GPU encore à effectuer.

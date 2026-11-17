@@ -1,9 +1,9 @@
 diff --git a/Assets/SkiStation/Scripts/Arcade/ArcadeGrandAigleDaylight.cs b/Assets/SkiStation/Scripts/Arcade/ArcadeGrandAigleDaylight.cs
 new file mode 100644
-index 0000000000000000000000000000000000000000..ea3e97b16a8652da74e1b43f4df4f405afdbaa47
+index 0000000000000000000000000000000000000000..7306502ac1a12a629d335b10f63e78b9e76de2e2
 --- /dev/null
 +++ b/Assets/SkiStation/Scripts/Arcade/ArcadeGrandAigleDaylight.cs
-@@ -0,0 +1,213 @@
+@@ -0,0 +1,214 @@
 +using System;
 +using UnityEngine;
 +using UnityEngine.Rendering;
@@ -21,6 +21,7 @@ index 0000000000000000000000000000000000000000..ea3e97b16a8652da74e1b43f4df4f405
 +
 +            public Palette(float hour, Color zenith, Color horizon, Color ambient)
 +            {
++                Hour = hour;
 +                Zenith = zenith;
 +                Horizon = horizon;
 +                Ambient = ambient;
