@@ -363,6 +363,9 @@
   function takeEdge(v, e) {
     if (!e || Net.edges[e.id] !== e) { v.path = null; v.target = null; return decide(v); }
     const forced = v.decision === 'Rentrer';
+    // rejoindre d'abord le départ (gare ou début de piste) : marche, ou glisse à ski sur la neige du front de neige
+    const sx = e.kind === 'lift' ? e.lift.a.x : SS.pisteAt(e.piste, e.s0, tmp).x, sz = e.kind === 'lift' ? e.lift.a.z : tmp.z;
+    if (v.state !== 'walk' && Math.hypot(v.x - sx, v.z - sz) > 25) { v.nextEdge = e; return walkTo(v, sx + jitter(6), sz + jitter(6), 'edge', Net.nodes[v.node] && Net.nodes[v.node].hub ? WALK * 2.5 : WALK * 1.4); }
     if (e.kind === 'lift') {
       const l = e.lift;
       if (!SS.liftBoarding(l)) { Net.touch(); v.path = null; v.target = null; return decide(v); }
@@ -378,7 +381,9 @@
       v.fallAt = Math.random() < risk * e.len / 1000 ? SS.range(e.s0, e.s1) : -1;
     }
   }
-  function arriveNode(v, node) { v.node = node.id; v.x = node.x + jitter(8); v.z = node.z + jitter(8); advance(v); }
+  // à l'arrivée d'une piste ou d'une remontée, le skieur reste où il est : au front de neige (ou à un raccord), il glisse
+  // ensuite librement jusqu'au départ de ce qu'il prend ensuite, au lieu d'être déplacé
+  function arriveNode(v, node) { v.node = node.id; if (Math.hypot(v.x - node.x, v.z - node.z) > (node.hub ? SS.HUB_R + 40 : 120)) { v.x = node.x + jitter(8); v.z = node.z + jitter(8); } advance(v); }
 
   // ---------------- cours de ski ----------------
   function joinLesson(v, b) {
@@ -545,6 +550,7 @@
           v.x = v.tx; v.z = v.tz;
           if (v.then === 'service') tryEnter(v);
           else if (v.then === 'exit') finalize(v);
+          else if (v.then === 'edge') { const e = v.nextEdge; v.nextEdge = null; v.state = 'idle'; takeEdge(v, e); }
           else if (v.then === 'lesson') { v.state = 'lesson'; v.until = Math.max(G.time + 3600, v.lessonAt + 7200); v.bx = v.x; v.bz = v.z; }
           else decide(v);
         } else {

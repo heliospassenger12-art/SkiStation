@@ -134,6 +134,8 @@ namespace SkiStation.Gestion
             gz = (GetH(x, z + e) - GetH(x, z - e)) / (2 * e);
         }
         public double Slope(double x, double z) { double gx, gz; Grad(x, z, out gx, out gz); return GMath.Hypot(gx, gz); }
+        /// <summary>Le front de neige : espace libre, tout ce qui y finit y est raccordé.</summary>
+        public static bool InHub(double x, double z) { return GMath.Hypot(x - HUB.x, z - HUB.z) < HUB_R; }
         public static bool Inside(double x, double z, double m = 60) { return Math.Abs(x) < HALF - m && Math.Abs(z) < HALF - m; }
 
         /// <summary>Terrassement local : replat sous l'emprise, raccord naturel autour.</summary>

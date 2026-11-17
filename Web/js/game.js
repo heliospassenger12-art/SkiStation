@@ -132,6 +132,7 @@
       const p = pts[i];
       if (!left) { let inside = false; for (const o of start) if (closestS(o, p.x, p.z).d < (width + o.width) / 2 * 0.9) { inside = true; break; } if (!inside) left = true; }
       if (left) apart += Math.hypot(p.x - pts[i - 1].x, p.z - pts[i - 1].z);
+      if (SS.inHub(p.x, p.z)) continue;                 // front de neige : espace libre, pas de jonction, les pistes y finissent où elles veulent
       for (const o of pool) {
         const lim = (width + o.width) / 2 * 0.95, b = bbox(o, lim);
         if (p.x < b[0] || p.x > b[2] || p.z < b[1] || p.z > b[3]) continue;
@@ -368,7 +369,7 @@
     const to = i => ({ x: -SS.HALF + (i % M) * S * C, z: -SS.HALF + ((i / M) | 0) * S * C });
     const dests = [];                                   // sans arrivée imposée : front de neige ou départ d'une remontée plus basse
     if (!goal) {
-      dests.push({ x: SS.HUB.x, z: SS.HUB.z, r: 110, name: 'le front de neige' });
+      dests.push({ x: SS.HUB.x, z: SS.HUB.z, r: SS.HUB_R - 25, name: 'le front de neige' });
       if (SS.autoDest !== 'hub') {
         const h0 = T.getH(start.x, start.z), own = (SS.liftPool || G.lifts).find(l => Math.hypot(l.b.x - start.x, l.b.z - start.z) < 80);
         for (const l of (SS.liftPool || G.lifts)) {
@@ -404,7 +405,7 @@
         T.grad(q.x, q.z, g); const cross = Math.hypot(g.x, g.z), eff = Math.max(along, 0.26 * cross);
         let pen = 1 + wt * Math.max(0, eff - thr) + 3 * Math.max(0, along < 0.03 ? 0.03 - along : 0) * 10 + 4 * Math.max(0, cross - 0.5);
         if (T.slope(q.x, q.z) > 1.0) pen += 30;
-        if (corr.has(j) && Math.hypot(q.x - start.x, q.z - start.z) > 200) pen += 2.5;   // ne pas longer une piste existante (la rejoindre reste possible)
+        if (corr.has(j) && Math.hypot(q.x - start.x, q.z - start.z) > 200 && !SS.inHub(q.x, q.z)) pen += 2.5;   // ne pas longer une piste existante (la rejoindre reste possible)
         const nc = cost.get(i) + len * pen; if (nc >= (cost.has(j) ? cost.get(j) : 1e18)) continue;
         cost.set(j, nc); prev.set(j, i); push(nc + (goal ? Math.hypot(q.x - hg.x, q.z - hg.z) : Math.min.apply(null, dests.map(d => Math.hypot(q.x - d.x, q.z - d.z) - d.r))), j);
       }

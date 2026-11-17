@@ -162,6 +162,7 @@ namespace SkiStation.Gestion
                 var p = pts[i]; double step = GMath.Hypot(p.x - pts[i - 1].x, p.z - pts[i - 1].z); walked += step; double ss;
                 if (!left && !start.Any(o => ClosestOnPiste(o, p.x, p.z, out ss) < (width + o.width) / 2 * 0.9)) left = true;
                 if (left) apart += step;
+                if (Relief.InHub(p.x, p.z)) continue;                 // front de neige : espace libre, pas de jonction
                 foreach (var o in list)
                 {
                     double lim = (width + o.width) / 2 * 0.95, cs; double d = ClosestOnPiste(o, p.x, p.z, out cs); if (d >= lim) continue;
@@ -407,7 +408,7 @@ namespace SkiStation.Gestion
             var dests = new List<Tuple<P2, double, string, Lift>>();
             if (!goal.HasValue)
             {
-                dests.Add(Tuple.Create(Relief.HUB, 110.0, "le front de neige", (Lift)null));
+                dests.Add(Tuple.Create(Relief.HUB, Relief.HUB_R - 25.0, "le front de neige", (Lift)null));
                 if (AutoDest != "hub")
                 {
                     double h0 = T.GetH(start.x, start.z); var pool = LiftPool ?? G.lifts; var own = pool.FirstOrDefault(l => GMath.Hypot(l.b.x - start.x, l.b.z - start.z) < 80);
@@ -448,7 +449,7 @@ namespace SkiStation.Gestion
                     double gx, gz; T.Grad(q.x, q.z, out gx, out gz); double crs = GMath.Hypot(gx, gz), eff = Math.Max(along, 0.26 * crs);
                     double pen = 1 + wt * Math.Max(0, eff - thr) + 3 * Math.Max(0, along < 0.03 ? 0.03 - along : 0) * 10 + 4 * Math.Max(0, crs - 0.5);
                     if (T.Slope(q.x, q.z) > 1.0) pen += 30;
-                    if (corr.Contains(j) && GMath.Hypot(q.x - start.x, q.z - start.z) > 200) pen += 2.5;   // ne pas longer une piste existante
+                    if (corr.Contains(j) && GMath.Hypot(q.x - start.x, q.z - start.z) > 200 && !Relief.InHub(q.x, q.z)) pen += 2.5;   // ne pas longer une piste existante
                     double nc = cost[i] + len * pen, oc; if (nc >= (cost.TryGetValue(j, out oc) ? oc : 1e18)) continue;
                     cost[j] = nc; prev[j] = i; heap.Push(nc + (goal.HasValue ? GMath.Hypot(q.x - hg.x, q.z - hg.z) : dests.Min(d => GMath.Hypot(q.x - d.Item1.x, q.z - d.Item1.z) - d.Item2)), j);
                 }
