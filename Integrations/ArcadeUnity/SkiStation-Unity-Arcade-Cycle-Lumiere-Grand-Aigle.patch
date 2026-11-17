@@ -1,0 +1,299 @@
+diff --git a/Assets/SkiStation/Scripts/Arcade/ArcadeGrandAigleDaylight.cs b/Assets/SkiStation/Scripts/Arcade/ArcadeGrandAigleDaylight.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..9d737d631a995abfa64cf94f243cda83f8094576
+--- /dev/null
++++ b/Assets/SkiStation/Scripts/Arcade/ArcadeGrandAigleDaylight.cs
+@@ -0,0 +1,202 @@
++using System;
++using UnityEngine;
++using UnityEngine.Rendering;
++using UnityEngine.SceneManagement;
++
++namespace SkiStation.Arcade
++{
++    // Presentation clock for Grand Aigle in isolation. Never advances GameClock or station simulation.
++    internal sealed class ArcadeGrandAigleDaylight : IDisposable
++    {
++        readonly struct Palette
++        {
++            public readonly float Hour;
++            public readonly Color Zenith, Horizon, Ambient;
++
++            public Palette(float hour, Color zenith, Color horizon, Color ambient)
++            {
++                    Zenith = zenith;
++                Horizon = horizon;
++                Ambient = ambient;
++            }
++        }
++
++        static Color Rgb(uint hex) => new Color32((byte)(hex >> 16), (byte)(hex >> 8), (byte)hex, 255);
++
++        static readonly Palette Night = new Palette(0f, Rgb(0x070E26), Rgb(0x233A61), Rgb(0x253650));
++        static readonly Palette[] Palettes =
++        {
++            Night,
++            new Palette(4.5f, Night.Zenith, Night.Horizon, Night.Ambient),
++            new Palette(5.5f, Rgb(0x253760), Rgb(0x966175), Rgb(0x4E5675)),
++            new Palette(6.3f, Rgb(0x516C99), Rgb(0xE7A484), Rgb(0x737F94)),
++            new Palette(8f, Rgb(0x406FAD), Rgb(0xBACCE2), Rgb(0x879CB5)),
++            new Palette(12f, Rgb(0x397BB9), Rgb(0xC0D5E7), Rgb(0x9CACBD)),
++            new Palette(16f, Rgb(0x4272A7), Rgb(0xD0CBCE), Rgb(0x8997AB)),
++            new Palette(18f, Rgb(0x534D83), Rgb(0xDF8B6F), Rgb(0x69728F)),
++            new Palette(19.3f, Rgb(0x252D57), Rgb(0x85577A), Rgb(0x4C5271)),
++            new Palette(20.7f, Night.Zenith, Night.Horizon, Night.Ambient),
++            new Palette(24f, Night.Zenith, Night.Horizon, Night.Ambient)
++        };
++
++        static readonly int ZenithId = Shader.PropertyToID("_Zenith");
++        static readonly int HorizonId = Shader.PropertyToID("_Horizon");
++        static readonly int CloudTimeId = Shader.PropertyToID("_Clock");
++        static readonly int SunDirectionId = Shader.PropertyToID("_SunDir");
++        static readonly int SunTintId = Shader.PropertyToID("_SunTint");
++        static readonly int SunStrengthId = Shader.PropertyToID("_SunStrength");
++        static readonly int MoonDirectionId = Shader.PropertyToID("_MoonDir");
++        static readonly int NightId = Shader.PropertyToID("_Night");
++        static readonly Color MoonColor = new Color(.59f, .73f, 1f);
++        static readonly Color LowSun = new Color(1f, .55f, .31f);
++
++        readonly Scene scene;
++        readonly Material sky, originalSky;
++        readonly Light sun, moon, originalSun;
++        readonly AmbientMode originalAmbientMode;
++        readonly SphericalHarmonicsL2 originalProbe;
++        readonly bool originalFog;
++        readonly FogMode originalFogMode;
++        readonly Color originalFogColor;
++        readonly float originalFogDensity;
++
++        bool disposed;
++        double clockHour;
++        float cloudSeconds;
++
++        public static ArcadeGrandAigleDaylight TryCreate(Transform root, float startHour)
++        {
++            // The legacy renderer still owns lighting in Built-in. Leave other domains to their native clock.
++            if (!(GraphicsSettings.currentRenderPipeline is UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset)
++                || root.gameObject.scene != SceneManager.GetActiveScene())
++                return null;
++
++            var source = Resources.Load<Material>("ArcadeA257/AlpineSky");
++            if (source == null || source.shader == null || !source.shader.isSupported || !source.HasProperty(NightId))
++                return null;
++            return new ArcadeGrandAigleDaylight(root, source, startHour);
++        }
++
++        ArcadeGrandAigleDaylight(Transform root, Material source, float startHour)
++        {
++            scene = root.gameObject.scene;
++            originalSky = RenderSettings.skybox;
++            originalSun = RenderSettings.sun;
++            originalAmbientMode = RenderSettings.ambientMode;
++            originalProbe = RenderSettings.ambientProbe;
++            originalFog = RenderSettings.fog;
++            originalFogMode = RenderSettings.fogMode;
++            originalFogColor = RenderSettings.fogColor;
++            originalFogDensity = RenderSettings.fogDensity;
++
++            sky = new Material(source) { name = "Grand Aigle · ciel de session", hideFlags = HideFlags.DontSave };
++            sun = CreateLight(root, "Soleil Arcade", LightShadows.Soft);
++            moon = CreateLight(root, "Lune Arcade", LightShadows.None);
++            moon.color = MoonColor;
++            RenderSettings.skybox = sky;
++            RenderSettings.sun = sun;
++            RenderSettings.ambientMode = AmbientMode.Trilight;
++            RenderSettings.fog = true;
++            RenderSettings.fogMode = FogMode.ExponentialSquared;
++            RenderSettings.fogDensity = .00012f;
++            SetHour(startHour);
++        }
++
++        static Light CreateLight(Transform root, string name, LightShadows shadows)
++        {
++            var lightObject = new GameObject(name);
++            lightObject.transform.SetParent(root, false);
++            var light = lightObject.AddComponent<Light>();
++            light.type = LightType.Directional;
++            light.shadows = shadows;
++            return light;
++        }
++
++        static float Smooth(float from, float to, float value)
++            => Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(from, to, value));
++
++        static float Altitude(float hour) => 56f * Mathf.Sin((hour - 6f) * Mathf.PI / 12f);
++        static Quaternion Orbit(float hour) => Quaternion.Euler(Altitude(hour), (hour - 12f) * 15f, 0f);
++
++        public void Tick(float deltaSeconds, float minutesPerDay)
++        {
++            if (disposed || scene != SceneManager.GetActiveScene() || deltaSeconds <= 0f)
++                return;
++            cloudSeconds += deltaSeconds;
++            clockHour = (clockHour + deltaSeconds * (24d / (60d * Mathf.Max(.25f, minutesPerDay)))) % 24d;
++            ApplyHour((float)clockHour);
++        }
++
++        public void SetHour(float hour)
++        {
++            if (disposed || scene != SceneManager.GetActiveScene() || float.IsNaN(hour) || float.IsInfinity(hour))
++                return;
++            clockHour = Mathf.Repeat(hour, 24f);
++            ApplyHour((float)clockHour);
++        }
++
++        void ApplyHour(float hour)
++        {
++            for (int i = 1; i < Palettes.Length; i++)
++            {
++                var next = Palettes[i];
++                if (hour > next.Hour) continue;
++                var previous = Palettes[i - 1];
++                float blend = Smooth(previous.Hour, next.Hour, hour);
++                Apply(hour, Color.Lerp(previous.Zenith, next.Zenith, blend),
++                      Color.Lerp(previous.Horizon, next.Horizon, blend),
++                      Color.Lerp(previous.Ambient, next.Ambient, blend));
++                return;
++            }
++        }
++
++        void Apply(float hour, Color zenith, Color horizon, Color ambient)
++        {
++            float altitude = Altitude(hour);
++            float daylight = Smooth(-2f, 36f, altitude);
++            float night = 1f - Smooth(-17f, -3f, altitude);
++
++            sun.transform.rotation = Orbit(hour);
++            sun.color = Color.Lerp(LowSun, new Color(1f, .96f, .90f), Smooth(0f, 31f, altitude));
++            sun.intensity = 1.18f * daylight;
++            sun.shadowStrength = .76f * Smooth(1f, 13f, altitude);
++            moon.transform.rotation = Orbit(hour + 12f);
++            moon.intensity = .14f * night;
++
++            sky.SetColor(ZenithId, zenith);
++            sky.SetColor(HorizonId, horizon);
++            sky.SetColor(SunTintId, sun.color);
++            sky.SetVector(SunDirectionId, -sun.transform.forward);
++            sky.SetVector(MoonDirectionId, -moon.transform.forward);
++            sky.SetFloat(SunStrengthId, Smooth(-8f, 3f, altitude));
++            sky.SetFloat(NightId, night);
++            sky.SetFloat(CloudTimeId, cloudSeconds);
++            RenderSettings.fogColor = horizon;
++
++            // Keep diffuse visibility on URP materials without recapturing the environment every frame.
++            var probe = new SphericalHarmonicsL2();
++            probe.AddAmbientLight(ambient);
++            RenderSettings.ambientProbe = probe;
++        }
++
++        public void Dispose()
++        {
++            if (disposed) return;
++            disposed = true;
++            if (scene == SceneManager.GetActiveScene() && RenderSettings.skybox == sky)
++            {
++                RenderSettings.skybox = originalSky;
++                RenderSettings.sun = originalSun;
++                RenderSettings.fog = originalFog;
++                RenderSettings.fogMode = originalFogMode;
++                RenderSettings.fogColor = originalFogColor;
++                RenderSettings.fogDensity = originalFogDensity;
++                RenderSettings.ambientMode = originalAmbientMode;
++                RenderSettings.ambientProbe = originalProbe;
++            }
++            UnityEngine.Object.Destroy(sky);
++            if (sun != null) UnityEngine.Object.Destroy(sun.gameObject);
++            if (moon != null) UnityEngine.Object.Destroy(moon.gameObject);
++        }
++    }
++}
+diff --git a/Assets/SkiStation/Scripts/Arcade/ArcadeGrandAigleDaylight.cs.meta b/Assets/SkiStation/Scripts/Arcade/ArcadeGrandAigleDaylight.cs.meta
+new file mode 100644
+index 0000000000000000000000000000000000000000..a8c29fc49a86cf022f0e8e72f1de99ae453184eb
+--- /dev/null
++++ b/Assets/SkiStation/Scripts/Arcade/ArcadeGrandAigleDaylight.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 1d61c10ec6124cdb8dd9d63a8ef26f42
+diff --git a/Assets/SkiStation/Scripts/Arcade/ArcadeTestSlope.cs b/Assets/SkiStation/Scripts/Arcade/ArcadeTestSlope.cs
+index 4ff8866e01fa653a46cc010e50423d73d0ba2f66..d41dfdfeab275f291cb79235227c684a41c0de6d 100644
+--- a/Assets/SkiStation/Scripts/Arcade/ArcadeTestSlope.cs
++++ b/Assets/SkiStation/Scripts/Arcade/ArcadeTestSlope.cs
+@@ -13,6 +13,9 @@ namespace SkiStation.Arcade
+         [Range(100,1200)]public int treeCount=1120;
+         public bool enableAudio=true;
+         public bool enableDebugShortcuts=false;
++        [SerializeField, Range(0f, 24f)] float daylightStartHour = 8f;
++        [SerializeField, Min(.25f)] float daylightMinutesPerDay = 24f;
++        ArcadeGrandAigleDaylight daylight;
+         ArcadeSkiSession session;
+         ArcadeSpawnPoint spawn;
+         ArcadeAlpineTerrain terrain;
+@@ -91,6 +94,9 @@ namespace SkiStation.Arcade
+         }
+         void BuildLight()
+         {
++            daylight = ArcadeGrandAigleDaylight.TryCreate(generated.transform, daylightStartHour);
++            if (daylight != null) return;
++
+             RenderSettings.fog=true;RenderSettings.fogMode=FogMode.ExponentialSquared;
+             RenderSettings.fogColor=new Color(.69f,.81f,.88f);RenderSettings.fogDensity=.000055f;
+             RenderSettings.ambientMode=UnityEngine.Rendering.AmbientMode.Trilight;
+@@ -182,8 +188,16 @@ namespace SkiStation.Arcade
+             skier.RelocateInSession(new Vector3(x,terrain.HeightAt(x,z)+.12f,z),Quaternion.identity);
+             if(cameraFollow!=null)cameraFollow.SnapBehind();
+         }
++        [ContextMenu("Arcade/Appliquer l’heure de prévisualisation")]
++        void PreviewDaylightHour()
++        {
++            if (Application.isPlaying) daylight?.SetHour(daylightStartHour);
++        }
++
+         void Update()
+         {
++            if (session != null && session.IsPlaying && !session.IsPaused)
++                daylight?.Tick(Time.deltaTime, daylightMinutesPerDay);
+             if(!ready||!enableDebugShortcuts||session==null||session.InputBlocked)return;
+             if(Input.GetKeyDown(KeyCode.F2))RestartAt(-1270f);
+             if(Input.GetKeyDown(KeyCode.F3))RestartAt(475f);
+@@ -213,6 +227,7 @@ namespace SkiStation.Arcade
+         }
+         void OnDestroy()
+         {
++            daylight?.Dispose();
+             foreach(Material material in materials)if(material!=null)Destroy(material);
+             if(flake!=null)Destroy(flake);
+         }
+diff --git a/Assets/SkiStation/Shaders/ArcadeAlpineSky257.shader b/Assets/SkiStation/Shaders/ArcadeAlpineSky257.shader
+index 55bc255caa2a3ccac9fcca396158e639f10ab75e..6e8c22950a8578d1db47f4c22313ad7857dd10ce 100644
+--- a/Assets/SkiStation/Shaders/ArcadeAlpineSky257.shader
++++ b/Assets/SkiStation/Shaders/ArcadeAlpineSky257.shader
+@@ -1,12 +1,12 @@
+ Shader "SkiStation/Arcade/AlpineSky257" {
+- Properties {_Zenith("Zenith",Color)=(.19,.36,.58,1) _Horizon("Horizon",Color)=(.63,.74,.82,1) _Clouds("Nuages",Range(0,1))=.25 _Clock("Temps domaine",Float)=0 _SunDir("Soleil",Vector)=(.5,.5,-.5,0) _SunTint("Couleur soleil",Color)=(1,.96,.90,1) _SunStrength("Intensite",Float)=1 _DetailQuality("Detail",Float)=1}
++ Properties {_Zenith("Zenith",Color)=(.19,.36,.58,1) _Horizon("Horizon",Color)=(.63,.74,.82,1) _Clouds("Nuages",Range(0,1))=.25 _Clock("Temps domaine",Float)=0 _SunDir("Soleil",Vector)=(.5,.5,-.5,0) _SunTint("Couleur soleil",Color)=(1,.96,.90,1) _SunStrength("Intensite",Float)=1 _DetailQuality("Detail",Float)=1 _MoonDir("Lune",Vector)=(0,1,0,0) _Night("Nuit",Range(0,1))=0}
+  SubShader {Tags {"Queue"="Background" "RenderType"="Background" "PreviewType"="Skybox"} Cull Off ZWrite Off
+  Pass {CGPROGRAM
+  #pragma vertex vert
+  #pragma fragment frag
+  #pragma target 3.0
+  #include "UnityCG.cginc"
+- float4 _Zenith,_Horizon,_SunDir,_SunTint;float _Clouds,_Clock,_SunStrength,_DetailQuality;
++ float4 _Zenith,_Horizon,_SunDir,_SunTint,_MoonDir;float _Clouds,_Clock,_SunStrength,_DetailQuality,_Night;
+  struct app{float4 vertex:POSITION;};struct v2f{float4 position:SV_POSITION;float3 direction:TEXCOORD0;};
+  v2f vert(app v){v2f o;o.position=UnityObjectToClipPos(v.vertex);o.direction=mul((float3x3)unity_ObjectToWorld,v.vertex.xyz);return o;}
+  float hash(float2 p){return frac(sin(dot(p,float2(127.1,311.7)))*43758.5453);}
+@@ -22,6 +22,14 @@ Shader "SkiStation/Arcade/AlpineSky257" {
+   float coverage=smoothstep(.72-_Clouds*.25,.83-_Clouds*.25,cloud)*smoothstep(.05,.22,d.y)*saturate(_Clouds*2);
+   float shade=saturate(.67+.2*dot(d,sun)+cloud*.12);col=lerp(col,lerp(_Horizon.rgb*.85,_SunTint.rgb*.95,shade),coverage*.75);
+   float disc=smoothstep(.99984,.99996,sd)*smoothstep(-.02,.04,sun.y);col+=_SunTint.rgb*disc*1.4*_SunStrength*(1-coverage*.75);
++  if(_Night>0){
++   float3 moon=normalize(_MoonDir.xyz);
++   float md=saturate(dot(d,moon));
++   float visibility=_Night*(1-coverage*.85)*smoothstep(0,.07,moon.y);
++   float edge=max(fwidth(md),.000008);
++   float moonDisk=smoothstep(.99987-edge,.99987+edge,md);
++   col+=float3(.63,.76,1)*(.09*pow(md,160)+.82*moonDisk)*visibility;
++  }
+   col=lerp(_Horizon.rgb*.84,col,smoothstep(-.12,.01,d.y));return float4(col,1);
+  }ENDCG }
+  }FallBack Off
