@@ -1,5 +1,7 @@
-// SkiStation — point d'entrée de la scène de gestion fusionnée. S'installe tout seul dans toute scène dont le nom commence
-// par « SkiStation_Gestion » (les anciens systèmes ChatGPT y sont désactivés par ArcadeSceneIsolation), crée la caméra,
+// SkiStation — point d'entrée de la scène de gestion fusionnée. S'installe tout seul dans la scène
+// « SkiStation_Arcade_Test_Gestion » (ou toute scène « SkiStation_Gestion… »). Le préfixe « SkiStation_Arcade_Test_ » est
+// reconnu par ArcadeSceneIsolation de la version ChatGPT : ses anciens systèmes de gestion ne s'y installent pas, sans
+// modifier un seul de ses fichiers. Crée la caméra,
 // la lumière, le relief, le rendu, les outils, l'interface et le pont arcade, puis fait avancer l'horloge du noyau.
 using System;
 using System.IO;
@@ -11,14 +13,15 @@ namespace SkiStation.GestionUnity
 {
     public sealed class GestionBootstrap : MonoBehaviour
     {
-        public const string SCENE_PREFIX = "SkiStation_Gestion";
+        public const string SCENE = "SkiStation_Arcade_Test_Gestion", SCENE_PREFIX = "SkiStation_Gestion";
         GestionWorld world; GestionRender render; GestionTools tools; GestionUI ui; GestionCamera camCtl; GestionArcade arcade; Camera cam; Light sun;
         static string SavePath { get { return Path.Combine(Application.persistentDataPath, "skistation_gestion.json"); } }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Install()
         {
-            if (!SceneManager.GetActiveScene().name.StartsWith(SCENE_PREFIX, StringComparison.Ordinal)) return;
+            var n = SceneManager.GetActiveScene().name;
+            if (n != SCENE && !n.StartsWith(SCENE_PREFIX, StringComparison.Ordinal)) return;
             if (FindFirstObjectByType<GestionBootstrap>() != null) return;
             new GameObject("SkiStation_Gestion").AddComponent<GestionBootstrap>();
         }
@@ -47,8 +50,17 @@ namespace SkiStation.GestionUnity
             Game.T.Init(1337); Game.T.GenTrees(); world.Build(); camCtl.Focus(0, 2300, 3200); camCtl.pitch = 30;
         }
 
+        // Quelques installeurs ChatGPT ne consultent pas ArcadeSceneIsolation : on retire leurs objets de cette scène.
+        int cleanFrames = 120;
+        void CleanForeignObjects()
+        {
+            foreach (var go in SceneManager.GetActiveScene().GetRootGameObjects())
+                if (go != gameObject && go.name.StartsWith("SkiStation_", StringComparison.Ordinal) && !go.name.StartsWith("SkiStation_Gestion", StringComparison.Ordinal))
+                { Debug.Log("SkiStation Gestion : objet hérité retiré de la scène de gestion — " + go.name); Destroy(go); }
+        }
         void Update()
         {
+            if (cleanFrames > 0 && cleanFrames-- % 30 == 0) CleanForeignObjects();
             if (Game.G != null && !arcade.Playing) Sim.Tick(Time.unscaledDeltaTime);
             else if (Game.G == null) camCtl.yaw += Time.unscaledDeltaTime * 3;         // menu : la caméra tourne lentement autour du massif
             render.UpdateSky(cam);

@@ -90,3 +90,40 @@
     return h;
   };
 })();
+
+// ---------- panneau Alpine Empires : classement des compagnies, concessions, course aux Jeux ----------
+(function () {
+  'use strict';
+  const SS = window.SS, UI = SS.UI;
+  const { row, btn, eur, esc } = UI.H;
+  const bar = (v, c) => `<div class="bar"><i style="width:${Math.round(SS.clamp(v, 0, 1) * 100)}%;background:${c}"></i></div>`;
+  const PH = { eval: 'évaluation du CIO', prep: 'préparation des Jeux', games: 'Jeux en cours', done: 'Jeux organisés', refused: 'candidature refusée' };
+  UI.PANELS.ae = function () {
+    const G = SS.G; if (!G.ae) return '<p class="fine">Ce panneau concerne le mode Alpine Empires.</p>';
+    const AE = SS.AE, rows = AE.standings(), holder = AE.editionHolder();
+    let h = '';
+    if (G.ae.winner) {
+      const w = G.ae.winner === 'player' ? null : AE.rivalOf(G.ae.winner);
+      h += w ? `<div class="msg ${w.ally ? '' : 'bad'}">${w.ally ? '🏅 Victoire de votre équipe' : '❌ Partie perdue'} : les Jeux Olympiques se sont ouverts à ${esc(w.name)}.</div>` : '<div class="msg">🏅 Victoire : les Jeux Olympiques se sont ouverts chez vous !</div>';
+    } else h += `<p class="fine"><b>But :</b> être la première compagnie à ouvrir les Jeux Olympiques (jour 1). ${G.ae.team === 'duo' ? 'Vous faites équipe avec Valfroide : sa victoire est aussi la vôtre.' : 'Chacun pour soi.'} Vos rivaux construisent, fixent leurs prix et se disputent les mêmes clients que vous.</p>`;
+    if (holder) h += `<div class="msg warn">🔥 Édition des Jeux attribuée à ${holder === 'player' ? 'votre station' : esc(AE.rivalOf(holder).name)}.</div>`;
+    h += '<h4>Classement</h4>';
+    const sorted = rows.slice().sort((a, b) => b.dossier - a.dossier);
+    for (const r of sorted) {
+      h += `<div class="card${r.you ? ' cur' : ''}" style="border-left:4px solid ${r.color}"><div class="ctitle"><b>${esc(r.name)}${r.you ? ' (vous)' : r.ally ? ' (allié)' : ''}</b><span>dossier ${Math.round(r.dossier)} / 100</span></div>`;
+      if (r.motto) h += `<div class="cmeta">${esc(r.motto)}</div>`;
+      h += row('Visiteurs (dernier jour)', SS.num(r.visitors)) + row('Domaine', r.km.toFixed(1) + ' km · ' + r.lifts + ' remontée(s)') + row('Trésorerie', eur(r.money));
+      h += row('Notoriété · prestige', Math.round(r.fame) + ' % · ' + UI.starHtml(SS.prestigeStars(r.prestige))) + row('Événements organisés', r.hosted);
+      if (!r.you) h += row('Forfait · satisfaction', eur(r.price) + ' · ' + Math.round(r.sat) + ' %');
+      h += `<div class="cmeta">Niveau X Games ${Math.round(r.xg * 100)} % · cahier olympique ${Math.round(r.oly * 100)} %${r.bid ? ' · ' + (PH[r.bid] || r.bid) : ''}</div>${bar(r.oly, r.color)}</div>`;
+    }
+    h += '<h4>Concessions</h4><p class="fine">Vous ne pouvez construire que sur vos terrains (traits orange sur la carte). Le sommet central est protégé. Les autres secteurs appartiennent aux rivaux.</p>';
+    for (const zn of AE.ZONES) {
+      if (!zn.price && zn.id !== 'start') continue;
+      const own = G.ae.owned.indexOf(zn.id) >= 0;
+      h += `<div class="li"><b>${zn.name}</b><small>${own ? 'à vous' : eur(zn.price)}</small>${own ? '' : btn('Acheter — ' + eur(zn.price), 'aeBuy', zn.id, 'small')}</div>`;
+    }
+    h += '<h4>Nouvelles des rivaux</h4>' + (G.ae.news.length ? G.ae.news.slice(0, 15).map(n => `<div class="fine">J${n.d} · ${esc(n.msg)}</div>`).join('') : '<p class="fine">Rien pour l\'instant.</p>');
+    return h;
+  };
+})();

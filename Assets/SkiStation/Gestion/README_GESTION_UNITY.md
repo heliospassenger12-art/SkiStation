@@ -6,12 +6,18 @@ et garde de la version ChatGPT **l'arcade, le rider et l'habillage de la montagn
 ## Lancer
 
 1. Ouvrir le projet dans Unity 6 (6000.3).
-2. Menu **SkiStation › Gestion fusionnée › Jouer (gestion + arcade)**, ou ouvrir `Assets/Scenes/SkiStation_Gestion.unity` puis Play.
-   Cette scène est désormais la première de la liste de build ; l'ancienne `SkiStation_Bootstrap` reste disponible.
+2. Menu **SkiStation › Gestion fusionnée › Jouer (gestion + arcade)**, ou ouvrir `Assets/Scenes/SkiStation_Arcade_Test_Gestion.unity` puis Play.
 
-La scène est vide : tout s'installe au lancement (`GestionBootstrap`) dès que le nom de la scène commence par
-`SkiStation_Gestion`. Dans ces scènes, `ArcadeSceneIsolation.IsActive` est vrai : les ~110 anciens systèmes
-de gestion ChatGPT (qui s'installaient automatiquement) ne démarrent pas, il n'y a donc aucun conflit.
+La scène est vide : tout s'installe au lancement (`GestionBootstrap`). Son nom commence par `SkiStation_Arcade_Test_`,
+préfixe reconnu par `ArcadeSceneIsolation` de la version ChatGPT : les anciens systèmes de gestion ne s'y installent pas,
+**sans modifier aucun fichier ChatGPT**. Les rares objets créés sans cette vérification sont retirés au démarrage.
+
+## Installer dans la dernière version du projet (3.94 / A2.64, URP)
+
+Kit `SkiStation_Installer_Gestion_Web.zip` (Drive, dossier « Alpine Empires Diviser ») : fermer Unity, lancer
+`Installer_Gestion_Web.cmd`. Il **ajoute** seulement `Assets/SkiStation/Gestion/`, la scène et `Tools/GestionPort/`.
+L'arcade, le rider, la roche et les sapins sont retrouvés par leur nom à l'exécution (`ChatGPTAssets.cs`) :
+pas d'erreur de compilation si leur code a évolué. Shaders choisis selon le pipeline (URP ou intégré).
 
 ## Ce qui vient d'où
 
@@ -19,7 +25,7 @@ de gestion ChatGPT (qui s'installaient automatiquement) ne démarrent pas, il n'
 |---|---|
 | Règles de gestion, visiteurs, remontées, pistes, finances, recherche, pisteurs, dameuses, hébergements, loisirs, météo, scénarios, prestige / notoriété, X Games, candidature olympique, sauvegarde | Version web, portée en C# pur : `Gestion/Core` (assembly `SkiStation.Gestion.Core`, sans dépendance Unity) |
 | Relief du massif 8 × 8 km, 1 640 → 4 200 m, forêts (positions) | Version web (`Relief.cs`, identique au millimètre près) |
-| Texture de roche stratifiée | ChatGPT : `AlpineRockMaterial.Shared` |
+| Texture de roche stratifiée | ChatGPT : `AlpineRockMaterial.Shared` (trouvé à l'exécution) |
 | Palette neige fraîche / compacte / ventée / roche / roche ombrée | ChatGPT : `AlpineMountainSurface261` (seuils d'altitude adaptés au nouveau massif) |
 | Sapin étagé enneigé | ChatGPT : `AlpineForestVisual262.BuildCrown` (dessiné par instanciation) |
 | Rider, glisse, sauts, figures, combos, boost, HUD, caméra 3e personne | ChatGPT : `Scripts/Arcade` (inchangé) |

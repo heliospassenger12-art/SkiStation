@@ -1,69 +1,88 @@
 // SkiStation — pont vers l'ARCADE de la version ChatGPT : le rider (ArcadeSkierRig), son contrôleur de glisse, ses figures,
-// HUD et sa caméra 3e personne sont repris tels quels ; on les pose simplement au départ d'une piste construite en gestion.
+// HUD et sa caméra 3e personne sont repris tels quels et posés au départ d'une piste construite en gestion.
+// Aucune dépendance de compilation : les composants sont retrouvés par leur nom (ChatGPTAssets), pour fonctionner
+// avec toutes les versions de l'arcade (A2.3x, A2.63, A2.64…).
 using UnityEngine;
-using SkiStation.Arcade;
 using SkiStation.Gestion;
 
 namespace SkiStation.GestionUnity
 {
     public sealed class GestionArcade : MonoBehaviour
     {
-        ArcadeSkiSession session; ArcadeSkiController skier; Camera skiCam; Material trackMat;
+        const string NS = "SkiStation.Arcade.";
         public Camera managementCamera; public MonoBehaviour managementControls;
-        public bool Playing { get { return session != null && session.IsPlaying; } }
-        public Piste piste; bool wasPaused;
+        public bool Playing { get; private set; }
+        public Piste piste; public string lastError;
+        GameObject avatar; Component skier, follow; Camera skiCam; bool wasPaused, built;
 
-        void Build()
+        bool Build()
         {
-            var avatar = GameObject.CreatePrimitive(PrimitiveType.Capsule); avatar.name = "JOUEUR - Rider arcade"; avatar.transform.SetParent(transform);
+            built = true;
+            if (ChatGPTAssets.Find(NS + "ArcadeSkiController") == null) { lastError = "Arcade introuvable dans ce projet (SkiStation.Arcade.ArcadeSkiController)."; return false; }
+            avatar = GameObject.CreatePrimitive(PrimitiveType.Capsule); avatar.name = "JOUEUR - Rider arcade"; avatar.transform.SetParent(transform);
             avatar.GetComponent<Collider>().isTrigger = true;
-            skier = avatar.AddComponent<ArcadeSkiController>();
-            avatar.AddComponent<ArcadeBigAirLanding>().skier = skier;
-            avatar.AddComponent<ArcadeComboHUD>().skier = skier;
-            avatar.AddComponent<ArcadeTrickNameHUD>().skier = skier;
-            avatar.AddComponent<ArcadeLandingCelebrationHUD>();
+            skier = ChatGPTAssets.Add(avatar, NS + "ArcadeSkiController");
+            foreach (var hud in new[] { "ArcadeBigAirLanding", "ArcadeComboHUD", "ArcadeTrickNameHUD" }) ChatGPTAssets.Set(ChatGPTAssets.Add(avatar, NS + hud), "skier", skier);
+            ChatGPTAssets.Add(avatar, NS + "ArcadeLandingCelebrationHUD");
             var jacket = W.Mat("Rider_veste", new Color(.95f, .28f, .26f), .3f); var dark = W.Mat("Rider_sombre", new Color(.12f, .12f, .14f), .3f); var snow = W.Mat("Rider_neige", new Color(.93f, .96f, 1f), .3f);
-            ArcadeSkierRig.Build(avatar.transform, skier, jacket, dark, snow);
-            var trick = avatar.AddComponent<ArcadeSkiTrickVisual>(); trick.controller = skier;
-            trick.bodyVisual = avatar.transform.Find("Arcade body visual"); trick.leftSki = trick.bodyVisual.Find("Left ski"); trick.rightSki = trick.bodyVisual.Find("Right ski");
-            var carving = avatar.AddComponent<ArcadeCarvingVisual>(); carving.controller = skier; carving.body = trick.bodyVisual; carving.leftSki = trick.leftSki; carving.rightSki = trick.rightSki;
-            var sh = Shader.Find("Sprites/Default"); trackMat = sh != null ? new Material(sh) : null;
-            carving.leftTrack = Track(trick.leftSki, "Trace gauche"); carving.rightTrack = Track(trick.rightSki, "Trace droite");
-            avatar.GetComponent<Renderer>().enabled = false;
+            bool rig = ChatGPTAssets.Call(null, ChatGPTAssets.Find(NS + "ArcadeSkierRig"), "Build", avatar.transform, skier, jacket, dark, snow);
+            var body = avatar.transform.Find("Arcade body visual");
+            if (rig && body != null)
+            {
+                var trick = ChatGPTAssets.Add(avatar, NS + "ArcadeSkiTrickVisual");
+                ChatGPTAssets.Set(trick, "controller", skier); ChatGPTAssets.Set(trick, "bodyVisual", body);
+                ChatGPTAssets.Set(trick, "leftSki", body.Find("Left ski")); ChatGPTAssets.Set(trick, "rightSki", body.Find("Right ski"));
+                var carving = ChatGPTAssets.Add(avatar, NS + "ArcadeCarvingVisual");
+                ChatGPTAssets.Set(carving, "controller", skier); ChatGPTAssets.Set(carving, "body", body);
+                ChatGPTAssets.Set(carving, "leftSki", body.Find("Left ski")); ChatGPTAssets.Set(carving, "rightSki", body.Find("Right ski"));
+                var sh = Shader.Find("Sprites/Default"); var trackMat = sh != null ? new Material(sh) : null;
+                ChatGPTAssets.Set(carving, "leftTrack", Track(body.Find("Left ski"), "Trace gauche", trackMat)); ChatGPTAssets.Set(carving, "rightTrack", Track(body.Find("Right ski"), "Trace droite", trackMat));
+                avatar.GetComponent<Renderer>().enabled = false;
+            }
+            else avatar.GetComponent<Renderer>().sharedMaterial = jacket;          // rider indisponible : capsule colorée
             var camGo = new GameObject("Camera arcade 3e personne"); camGo.transform.SetParent(transform);
             skiCam = camGo.AddComponent<Camera>(); skiCam.fieldOfView = 72; skiCam.nearClipPlane = .08f; skiCam.farClipPlane = 20000; skiCam.enabled = false;
-            var follow = camGo.AddComponent<ArcadeThirdPersonCamera>(); follow.target = avatar.transform; follow.controller = skier;
-            var fx = camGo.AddComponent<ArcadePeripheralSpeedEffect>(); fx.controller = skier; fx.showBlurWhenSupported = false;
-            session = gameObject.AddComponent<ArcadeSkiSession>(); session.player = skier; session.playerCamera = skiCam; session.managementCamera = managementCamera; session.managementCameraControls = managementControls;
+            follow = ChatGPTAssets.Add(camGo, NS + "ArcadeThirdPersonCamera");
+            ChatGPTAssets.Set(follow, "target", avatar.transform); ChatGPTAssets.Set(follow, "controller", skier);
+            var fx = ChatGPTAssets.Add(camGo, NS + "ArcadePeripheralSpeedEffect"); ChatGPTAssets.Set(fx, "controller", skier); ChatGPTAssets.Set(fx, "showBlurWhenSupported", false);
+            ChatGPTAssets.Call(skier, skier.GetType(), "StopPlaying");
             avatar.SetActive(false);
+            return true;
         }
-        TrailRenderer Track(Transform ski, string name)
+        static TrailRenderer Track(Transform ski, string name, Material mat)
         {
+            if (ski == null) return null;
             var go = new GameObject(name); go.transform.SetParent(ski, false); go.transform.localPosition = new Vector3(0, -.07f, -.45f);
             var t = go.AddComponent<TrailRenderer>(); t.time = 5; t.startWidth = .11f; t.endWidth = .025f; t.minVertexDistance = .12f;
-            t.startColor = new Color(.57f, .73f, .83f, .8f); t.endColor = new Color(.57f, .73f, .83f, 0); t.sharedMaterial = trackMat; t.enabled = trackMat != null; t.emitting = false; return t;
+            t.startColor = new Color(.57f, .73f, .83f, .8f); t.endColor = new Color(.57f, .73f, .83f, 0); t.sharedMaterial = mat; t.enabled = mat != null; t.emitting = false; return t;
         }
 
-        /// <summary>Lance une descente arcade depuis le haut de la piste (la gestion est mise en pause pendant la descente).</summary>
+        /// <summary>Lance une descente arcade depuis le haut de la piste (la gestion est en pause pendant la descente).</summary>
         public bool Launch(Piste p)
         {
             if (p == null || p.pts == null || p.pts.Count < 3) return false;
-            if (session == null) Build();
+            if (!built && !Build()) return false; if (skier == null) return false;
             piste = p; var a = p.pts[1]; var b = p.pts[Mathf.Min(p.pts.Count - 1, 4)];
             var pos = W.U(a.x, Game.T.GetH(a.x, a.z) + .15, a.z); var face = Quaternion.Euler(0, W.Yaw(b.x - a.x, b.z - a.z), 0);
             wasPaused = Game.G.paused; Game.G.paused = true;
-            if (!session.EnterWorld(pos, face)) return false;
-            var cam = skiCam.GetComponent<ArcadeThirdPersonCamera>(); if (cam != null) cam.SnapBehind();
-            return true;
+            avatar.SetActive(true);
+            if (!ChatGPTAssets.Call(skier, skier.GetType(), "BeginAt", pos, face)) { avatar.transform.SetPositionAndRotation(pos, face); }
+            if (managementCamera != null) managementCamera.enabled = false; if (managementControls != null) managementControls.enabled = false;
+            skiCam.enabled = true; if (follow != null) ChatGPTAssets.Call(follow, follow.GetType(), "SnapBehind");
+            Playing = true; return true;
         }
-        public void Stop() { if (session != null) session.ExitWorld(); }
-        void Update()
+        public void Stop()
         {
-            if (session != null && !session.IsPlaying && piste != null) { piste = null; if (Game.G != null) Game.G.paused = wasPaused; }
+            if (!Playing) return; Playing = false;
+            if (skier != null) ChatGPTAssets.Call(skier, skier.GetType(), "StopPlaying");
+            if (avatar != null) avatar.SetActive(false); if (skiCam != null) skiCam.enabled = false;
+            if (managementCamera != null) managementCamera.enabled = true; if (managementControls != null) managementControls.enabled = true;
+            if (Game.G != null) Game.G.paused = wasPaused; piste = null;
         }
+        void Update() { if (Playing && Input.GetKeyDown(KeyCode.Escape)) Stop(); }
         void OnGUI()
         {
-            if (!Playing) return;
+            if (!Playing || piste == null) return;
             GUI.Label(new Rect(16, Screen.height - 60, 900, 24), "<b>Arcade</b> — " + piste.name + " (" + Catalog.DIFF_NAMES[piste.diff] + ") · Échap : retour à la gestion", GestionUI.Rich);
         }
     }

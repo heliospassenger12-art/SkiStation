@@ -109,7 +109,7 @@ namespace SkiStation.GestionUnity
         {
             if (mode == Mode.Lift && liftAn != null && liftAn.ok) { var l = Game.CommitLift(liftAn); message = l != null ? l.name + " construit." : "Fonds insuffisants."; Cancel(); if (l != null) Select(l); return; }
             if ((mode == Mode.Piste || mode == Mode.PisteAuto) && pisteAn != null && pisteAn.ok) { var p = Game.CommitPiste(pts, pisteAn); message = p != null ? "Piste " + p.name + " ouverte." : "Fonds insuffisants."; var m = mode; Cancel(); if (p != null) Select(p); if (m == Mode.PisteAuto) mode = Mode.None; return; }
-            if (mode == Mode.Road && roadAn != null && roadAn.ok) { var r = Game.CommitRoad(pts, roadAn); message = r != null ? "Route construite." : "Fonds insuffisants."; Cancel(); FindObjectOfType<GestionRender>().SyncRoads(); }
+            if (mode == Mode.Road && roadAn != null && roadAn.ok) { var r = Game.CommitRoad(roadAn.pts ?? pts, roadAn); message = r != null ? "Route construite." : "Fonds insuffisants."; Cancel(); FindObjectOfType<GestionRender>().SyncRoads(); }
         }
 
         void DrawLine(IList<P2> p, bool ok)

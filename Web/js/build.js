@@ -23,7 +23,7 @@
 
   B.start = function (kind, type) {
     B.cancel(true);
-    B.tool = { kind: kind === 'autopiste' ? 'piste' : kind, auto: kind === 'autopiste', type, ctrl: [], width: B.width || 30, rot: 0, ease: B.ease === undefined ? 1 : B.ease };
+    B.tool = { kind: kind === 'autopiste' ? 'piste' : kind, auto: kind === 'autopiste', type, ctrl: [], width: B.width || 30, rot: 0, ease: B.ease === undefined ? 1 : B.ease, dest: B.dest || 'any' };
     R.showReach = B.tool.kind === 'piste'; R.drawOverlay();
     R.select(null); update(); SS.emit('build');
   };
@@ -31,10 +31,11 @@
   B.undo = function () { const t = B.tool; if (!t) return; if (t.kind === 'lift') { if (t.b) t.b = null; else t.a = null; } else if (t.ctrl.length) t.ctrl.pop(); else if (t.kind === 'building') t.pos = null; update(); SS.emit('build'); };
   B.rotate = function () { if (B.tool) { B.tool.rot += Math.PI / 4; update(); } };
   function autoCompute(t) {
-    const r = SS.autoPiste(t.start, null, t.width, t.ease);
+    SS.autoDest = t.dest || 'any'; const r = SS.autoPiste(t.start, null, t.width, t.ease); SS.autoDest = null;
     if (r.err) { B.autoMsg = r.err; t.ctrl = []; SS.emit('toast', '🧭 ' + r.err, 'warn'); update(); SS.emit('build'); return; }
-    B.autoMsg = r.bad ? 'Tracé assisté trouvé, mais il enfreint une règle : ' + (r.an.err || '') : null; t.ctrl = r.ctrl; update(); SS.emit('build');
+    B.autoMsg = r.bad ? 'Tracé assisté trouvé, mais il enfreint une règle : ' + (r.an.err || '') : null; t.ctrl = r.ctrl; t.destName = r.dest; update(); SS.emit('build');
   }
+  B.setDest = function (d) { B.dest = d; const t = B.tool; if (t && t.auto) { t.dest = d; if (t.start) autoCompute(t); else SS.emit('build'); } };
   B.setEase = function (i) { B.ease = i; const t = B.tool; if (t && t.auto) { t.ease = i; if (t.start) autoCompute(t); else SS.emit('build'); } };
   B.setWidth = function (w) { B.width = w; if (B.tool) { B.tool.width = w; if (B.tool.auto && B.tool.start) autoCompute(B.tool); else { update(); SS.emit('build'); } } };
 
@@ -45,7 +46,7 @@
       const pts = t.ctrl.slice(); if (hover && !R.coarse && pts.length) pts.push(hover);
       if (pts.length >= 2) {
         const an = t.kind === 'piste' ? SS.analyzePiste(pts, t.width) : SS.analyzeRoad(pts);
-        if (t.kind === 'piste') R.previewPath(an.pts || pts, an.ok, t.width, t.ctrl); else R.previewPath(pts, an.ok, 9, t.ctrl);
+        if (t.kind === 'piste') R.previewPath(an.pts || pts, an.ok, t.width, t.ctrl); else R.previewPath(an.pts || pts, an.ok, 9, t.ctrl);
         B.an = t.ctrl.length >= 2 ? (t.kind === 'piste' ? SS.analyzePiste(t.ctrl, t.width) : SS.analyzeRoad(t.ctrl)) : null; B.live = an;
       } else { R.previewPath(pts, true, 0, t.ctrl); B.live = null; }
     } else if (t.kind === 'lift') {

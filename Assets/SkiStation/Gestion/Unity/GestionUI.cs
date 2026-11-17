@@ -186,6 +186,10 @@ namespace SkiStation.GestionUnity
                 if (GUILayout.Button("✏ Tracer à la main (clic par point, Entrée pour le devis)")) { tools.Begin(GestionTools.Mode.Piste); panel = null; }
                 GUILayout.Label("<b>Tracé assisté</b> : cliquez sur le départ (arrivée d'une remontée), le jeu trouve la descente jusqu'au front de neige.", wrap);
                 GUILayout.BeginHorizontal(); for (int i = 0; i < 4; i++) if (GUILayout.Button((i == 3 ? "Libre" : Catalog.DIFF_NAMES[i]), tools.autoEase == i ? btnOn : GUI.skin.button)) tools.autoEase = i; GUILayout.EndHorizontal();
+                GUILayout.BeginHorizontal(); GUILayout.Label("Arrivée", GUILayout.Width(S(70)));
+                foreach (var d in new[] { Tuple.Create("any", "Autre remontée ou front de neige"), Tuple.Create("self", "Retour à sa remontée"), Tuple.Create("hub", "Front de neige") })
+                    if (GUILayout.Button(d.Item2, Game.AutoDest == d.Item1 ? btnOn : GUI.skin.button)) Game.AutoDest = d.Item1;
+                GUILayout.EndHorizontal();
                 if (GUILayout.Button("🧭 Tracé assisté")) { tools.Begin(GestionTools.Mode.PisteAuto); panel = null; }
             }
             else if (tab == "Bâtiments")
@@ -223,6 +227,7 @@ namespace SkiStation.GestionUnity
                 Row("Coût", "<b>" + GMath.Eur(an.cost) + "</b>");
                 var la = an as LiftAnalysis; var pa = an as PisteAnalysis; var ba = an as BuildingAnalysis; var ra = an as RoadAnalysis;
                 if (la != null) { Row("Longueur / dénivelé", GMath.Num(la.len) + " m / " + GMath.Num(la.vert) + " m"); Row("Portée maximale", GMath.Num(la.maxLen) + " m"); Row("Débit", GMath.Num(la.capacity) + " pers./h · " + la.vehicles + " véhicules"); Row("Trajet", la.rideMin.ToString("0.0") + " min"); Row("Entretien", GMath.Eur(la.maint) + " / jour"); }
+                if (pa != null && pa.pts != null) { Row("Départ", pa.startLift != null ? "⬆ arrivée du " + pa.startLift : "—"); Row("Arrivée", pa.joins != null ? "↘ jonction avec " + pa.joins : pa.endLift != null ? "⬇ départ du " + pa.endLift : "—"); }
                 if (pa != null && pa.pts != null) { Row("Longueur / dénivelé", GMath.Num(pa.len) + " m / " + GMath.Num(pa.drop) + " m"); Row("Pente moyenne / forte", Game.R(pa.avg * 100) + " % / " + Game.R(pa.p90 * 100) + " %"); Row("Difficulté", "<color=" + Catalog.DIFF_COLORS[pa.diff] + "><b>" + Catalog.DIFF_NAMES[pa.diff] + "</b></color>"); }
                 if (ba != null) { Row("Pente", Game.R(ba.slope * 100) + " %"); Row("Terrassement", GMath.Eur(ba.earth)); }
                 if (ra != null) { Row("Longueur", GMath.Num(ra.len) + " m"); Row("Pente max.", Game.R(ra.maxSlope * 100) + " %"); }
@@ -272,7 +277,7 @@ namespace SkiStation.GestionUnity
             if (!p.cannons && GUILayout.Button("Installer des enneigeurs — " + GMath.Eur(Game.R(p.len * 55)))) Msg(Actions.Cannons(p), "Enneigeurs installés.");
             if (!p.lit && Game.Researched("night") && GUILayout.Button("Éclairage nocturne — " + GMath.Eur(Game.R(p.len * 45)))) Msg(Actions.Light(p), "Éclairage installé.");
             GUILayout.BeginHorizontal(); GUILayout.Label("Damage"); string[] pr = { "Jamais", "Normal", "Prioritaire" }; for (int i = 0; i < 3; i++) if (GUILayout.Button(pr[i], p.prio == i ? btnOn : GUI.skin.button)) Actions.GroomPrio(p, i); GUILayout.EndHorizontal();
-            if (GUILayout.Button("<b>⛷ Descendre en arcade (rider)</b>", GUILayout.Height(S(36)))) { if (!arcade.Launch(p)) Toast("Descente impossible."); }
+            if (GUILayout.Button("<b>⛷ Descendre en arcade (rider)</b>", GUILayout.Height(S(36)))) { if (!arcade.Launch(p)) Toast(arcade.lastError ?? "Descente impossible."); }
             Demolish(p);
         }
         void LiftSheet(Lift l)

@@ -103,9 +103,9 @@ namespace SkiStation.Gestion
 
     // ---------- résultats d'analyse (devis avant validation) ----------
     public class Analysis { public bool ok; public string err, warn; public double cost; public int trees; }
-    public sealed class PisteAnalysis : Analysis { public double width = 30, len, drop, topAlt, avg, p90, max; public int diff; public List<P3> pts; }
+    public sealed class PisteAnalysis : Analysis { public double width = 30, len, drop, topAlt, avg, p90, max; public int diff; public List<P3> pts; public List<P2> ctrl; public string joins, startLift, endLift; public Piste joinPiste; }
     public sealed class LiftAnalysis : Analysis { public LiftDef def; public double vert, hlen, len, maxLen, capacity, rideMin, maint, L; public int vehicles; public List<CablePt> path; public P3 a, b; }
     public sealed class BuildingAnalysis : Analysis { public BuildingDef def; public double x, z, y, slope, earth; }
-    public sealed class RoadAnalysis : Analysis { public double len, maxSlope; }
-    public sealed class AutoPisteResult { public string err; public List<P2> ctrl; public PisteAnalysis an; public bool bad; }
+    public sealed class RoadAnalysis : Analysis { public double len, maxSlope; public List<P2> pts; public bool joins; }
+    public sealed class AutoPisteResult { public string err, dest; public List<P2> ctrl; public PisteAnalysis an; public bool bad; }
 }

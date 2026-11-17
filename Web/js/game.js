@@ -27,6 +27,7 @@
     SS.Weather.init();
     SS.Net.rebuild();
     if (opts.scn) { SS.Scn.setup(G, opts); SS.Weather.init(); }
+    if (opts.mode === 'ae' && SS.AE) SS.AE.setup(G, opts);
     SS.Net.rebuild();
     SS.Sim.startDay();
     return G;
@@ -90,7 +91,7 @@
     }
     return out;
   }
-  SS.analyzePiste = function (ctrl, width) {
+  function analyzePiste0(ctrl, width) {
     const r = { ok: false, width: width || 30 };
     if (ctrl.length < 2) { r.err = 'Placez au moins deux points : le départ en haut, l\'arrivée en bas.'; return r; }
     const pts = r.pts = spline(ctrl);
@@ -116,7 +117,69 @@
     for (const l of G.lifts) if (D.lift(l.type).kind === 'tow' && crossesLine(pts, l, 45)) { r.err = 'Traversée du ' + l.name + ' interdite : une piste ne coupe pas un téléski.'; return r; }
     if (!SS.canPay(r.cost)) r.warn = 'Fonds insuffisants.';
     r.ok = true; return r;
+  }
+  // JONCTIONS : une piste ne chevauche jamais une autre. Elle peut partir d'une piste existante (embranchement) et,
+  // dès qu'elle en touche une autre, elle s'arrête dessus et la rejoint : le réseau du domaine les relie à cet endroit.
+  SS.pistePool = null;                                   // pistes à prendre en compte (null = celles du joueur)
+  function bbox(p, m) { if (!p._bb) { let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9; for (const q of p.pts) { x0 = Math.min(x0, q.x); z0 = Math.min(z0, q.z); x1 = Math.max(x1, q.x); z1 = Math.max(z1, q.z); } p._bb = [x0, z0, x1, z1]; } const b = p._bb; return [b[0] - m, b[1] - m, b[2] + m, b[3] + m]; }
+  SS.findJunction = function (pts, width, pool) {
+    pool = (pool || SS.pistePool || G.pistes).filter(o => o.pts && o.pts.length > 1);
+    if (!pool.length || pts.length < 3) return null;
+    const start = new Set();
+    for (const o of pool) if (closestS(o, pts[0].x, pts[0].z).d < (width + o.width) / 2 + 6) start.add(o);
+    let left = !start.size, apart = 0;
+    for (let i = 1; i < pts.length; i++) {
+      const p = pts[i];
+      if (!left) { let inside = false; for (const o of start) if (closestS(o, p.x, p.z).d < (width + o.width) / 2 * 0.9) { inside = true; break; } if (!inside) left = true; }
+      if (left) apart += Math.hypot(p.x - pts[i - 1].x, p.z - pts[i - 1].z);
+      for (const o of pool) {
+        const lim = (width + o.width) / 2 * 0.95, b = bbox(o, lim);
+        if (p.x < b[0] || p.x > b[2] || p.z < b[1] || p.z > b[3]) continue;
+        const c = closestS(o, p.x, p.z); if (c.d >= lim) continue;
+        if (start.has(o) && p.s < 170) continue;          // embranchement : on quitte la piste de départ
+        const j = SS.pisteAt(o, c.s, {});
+        return { i, piste: o, s: p.s, at: { x: j.x, z: j.z }, apart };
+      }
+    }
+    return null;
   };
+  // RACCORD AUX REMONTÉES : un départ tracé près de l'arrivée d'une remontée part de la gare ; une fin tracée près
+  // du départ d'une remontée (plus bas) aboutit à la gare. Les skieurs y passent sans marcher.
+  SS.liftPool = null;                                   // remontées prises en compte (null = celles du joueur)
+  SS.attachPiste = function (ctrl) {
+    const lifts = SS.liftPool || G.lifts, out = ctrl.slice(); let startLift = null, endLift = null;
+    if (out.length < 2) return { ctrl: out };
+    const f = out[0], hf = T.getH(f.x, f.z); let bd = 140;
+    for (const l of lifts) { const d = Math.hypot(l.b.x - f.x, l.b.z - f.z); if (d < bd && l.b.y >= hf - 15) { bd = d; startLift = l; } }
+    if (startLift) { if (bd < 35 || out.length > 2) out[0] = { x: Math.round(startLift.b.x), z: Math.round(startLift.b.z) }; else out.unshift({ x: Math.round(startLift.b.x), z: Math.round(startLift.b.z) }); }
+    const e = out[out.length - 1], he = T.getH(e.x, e.z); bd = 160;
+    for (const l of lifts) { if (l === startLift) continue; const d = Math.hypot(l.a.x - e.x, l.a.z - e.z); if (d < bd && l.a.y <= he + 5) { bd = d; endLift = l; } }
+    if (!endLift && startLift) { const l = startLift, d = Math.hypot(l.a.x - e.x, l.a.z - e.z); if (d < 160 && l.a.y <= he + 5) endLift = l; }
+    if (endLift) { const st = { x: Math.round(endLift.a.x), z: Math.round(endLift.a.z) }; if (bd < 35) out[out.length - 1] = st; else out.push(st); }
+    return { ctrl: out, startLift, endLift };
+  };
+  SS.analyzePiste = function (ctrl, width) {
+    const att = SS.attachPiste(ctrl); ctrl = att.ctrl;
+    const r = analyzePisteJ(ctrl, width); r.startLift = att.startLift && att.startLift.name; r.endLift = !r.joins && att.endLift ? att.endLift.name : null;
+    return r;
+  };
+  function analyzePisteJ(ctrl, width) {
+    const pts0 = ctrl.length >= 2 ? spline(ctrl) : null;
+    if (pts0) for (let i = 1, s = 0; i < pts0.length; i++) { s += Math.hypot(pts0[i].x - pts0[i - 1].x, pts0[i].z - pts0[i - 1].z); pts0[i].s = s; }
+    const j = pts0 ? SS.findJunction(pts0.map((p, i) => ({ x: p.x, z: p.z, s: i ? p.s : 0 })), width || 30) : null;
+    if (!j) { const r = analyzePiste0(ctrl, width); r.ctrl = ctrl; return r; }
+    // on garde les points de contrôle situés avant la jonction, puis la jonction elle-même
+    const keep = [ctrl[0]];
+    for (let k = 1; k < ctrl.length; k++) {
+      let best = 1e9, bs = 0; for (const p of pts0) { const d = Math.hypot(p.x - ctrl[k].x, p.z - ctrl[k].z); if (d < best) { best = d; bs = p.s || 0; } }
+      if (bs < j.s - 25) keep.push(ctrl[k]); else break;
+    }
+    keep.push({ x: Math.round(j.at.x), z: Math.round(j.at.z) });
+    const r = analyzePiste0(keep, width); r.ctrl = keep; r.joins = j.piste.name; r.joinPiste = j.piste;
+    if (r.ok && j.apart < 60) { r.ok = false; r.err = 'Ce tracé suit la piste ' + j.piste.name + ' : écartez-le pour créer une vraie nouvelle piste (elle pourra la rejoindre plus bas).'; }
+    if (r.ok && r.len < 80) { r.ok = false; r.err = 'La piste rejoint ' + j.piste.name + ' trop tôt : écartez le tracé de la piste existante.'; }
+    return r;
+  }
   function crossesLine(pts, l, margin) {
     const dx = l.b.x - l.a.x, dz = l.b.z - l.a.z, len = Math.hypot(dx, dz), ux = dx / len, uz = dz / len;
     const a = { x: l.a.x + ux * margin, z: l.a.z + uz * margin }, b = { x: l.b.x - ux * margin, z: l.b.z - uz * margin };
@@ -126,6 +189,7 @@
   }
   SS.commitPiste = function (ctrl, an, loaded) {
     if (!loaded && !SS.spend(an.cost, 'Construction')) return null;
+    if (!loaded && an.ctrl) ctrl = an.ctrl;
     const used = G.pistes.map(p => p.name);
     const p = loaded || {
       id: G.nextId++, name: D.PISTE_NAMES.find(n => used.indexOf(n) < 0) || 'Piste ' + G.nextId, ctrl: ctrl.map(c => ({ x: Math.round(c.x), z: Math.round(c.z) })),
@@ -217,8 +281,25 @@
     l.queue = []; l.brokenUntil = 0; l.windStop = false; l.rides = 0;
     T.treesNearPath([l.a, l.b], 9, true);
     for (const st of [l.a, l.b]) { T.flatten(st.x, st.z, 12, st.y, 14); if (!loaded) G.flats.push([st.x, st.z, 12, st.y, 14]); }
-    if (!loaded) { G.lifts.push(l); SS.Net.rebuild(); SS.emit('lift:add', l); SS.emit('world'); }
+    if (!loaded) { G.lifts.push(l); SS.reattachPistes(l); SS.Net.rebuild(); SS.emit('lift:add', l); SS.emit('world'); }
     return l;
+  };
+  // une nouvelle remontée raccorde d'elle-même les pistes voisines : fins de piste vers sa gare de départ, départs vers son arrivée
+  SS.reattachPistes = function (l, pistes) {
+    const list = pistes || G.pistes; let n = 0;
+    for (const p of list) {
+      const a = p.pts[0], z = p.pts[p.pts.length - 1];
+      const nearEnd = Math.hypot(l.a.x - z.x, l.a.z - z.z) < 160 && Math.hypot(l.a.x - z.x, l.a.z - z.z) > 8 && l.a.y <= z.y + 5;
+      const nearStart = !p.on && Math.hypot(l.b.x - a.x, l.b.z - a.z) < 140 && Math.hypot(l.b.x - a.x, l.b.z - a.z) > 8 && l.b.y >= a.y - 15;
+      if (!nearEnd && !nearStart) continue;
+      const prevPool = SS.pistePool; SS.pistePool = list.filter(o => o !== p);
+      const an = SS.analyzePiste(p.ctrl, p.width); SS.pistePool = prevPool;
+      if (!an.ok || !an.pts) continue;
+      p.ctrl = an.ctrl.map(c => ({ x: Math.round(c.x), z: Math.round(c.z) })); p.pts = an.pts; p.len = an.len; p.drop = an.drop; p.avg = an.avg; p.p90 = an.p90; p.diff = an.diff; p.topAlt = an.topAlt; p._bb = null;
+      T.treesNearPath(p.pts, p.width / 2 + 5, true); T.snowAlong(p.pts, p.width / 2 + SS.CELL);
+      SS.emit('piste:refresh', p); n++;
+    }
+    return n;
   };
   // modernisation : remplace le modèle sur la même ligne (gares inchangées), remontée vide uniquement
   SS.modernize = function (l, type, dry) {
@@ -273,20 +354,33 @@
     const thr = [0.085, 0.14, 0.24, 0.17][ease === undefined ? 3 : ease], wt = ease === 0 ? 30 : ease === 1 ? 22 : 14;
     const N = SS.N, C = SS.CELL, H = T.H, S = 2, M = Math.ceil(N / S);
     const to = i => ({ x: -SS.HALF + (i % M) * S * C, z: -SS.HALF + ((i / M) | 0) * S * C });
+    const dests = [];                                   // sans arrivée imposée : front de neige ou départ d'une remontée plus basse
+    if (!goal) {
+      dests.push({ x: SS.HUB.x, z: SS.HUB.z, r: 110, name: 'le front de neige' });
+      if (SS.autoDest !== 'hub') {
+        const h0 = T.getH(start.x, start.z), own = (SS.liftPool || G.lifts).find(l => Math.hypot(l.b.x - start.x, l.b.z - start.z) < 80);
+        for (const l of (SS.liftPool || G.lifts)) {
+          if (SS.autoDest === 'self' ? l !== own : l === own) continue;            // « autre remontée » exclut celle du départ ; « retour » ne vise qu'elle
+          if (l.a.y < h0 - 40 && Math.hypot(l.a.x - start.x, l.a.z - start.z) > 250) dests.push({ x: l.a.x, z: l.a.z, r: 45, name: l.name, lift: l });
+        }
+        if (SS.autoDest === 'self' && dests.length > 1) dests.shift();             // retour : le front de neige n'est visé que sans remontée de départ
+      }
+    }
     const gx0 = goal || SS.HUB, ci = (x, z) => Math.round((z + SS.HALF) / C / S) * M + Math.round((x + SS.HALF) / C / S);
     const hAt = i => { const p = to(i); return T.getH(p.x, p.z); };
     const si = ci(start.x, start.z), gi = ci(gx0.x, gx0.z), stepL = S * C, g = {};
-    if (hAt(si) < T.getH(gx0.x, gx0.z) + 8) return { err: 'Le départ doit être nettement plus haut que l\'arrivée.' };
+    if (hAt(si) < (goal ? T.getH(gx0.x, gx0.z) : Math.min.apply(null, dests.map(d => T.getH(d.x, d.z)))) + 8) return { err: 'Le départ doit être nettement plus haut que l\'arrivée.' };
     const open = [[0, si]], cost = new Map([[si, 0]]), prev = new Map(), done = new Set();
     const nbs = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]];
-    const hg = to(gi); let iter = 0, reached = -1;
+    const hg = to(gi); let iter = 0, reached = -1, hitDest = null;
     const tows = G.lifts.filter(l => D.lift(l.type).kind === 'tow').map(l => { const dx = l.b.x - l.a.x, dz = l.b.z - l.a.z, n = Math.hypot(dx, dz) || 1, m = 45; return { a: { x: l.a.x + dx / n * m, z: l.a.z + dz / n * m }, b: { x: l.b.x - dx / n * m, z: l.b.z - dz / n * m } }; });
+    const corr = new Set(); for (const o of (SS.pistePool || G.pistes)) if (o.pts) for (const q of o.pts) corr.add(ci(q.x, q.z));
     const push = (f, i) => { open.push([f, i]); let k = open.length - 1; while (k > 0) { const p = (k - 1) >> 1; if (open[p][0] <= open[k][0]) break; [open[p], open[k]] = [open[k], open[p]]; k = p; } };
     const pop = () => { const t = open[0], l = open.pop(); if (open.length) { open[0] = l; let k = 0; for (; ;) { let a = k * 2 + 1, b = a + 1, m = k; if (a < open.length && open[a][0] < open[m][0]) m = a; if (b < open.length && open[b][0] < open[m][0]) m = b; if (m === k) break; [open[m], open[k]] = [open[k], open[m]]; k = m; } } return t; };
     while (open.length && iter++ < 60000) {
       const [, i] = pop(); if (done.has(i)) continue; done.add(i);
       const p = to(i);
-      if (Math.hypot(p.x - hg.x, p.z - hg.z) < (goal ? 60 : 110)) { reached = i; break; }
+      if (goal ? Math.hypot(p.x - hg.x, p.z - hg.z) < 60 : dests.some(d => Math.hypot(p.x - d.x, p.z - d.z) < d.r && (hitDest = d))) { reached = i; break; }
       const hi = hAt(i);
       for (const [dx, dz] of nbs) {
         const nx = (i % M) + dx, nz = ((i / M) | 0) + dz; if (nx < 1 || nz < 1 || nx >= M - 1 || nz >= M - 1) continue;
@@ -298,13 +392,14 @@
         T.grad(q.x, q.z, g); const cross = Math.hypot(g.x, g.z), eff = Math.max(along, 0.26 * cross);
         let pen = 1 + wt * Math.max(0, eff - thr) + 3 * Math.max(0, along < 0.03 ? 0.03 - along : 0) * 10 + 4 * Math.max(0, cross - 0.5);
         if (T.slope(q.x, q.z) > 1.0) pen += 30;
+        if (corr.has(j) && Math.hypot(q.x - start.x, q.z - start.z) > 200) pen += 2.5;   // ne pas longer une piste existante (la rejoindre reste possible)
         const nc = cost.get(i) + len * pen; if (nc >= (cost.has(j) ? cost.get(j) : 1e18)) continue;
-        cost.set(j, nc); prev.set(j, i); push(nc + Math.hypot(q.x - hg.x, q.z - hg.z), j);
+        cost.set(j, nc); prev.set(j, i); push(nc + (goal ? Math.hypot(q.x - hg.x, q.z - hg.z) : Math.min.apply(null, dests.map(d => Math.hypot(q.x - d.x, q.z - d.z) - d.r))), j);
       }
     }
     if (reached < 0) return { err: goal ? 'Aucune descente continue ne mène à ce point depuis le départ.' : 'Aucune descente continue ne mène au front de neige depuis ce point. Choisissez un départ plus bas, ou activez la carte des zones desservables pour repérer les emplacements possibles.' };
     const pts = []; for (let i = reached; i !== undefined; i = prev.get(i)) pts.unshift(to(i));
-    pts[0] = { x: start.x, z: start.z }; if (goal) pts.push({ x: gx0.x, z: gx0.z });
+    pts[0] = { x: start.x, z: start.z }; if (goal) pts.push({ x: gx0.x, z: gx0.z }); else if (hitDest && hitDest.lift) pts.push({ x: hitDest.x, z: hitDest.z });
     { let m = T.getH(start.x, start.z); const out = [pts[0]];           // le départ réel peut être plus bas que la maille voisine : on écarte les points qui feraient remonter
       for (let i = 1; i < pts.length; i++) { const h = T.getH(pts[i].x, pts[i].z); if (h <= m + 0.4) { out.push(pts[i]); m = Math.min(m, h); } }
       if (out.length < 2) return { err: 'Départ trop plat pour tracer une descente.' }; pts.length = 0; pts.push(...out); }
@@ -316,6 +411,7 @@
       const an = SS.analyzePiste(ctrl, width || 30); if (an.ok) { best = { ctrl, an }; break; } if (!best) best = { ctrl, an, bad: true };
     }
     if (!best) return { err: 'Tracé trop complexe : choisissez un départ plus proche.' };
+    best.dest = hitDest ? hitDest.name : null;
     return best;
   };
 
@@ -360,9 +456,28 @@
   SS.upgradeCost = b => Math.round(D.building(b.type).cost * 0.6 * b.level);
 
   // ---------- routes ----------
+  // une route qui en rencontre une autre s'y raccorde (elle s'arrête au carrefour) au lieu de la chevaucher
+  SS.roadJunction = function (pts) {
+    let walked = 0;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i], b = pts[i + 1], d = Math.hypot(b.x - a.x, b.z - a.z), n = Math.max(1, Math.ceil(d / 8));
+      for (let k = 1; k <= n; k++) {
+        const x = SS.lerp(a.x, b.x, k / n), z = SS.lerp(a.z, b.z, k / n), w = walked + d * k / n; if (w < 60) continue;
+        for (const rd of G.roads) for (let m = 0; m < rd.pts.length - 1; m++) {
+          const c = SS.segDist(x, z, rd.pts[m].x, rd.pts[m].z, rd.pts[m + 1].x, rd.pts[m + 1].z); if (c.d > 9) continue;
+          const jx = SS.lerp(rd.pts[m].x, rd.pts[m + 1].x, c.t), jz = SS.lerp(rd.pts[m].z, rd.pts[m + 1].z, c.t);
+          return pts.slice(0, i + 1).concat([{ x: Math.round(jx), z: Math.round(jz) }]);
+        }
+      }
+      walked += d;
+    }
+    return null;
+  };
   SS.analyzeRoad = function (pts) {
     const r = { ok: false, len: 0, maxSlope: 0 };
     if (pts.length < 2) { r.err = 'Placez au moins deux points.'; return r; }
+    const jn = SS.roadJunction(pts); if (jn) { pts = jn; r.joins = true; }
+    r.pts = pts;
     if (!SS.inVillage(pts[0].x, pts[0].z) && !SS.nearRoad(pts[0].x, pts[0].z, 90)) { r.err = 'Une route doit partir du village ou d\'une route existante.'; return r; }
     for (let i = 0; i < pts.length - 1; i++) {
       const a = pts[i], b = pts[i + 1], d = Math.hypot(b.x - a.x, b.z - a.z), n = Math.max(1, Math.ceil(d / 25));
@@ -381,6 +496,7 @@
   };
   SS.commitRoad = function (pts, an) {
     if (!SS.spend(an.cost, 'Construction')) return null;
+    if (an.pts) pts = an.pts;
     T.treesNearPath(pts, 8, true);
     const r = { id: G.nextId++, pts: pts.map(p => ({ x: Math.round(p.x), z: Math.round(p.z) })) };
     G.roads.push(r); SS.emit('world'); return r;
@@ -575,6 +691,7 @@
     for (const l of lifts) { const an = SS.analyzeLift(l.type, l.a, l.b, true); if (an.path) { SS.commitLift(an, l); G.lifts.push(l); } }
     for (const p of pistes) { const an = SS.analyzePiste(p.ctrl, p.width); if (an.pts) { SS.commitPiste(p.ctrl, an, p); G.pistes.push(p); } }
     for (const b of G.buildings) { b.queue = []; b.occ = 0; }
+    if (G.ae && SS.AE) SS.AE.rebuild();
     if (G.time > 9 * 3600) G.time = 8 * 3600;
     Net.rebuild();
     SS.Sim.startDay();
