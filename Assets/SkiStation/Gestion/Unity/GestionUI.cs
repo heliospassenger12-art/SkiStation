@@ -337,6 +337,7 @@ namespace SkiStation.GestionUnity
         {
             GUILayout.Label("<b>" + v.name + "</b>", title);
             GUILayout.Label(v.prof.name + " · " + Catalog.SKILL[v.skill] + (v.child ? " · enfant" : "") + (v.lodger ? " · en séjour" : " · à la journée") + (v.grp != null ? " · " + v.grp.name : "") + (v.mode != null ? " · " + (v.mode == "vtt" ? "VTT" : "randonnée") : ""), small);
+            if (v.clientId > 0) GUILayout.Label("🔁 Habitué depuis la saison " + v.loyalSince + " · " + v.visitNo + "e venue cette saison" + (v.pass ? " · 🎫 forfait saison" : "") + (v.fav != null ? " · piste préférée : " + v.fav : ""), small);
             Row("Décision", "<b>" + v.decision + "</b>"); if (v.reason != "") GUILayout.Label("<color=#aaa>" + v.reason + "</color>", small);
             Row("Satisfaction", Game.R(v.sat * 100) + " %"); Row("Faim / énergie", Game.R(v.hunger * 100) + " % / " + Game.R(v.energy * 100) + " %");
             Row("Descentes", v.runs + " · " + v.km.ToString("0.0") + " km"); Row("Dépenses", GMath.Eur(v.spent)); Row("Départ prévu", GMath.HHMM(v.leaveT));
@@ -364,6 +365,7 @@ namespace SkiStation.GestionUnity
                 Slider("Forfait journée", G.passPrice, 8, 80, v => Actions.Price("pass", v));
                 if (Game.Researched("night")) Slider("Forfait nocturne", G.nightPrice, 4, 40, v => Actions.Price("night", v));
                 if (Game.Researched("summer")) Slider("Forfait été", G.summerPass, 3, 40, v => Actions.Price("summer", v));
+                Slider("Forfait saison", Loyalty.PassPrice(), 100, 1500, v => G.seasonPassPrice = v);
                 if (Sim.Today != null) GUILayout.Label("<color=#aaa>Juste prix estimé du forfait pour ce domaine : " + GMath.Eur(Sim.Today.fair) + "</color>", small);
                 H("Salaires"); GUILayout.BeginHorizontal(); string[] wg = { "Serrés", "Standard", "Généreux" }; for (int i = 0; i < 3; i++) if (GUILayout.Button(wg[i], G.wage == i ? btnOn : GUI.skin.button)) Actions.Wage(i); GUILayout.EndHorizontal();
                 H("Entretien des remontées"); GUILayout.BeginHorizontal(); string[] mt = { "Minimal", "Normal", "Renforcé" }; for (int i = 0; i < 3; i++) if (GUILayout.Button(mt[i], G.maint == i ? btnOn : GUI.skin.button)) Actions.Maint(i); GUILayout.EndHorizontal();
@@ -411,7 +413,7 @@ namespace SkiStation.GestionUnity
         // ---------- exploitation ----------
         void OpsPanel()
         {
-            Tabs("Pisteurs", "Dameuses", "Hébergements", "Services");
+            Tabs("Pisteurs", "Dameuses", "Hébergements", "Services", "Clientèle");
             if (tab == "Pisteurs")
             {
                 var pi = Mgmt.PatrolInfo ?? Mgmt.SecurePistes();
@@ -433,6 +435,14 @@ namespace SkiStation.GestionUnity
                 var li = Mgmt.LodgingInfo;
                 if (li != null) for (int s = 0; s < 3; s++) Row(Catalog.SEG[s], "demande " + GMath.Num(li.pools[s]) + " · logés " + GMath.Num(li.served[s]) + " · lits " + GMath.Num(li.beds[s]));
                 foreach (var b in G.buildings.Where(x => x.Def.type == "lodging")) if (GUILayout.Button(b.Def.name + " — " + b.guests + "/" + Game.Bcap(b) + " · " + GMath.Eur(b.price) + " · ★ " + b.rating.ToString("0.0"))) { tools.Select(b); camCtl.Focus(b.x, b.z, 600); }
+            }
+            else if (tab == "Clientèle")
+            {
+                var ls = Loyalty.Stats();
+                Row("Habitués enregistrés", ls.clients + " groupes (" + ls.people + " personnes)"); Row("Très fidèles", ls.loyal.ToString()); Row("Forfaits saison " + G.year, ls.pass.ToString());
+                Row("Habitués présents aujourd'hui", ls.today.ToString()); Row("Venues par habitué", ls.avgVisits.ToString("0.0")); Row("Effet bouche-à-oreille", "×" + Loyalty.DemandMul().ToString("0.00"));
+                foreach (var c in ls.top) Row(Loyalty.Label(c) + (c.pass == G.year ? " 🎫" : ""), c.visits + (c.visits > 1 ? " venues" : " venue") + " · " + Game.R(c.loy * 100) + " % · " + (c.fav ?? "—"));
+                L("Les visiteurs contents deviennent des habitués : ils reviennent plusieurs fois dans la saison et d'une saison à l'autre, retournent sur leur piste préférée, et les plus fidèles achètent le forfait saison.");
             }
             else foreach (var b in G.buildings.Where(Mgmt.IsService)) if (GUILayout.Button(b.Def.name + " — " + b.visits + " clients · " + GMath.Eur(b.revenue) + " · ★ " + b.rating.ToString("0.0"))) { tools.Select(b); camCtl.Focus(b.x, b.z, 600); }
         }

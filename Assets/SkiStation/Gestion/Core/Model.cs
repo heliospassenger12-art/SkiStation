@@ -98,6 +98,7 @@ namespace SkiStation.Gestion
         public List<Loan> loans = new List<Loan>(); public Season season = new Season(), lastSeason; public Safety safety = new Safety(); public bool groomNight; public GroomReport groomReport; public int negDays;
         public string pending, lastEvent; public int olympicsDay1 = -1;
         public List<int> removedTrees = new List<int>();
+        public List<Client> clients = new List<Client>(); public int loyalSeq = 1; public double seasonPassPrice;
         public bool OlympicsOpened { get { return olympicsDay1 >= 0; } }
     }
 

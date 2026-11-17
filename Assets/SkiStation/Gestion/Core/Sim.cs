@@ -26,6 +26,7 @@ namespace SkiStation.Gestion
         public double tx, tz, wspeed = 1; public string then; public Building svc; public double until, waitStart, svcWait, restGain, skipFood, balked, qPen, remain;
         public string state0 = ""; public List<Edge> path; public Piste target, lastPiste; public Lift lift; public int veh; public Edge edge; public double s, fallAt = -1;
         public int dn, waits, apres; public bool pOnDone;
+        public int clientId, visitNo, loyalSince; public string fav; public bool pass; public Dictionary<string, int> pc = new Dictionary<string, int>();
     }
     public sealed class Rescue { public string kind; public double x, z, y, speed, t0; public Visitor v; public string phase; public Building post, src; public bool slow; public double sx, sz; }
     public sealed class Groomer { public double x, z, y, s, hx, hz = 1; public Building garage; public Piste piste; public string state; }
@@ -64,7 +65,7 @@ namespace SkiStation.Gestion
             double mk = 1 + (G.marketing.social > 0 ? 0.15 : 0) + (G.marketing.tv > 0 ? 0.35 : 0);
             double ev = G.@event != null && G.@event.day <= G.day ? Catalog.Event(G.@event.id).boost : 1;
             double rental = s.rental > 0 || G.summer ? 1 : 0.74;
-            double demand = bs * rep * cal * Weather.Def.demand * priceF * mk * ev * rental;
+            double demand = bs * rep * cal * Weather.Def.demand * priceF * mk * ev * rental * Loyalty.DemandMul();
             double lodgers = Mgmt.AllocateLodging(demand, cal, ev);
             double day = Game.R(Math.Min(demand, s.access));
             double total = Math.Min(1500, day + lodgers);
@@ -96,14 +97,15 @@ namespace SkiStation.Gestion
             bool comp = G.@event != null && G.@event.day <= G.day && Catalog.Event(G.@event.id).comp;
             var parkings = G.buildings.Where(b => b.Def.type == "parking" && b.open).ToList();
             bool hasKids = s.kids > 0, hasSchool = s.school > 0;
-            Action<Building, P2, bool, ProfileDef, Group> mk = (homeB, home, lodger, pr, grp) =>
+            Action<Building, P2, bool, ProfileDef, Group, ClientMember> mk = (homeB, home, lodger, pr, grp, mem) =>
             {
                 pr = pr ?? PickProfile(comp); double r = Rnd(); int skill = 0;
                 for (int i = 0; i < 4; i++) { r -= pr.skill[i]; if (r <= 0) { skill = i; break; } }
+                if (mem != null) skill = mem.s;
                 double arrive = grp != null && grp.arrive > 0 ? grp.arrive + Rnd() * 240 : lodger ? Tri(8.4, 9.0, 10.2) * 3600 : Tri(8.0, 9.2, 11.6) * 3600;
                 var v = new Visitor
                 {
-                    id = NextV++, name = Rand.Pick(Catalog.FIRST) + " " + (grp != null && grp.last != null ? grp.last : Rand.Pick(Catalog.LAST)), prof = pr, skill = skill, child = pr.child, color = Rand.Pick(COLORS),
+                    id = NextV++, name = (mem != null ? mem.f : Rand.Pick(Catalog.FIRST)) + " " + (grp != null && grp.last != null ? grp.last : Rand.Pick(Catalog.LAST)), prof = pr, skill = skill, child = pr.child, color = mem != null && mem.col != 0 ? mem.col : Rand.Pick(COLORS),
                     homeB = homeB, home = home, lodger = lodger, arriveT = arrive, leaveT = (lodger ? Rand.Range(15.6, 16.9) : Math.Min(17.0, Math.Max(arrive / 3600 + 3.5, Rand.Range(14.6, 17.0)))) * 3600,
                     hunger = Rand.Range(0.08, 0.35), energy = Rand.Range(0.85, 1), sat = 0.62, patience = Rand.Range(0.7, 1.4),
                     spend = lodger ? new[] { 0.72, 1.05, 1.85 }[SegOf(homeB)] * Rand.Range(0.85, 1.2) : pr.spend * Rand.Range(0.7, 1.4),
@@ -129,15 +131,30 @@ namespace SkiStation.Gestion
             {
                 var pr = PickProfile(comp); bool fam = pr.id == "famille" || pr.id == "enfant";
                 int n = Rnd() < (fam ? 0.15 : 0.45) ? 1 : 2 + (int)Math.Floor(Rnd() * (fam ? 3 : 4)); n = (int)Math.Min(n, max);
-                if (n < 2) { mk(homeB, home, lodger, pr.id == "enfant" ? PF("famille") : pr, null); return 1; }
+                if (n < 2) { mk(homeB, home, lodger, pr.id == "enfant" ? PF("famille") : pr, null, null); return 1; }
                 string last = Rand.Pick(Catalog.LAST);
                 var grp = new Group { id = NextV, fam = fam, last = fam ? last : null, name = fam ? "Famille " + last : "Groupe d'amis" };
                 int adults = fam ? Math.Min(n, Rnd() < 0.3 ? 1 : 2) : n;
-                for (int i = 0; i < n; i++) mk(homeB, home, lodger, fam ? PF(i < adults ? "famille" : "enfant") : pr, grp);
+                for (int i = 0; i < n; i++) mk(homeB, home, lodger, fam ? PF(i < adults ? "famille" : "enfant") : pr, grp, null);
                 return n;
             };
-            int k = 0;
-            for (int i = 0; i < d.day;)
+            // les habitués d'abord : mêmes membres, ils prennent leurs places parmi les visiteurs à la journée
+            int k = 0, ret = 0;
+            if (d.day > 0) foreach (var c in Loyalty.PickToday(d.day))
+                {
+                    Building hb = null; P2 home = Const.ARRIVAL; if (parkings.Count > 0) { hb = parkings[k % parkings.Count]; home = new P2(hb.x, hb.z); k++; }
+                    int n0 = Arrivals.Count; bool many = c.members.Count > 1;
+                    var grp = new Group { id = NextV, fam = c.fam, last = c.last, name = c.fam ? "Famille " + c.last : "Groupe d'amis" };
+                    foreach (var m in c.members) mk(hb, home, false, Catalog.PROFILES.FirstOrDefault(p => p.id == m.p) ?? PF("famille"), grp, m);
+                    for (int i = n0; i < Arrivals.Count; i++)
+                    {
+                        var v = Arrivals[i]; v.clientId = c.id; v.visitNo = c.vs + 1; v.fav = c.fav; v.loyalSince = c.since;
+                        if (!many) v.grp = null;
+                        if (c.pass == G.year) { v.pass = true; v.hasPass = true; }
+                    }
+                    ret += c.members.Count;
+                }
+            for (int i = ret; i < d.day;)
             {
                 Building hb = null; P2 home = Const.ARRIVAL;
                 if (parkings.Count > 0) { hb = parkings[k % parkings.Count]; home = new P2(hb.x, hb.z); k++; }
@@ -347,6 +364,7 @@ namespace SkiStation.Gestion
                     int dd = p.diff - v.skill;
                     double sc = (dd == 0 ? 1 : dd == -1 ? 0.7 : dd == 1 ? 0.35 : 0.3) + Weather.Quality(p, v.skill) * 0.6 - Math.Min(1, p.on / (p.len * p.width / 500)) * 0.5 - t1 / 3600 * 0.7 + Rnd() * 0.55;
                     if (p == v.lastPiste) sc -= 0.25;
+                    if (v.fav != null && p.name == v.fav) sc += 0.3;
                     if (grp != null && p.diff > grp.maxDiff) sc -= 0.9;
                     if (v.prof.id == "contemplatif" || v.prof.id == "sportif") sc += (p.topAlt - 1650) / 2500 * 0.3;
                     if (sc > bsc) { bsc = sc; best = p; }
@@ -677,7 +695,7 @@ namespace SkiStation.Gestion
                             if (crowd > 0.8 && Rnd() < 0.2) Think(v, "Trop de monde sur " + p.name, "Pistes surchargées", -0.02);
                             if (dd > 1) Think(v, p.name + " est trop difficile pour moi", "Pistes inadaptées au niveau", -0.06);
                             v.energy -= e.len / 1000 * (0.03 + 0.016 * p.diff + (dd > 0 ? 0.03 : 0)); v.km += e.len / 1000;
-                            if (e.to == p.nb) v.runs++;
+                            if (e.to == p.nb) { v.runs++; int pc; v.pc.TryGetValue(p.name, out pc); v.pc[p.name] = pc + 1; }
                             ArriveNode(v, e.to);
                         }
                         break;
@@ -727,6 +745,7 @@ namespace SkiStation.Gestion
             {
                 var v = Arrivals[0]; Arrivals.RemoveAt(0); v.state = "walk"; v.y = Game.T.GetH(v.x, v.z); v.dn = 0;
                 if (v.lodger && !v.hasPass) { v.hasPass = true; double pr = Game.PassNow() * (v.child ? 0.6 : 0.88) * YieldMul(); Game.Earn(pr, "Forfaits"); v.spent += pr; }
+                if (v.clientId > 0) Think(v, v.pass ? "Forfait saison en poche : je reviens skier !" : "Content de revenir à " + G.name + " (" + v.visitNo + "e venue cette saison)", null, 0.02);
                 Visitors.Add(v); Present++; G.visitorsToday++; G.totalVisitors++; Decide(v);
             }
             if (G.time - LastTouch > 600 || G.time < LastTouch)
