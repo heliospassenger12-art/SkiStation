@@ -1,0 +1,81 @@
+// Stub minimal de l'API Unity pour vérifier la compilation hors moteur (signatures seulement).
+using System; using System.Collections.Generic;
+namespace UnityEngine {
+  public class Object { public string name; public HideFlags hideFlags; public static void Destroy(Object o){} public static T FindFirstObjectByType<T>() where T:Object{return null;} public static T FindObjectOfType<T>() where T:Object{return null;} public static T[] FindObjectsByType<T>(FindObjectsSortMode m) where T:Object{return null;} public static T[] FindObjectsOfType<T>() where T:Object{return null;} public static bool operator true(Object o){return o!=null;} public static bool operator false(Object o){return o==null;} }
+  public enum HideFlags{None} public enum FindObjectsSortMode{None}
+  public class Component : Object { public GameObject gameObject; public Transform transform; public string tag; public T GetComponent<T>(){return default(T);} public T AddComponent<T>() where T:Component{return null;} }
+  public class Behaviour : Component { public bool enabled; }
+  public class MonoBehaviour : Behaviour { public void Invoke(string n,float t){} public void StartCoroutine(System.Collections.IEnumerator e){} }
+  public class GameObject : Object { public GameObject(){} public GameObject(string n){} public Transform transform; public string tag; public T AddComponent<T>() where T:Component{return null;} public T GetComponent<T>(){return default(T);} public void SetActive(bool b){} public static GameObject CreatePrimitive(PrimitiveType t){return null;} public static GameObject Find(string n){return null;} }
+  public enum PrimitiveType{Sphere,Capsule,Cylinder,Cube,Plane,Quad}
+  public class Transform : Component, System.Collections.IEnumerable { public Vector3 position, localPosition, localScale, forward, right, up; public Quaternion rotation, localRotation; public Transform parent; public void SetParent(Transform p, bool w=true){} public void SetPositionAndRotation(Vector3 p, Quaternion q){} public void LookAt(Vector3 p){} public Transform Find(string n){return null;} public System.Collections.IEnumerator GetEnumerator(){return null;} }
+  public struct Vector2 { public float x,y; public Vector2(float x,float y){this.x=x;this.y=y;} public float sqrMagnitude{get{return 0;}} public static Vector2 zero; public static implicit operator Vector2(Vector3 v){return new Vector2(v.x,v.y);} }
+  public struct Vector3 { public float x,y,z; public Vector3(float x,float y,float z){this.x=x;this.y=y;this.z=z;} public static Vector3 zero, one, up, forward, right; public Vector3 normalized{get{return this;}} public float magnitude{get{return 0;}} public float sqrMagnitude{get{return 0;}}
+    public static Vector3 operator+(Vector3 a,Vector3 b){return a;} public static Vector3 operator-(Vector3 a,Vector3 b){return a;} public static Vector3 operator-(Vector3 a){return a;} public static Vector3 operator*(Vector3 a,float b){return a;} public static Vector3 operator*(float b,Vector3 a){return a;} public static Vector3 operator/(Vector3 a,float b){return a;} public static bool operator==(Vector3 a,Vector3 b){return true;} public static bool operator!=(Vector3 a,Vector3 b){return false;} public override bool Equals(object o){return false;} public override int GetHashCode(){return 0;} }
+  public struct Quaternion { public static Quaternion identity; public static Quaternion Euler(float x,float y,float z){return identity;} public static Quaternion operator*(Quaternion a,Quaternion b){return a;} public static Vector3 operator*(Quaternion a,Vector3 b){return b;} }
+  public struct Color { public float r,g,b,a; public Color(float r,float g,float b,float a=1){this.r=r;this.g=g;this.b=b;this.a=a;} public static Color white, magenta, black; public static Color Lerp(Color a,Color b,float t){return a;} }
+  public struct Rect { public float x,y,width,height,yMax; public Rect(float x,float y,float w,float h){this.x=x;this.y=y;width=w;height=h;yMax=0;} public bool Contains(Vector2 p){return false;} }
+  public struct Matrix4x4 { public float m03,m13,m23; public static Matrix4x4 TRS(Vector3 p,Quaternion q,Vector3 s){return default(Matrix4x4);} public static Matrix4x4 operator*(Matrix4x4 a,Matrix4x4 b){return a;} }
+  public struct Ray {} public struct RaycastHit { public Vector3 point; public Collider collider; }
+  public static class Physics { public static bool Raycast(Ray r,out RaycastHit h,float d){h=default(RaycastHit);return false;} }
+  public static class Mathf { public const float PI=3.14f, Rad2Deg=57f, Deg2Rad=0.01f; public static float Min(float a,float b){return a;} public static int Min(int a,int b){return a;} public static float Max(float a,float b){return a;} public static int Max(int a,int b){return a;} public static float Clamp(float v,float a,float b){return v;} public static int Clamp(int v,int a,int b){return v;} public static float Clamp01(float v){return v;} public static float Sin(float v){return v;} public static float Atan2(float a,float b){return a;} public static float Pow(float a,float b){return a;} public static float Lerp(float a,float b,float t){return a;} public static float PerlinNoise(float a,float b){return a;} public static int CeilToInt(float f){return 0;} public static int RoundToInt(float f){return 0;} }
+  public class Mesh : Object { public Mesh(){} public Vector3[] vertices; public Vector3[] normals; public Vector2[] uv; public int[] triangles; public int subMeshCount; public void Clear(){} public void MarkDynamic(){} public void SetTriangles(List<int> t,int s,bool b=true){} public void SetTriangles(int[] t,int s){} public void SetVertices(List<Vector3> v){} public void RecalculateNormals(){} public void RecalculateBounds(){} }
+  public class MeshFilter : Component { public Mesh sharedMesh, mesh; }
+  public class Renderer : Component { public Material sharedMaterial; public Material[] sharedMaterials; public UnityEngine.Rendering.ShadowCastingMode shadowCastingMode; public bool receiveShadows, enabled; }
+  public class MeshRenderer : Renderer {}
+  public class Collider : Component { public bool isTrigger, enabled; } public class MeshCollider : Collider { public Mesh sharedMesh; }
+  public class LineRenderer : Renderer { public int positionCount; public float widthMultiplier; public void SetPosition(int i,Vector3 p){} }
+  public class TrailRenderer : Renderer { public float time,startWidth,endWidth,minVertexDistance; public Color startColor,endColor; public bool emitting; }
+  public class Shader : Object { public static Shader Find(string n){return null;} }
+  public class Material : Object { public Material(Shader s){} public Color color; public bool enableInstancing; public bool HasProperty(string n){return false;} public void SetFloat(string n,float v){} }
+  public class Camera : Behaviour { public static Camera main; public float nearClipPlane, farClipPlane, fieldOfView; public CameraClearFlags clearFlags; public Color backgroundColor; public Ray ScreenPointToRay(Vector3 p){return default(Ray);} }
+  public enum CameraClearFlags{Skybox,SolidColor}
+  public class AudioListener : Behaviour {}
+  public class Light : Behaviour { public LightType type; public LightShadows shadows; public float shadowStrength, intensity; public Color color; }
+  public enum LightType{Directional} public enum LightShadows{None,Hard,Soft}
+  public static class QualitySettings { public static float shadowDistance; }
+  public static class RenderSettings { public static Color ambientLight, fogColor; public static bool fog; public static FogMode fogMode; public static float fogStartDistance, fogEndDistance; }
+  public enum FogMode{Linear}
+  public static class Graphics { public static void DrawMeshInstanced(Mesh m,int s,Material mat,Matrix4x4[] a,int n){} public static void DrawMeshInstanced(Mesh m,int s,Material mat,Matrix4x4[] a,int n,MaterialPropertyBlock b,UnityEngine.Rendering.ShadowCastingMode c,bool r){} }
+  public class MaterialPropertyBlock{}
+  public static class Time { public static float unscaledDeltaTime, unscaledTime, time; }
+  public static class Screen { public static int width, height; }
+  public static class Input { public static bool GetKey(KeyCode k){return false;} public static bool GetKeyDown(KeyCode k){return false;} public static bool GetMouseButton(int b){return false;} public static bool GetMouseButtonDown(int b){return false;} public static Vector3 mousePosition; public static Vector2 mouseScrollDelta; }
+  public enum KeyCode{W,A,S,D,Z,Q,E,R,UpArrow,DownArrow,LeftArrow,RightArrow,LeftShift,Escape,Return,KeypadEnter,Backspace,Space,Alpha1,Alpha2,Alpha3}
+  public static class ColorUtility { public static bool TryParseHtmlString(string s,out Color c){c=default(Color);return false;} }
+  public static class PlayerPrefs { public static bool HasKey(string k){return false;} public static string GetString(string k){return null;} public static void SetString(string k,string v){} public static void Save(){} }
+  public static class Application { public static string persistentDataPath; }
+  public static class Debug { public static void Log(object o){} public static void LogWarning(object o){} public static void LogException(Exception e){} }
+  public static class Random { public static int Range(int a,int b){return a;} }
+  public class RequireComponent : Attribute { public RequireComponent(Type t){} }
+  public class RuntimeInitializeOnLoadMethodAttribute : Attribute { public RuntimeInitializeOnLoadMethodAttribute(RuntimeInitializeLoadType t){} } public enum RuntimeInitializeLoadType{AfterSceneLoad}
+  public class GUIContent { public static GUIContent none; }
+  public class RectOffset { public RectOffset(int a,int b,int c,int d){} }
+  public class GUIStyleState { public Color textColor; }
+  public class GUIStyle { public GUIStyle(){} public GUIStyle(GUIStyle o){} public int fontSize; public bool richText, wordWrap; public FontStyle fontStyle; public RectOffset padding; public GUIStyleState normal; }
+  public enum FontStyle{Normal,Bold}
+  public class GUISkin { public GUIStyle label, button, toggle, textField, box; }
+  public class GUILayoutOption {}
+  public static class GUI { public static GUISkin skin; public static bool enabled; public static void Box(Rect r,GUIContent c,GUIStyle s){} public static void Label(Rect r,string t,GUIStyle s){} public static bool Button(Rect r,string t,GUIStyle s){return false;} public static bool Button(Rect r,string t){return false;} }
+  public static class GUIUtility { public static int keyboardControl; public static string systemCopyBuffer; }
+  public static class GUILayout { public static bool Button(string t,params GUILayoutOption[] o){return false;} public static bool Button(string t,GUIStyle s,params GUILayoutOption[] o){return false;} public static void Label(string t,params GUILayoutOption[] o){} public static void Label(string t,GUIStyle s,params GUILayoutOption[] o){} public static bool Toggle(bool v,string t,params GUILayoutOption[] o){return v;} public static string TextField(string t,params GUILayoutOption[] o){return t;} public static string TextField(string t,int max,params GUILayoutOption[] o){return t;} public static float HorizontalSlider(float v,float a,float b,params GUILayoutOption[] o){return v;}
+    public static void BeginHorizontal(params GUILayoutOption[] o){} public static void EndHorizontal(){} public static void BeginArea(Rect r){} public static void EndArea(){} public static Vector2 BeginScrollView(Vector2 v,params GUILayoutOption[] o){return v;} public static void EndScrollView(){} public static void FlexibleSpace(){} public static void Space(float f){} public static GUILayoutOption Width(float f){return null;} public static GUILayoutOption Height(float f){return null;} }
+  public class HeaderAttribute : Attribute { public HeaderAttribute(string s){} }
+}
+namespace UnityEngine.Rendering { public enum ShadowCastingMode{Off,On} }
+namespace UnityEngine.SceneManagement { public struct Scene { public string name; } public static class SceneManager { public static Scene GetActiveScene(){return default(Scene);} } }
+namespace SkiStation { public static class AlpineRockMaterial { public static UnityEngine.Material Shared; } public sealed class AlpineForestVisual262 : UnityEngine.MonoBehaviour {} }
+namespace SkiStation.Arcade {
+  using UnityEngine;
+  public sealed class ArcadeSkiController : MonoBehaviour { public void BeginAt(Vector3 p,Quaternion q){} public void StopPlaying(){} }
+  public sealed class ArcadeSkiSession : MonoBehaviour { public ArcadeSkiController player; public Camera playerCamera, managementCamera; public MonoBehaviour managementCameraControls; public bool IsPlaying{get;private set;} public bool EnterWorld(Vector3 p,Quaternion q){return true;} public void ExitWorld(){} }
+  public static class ArcadeSkierRig { public static void Build(Transform a,ArcadeSkiController c,Material j,Material d,Material s){} }
+  public sealed class ArcadeBigAirLanding : MonoBehaviour { public ArcadeSkiController skier; }
+  public sealed class ArcadeComboHUD : MonoBehaviour { public ArcadeSkiController skier; }
+  public sealed class ArcadeTrickNameHUD : MonoBehaviour { public ArcadeSkiController skier; }
+  public sealed class ArcadeLandingCelebrationHUD : MonoBehaviour { }
+  public sealed class ArcadeSkiTrickVisual : MonoBehaviour { public ArcadeSkiController controller; public Transform bodyVisual, leftSki, rightSki; }
+  public sealed class ArcadeCarvingVisual : MonoBehaviour { public ArcadeSkiController controller; public Transform body, leftSki, rightSki; public TrailRenderer leftTrack, rightTrack; }
+  public sealed class ArcadeThirdPersonCamera : MonoBehaviour { public Transform target; public ArcadeSkiController controller; public void SnapBehind(){} }
+  public sealed class ArcadePeripheralSpeedEffect : MonoBehaviour { public ArcadeSkiController controller; public bool showBlurWhenSupported; }
+}

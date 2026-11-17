@@ -1,0 +1,218 @@
+// FICHIER GÉNÉRÉ depuis Web/js/data.js (script gen_catalog.js) : ne pas modifier à la main.
+// Catalogues de la gestion : remontées, bâtiments, recherche, météo, profils de visiteurs, prêts, noms.
+namespace SkiStation.Gestion
+{
+    public sealed class LiftDef
+    {
+        public string id;
+        public string name;
+        public string kind;
+        public int tier;
+        public int seats;
+        public double maxLen;
+        public double speed;
+        public double spacing;
+        public double cost;
+        public double pylonH;
+        public double comfort;
+        public double wind;
+        public bool bubble;
+        public bool big;
+    }
+    public sealed class BuildingDef
+    {
+        public string id;
+        public string name;
+        public string cat;
+        public string type;
+        public double cost;
+        public double upkeep;
+        public double cap;
+        public double price;
+        public double dur;
+        public double quality;
+        public double r;
+        public string look;
+        public bool road;
+        public bool alt;
+        public bool eve;
+        public string research;
+        public double prestige;
+        public double attract;
+        public double fun;
+        public string tags;
+        public double summer;
+        public int seg;
+        public int stars;
+        public bool hb;
+        public string desc;
+        public bool hasPrice;
+    }
+    public sealed class ResearchDef
+    {
+        public string cat;
+        public string id;
+        public string name;
+        public double cost;
+        public int days;
+        public string desc;
+        public int tier;
+        public string req;
+    }
+    public sealed class WeatherDef
+    {
+        public string id;
+        public string name;
+        public string icon;
+        public double demand;
+        public int sky;
+        public double snow;
+        public double light;
+        public double warm;
+        public double wind;
+        public bool rain;
+    }
+    public sealed class ProfileDef
+    {
+        public string id;
+        public string name;
+        public double w;
+        public double spend;
+        public string tags;
+        public bool child;
+        public double[] skill;
+    }
+    public sealed class LoanDef
+    {
+        public string id;
+        public string name;
+        public double amount;
+        public int days;
+        public double rate;
+    }
+
+    public static partial class Catalog
+    {
+        public static readonly string[] DIFF_NAMES = { "Verte", "Bleue", "Rouge", "Noire" };
+        public static readonly string[] DIFF_COLORS = { "#2fae4e", "#2b78e4", "#e03a32", "#1c1c22" };
+        public static readonly string[] SKILL = { "Débutant", "Intermédiaire", "Confirmé", "Expert" };
+        public static readonly LiftDef[] LIFTS = {
+            new LiftDef { id = "tow_classic", name = "Téléski classique", kind = "tow", tier = 0, seats = 1, maxLen = 1000, speed = 3.5, spacing = 16, cost = 42000, pylonH = 8, comfort = 0.3, wind = 95 },
+            new LiftDef { id = "chair_fixed_2", name = "Télésiège fixe 2 places", kind = "chair", tier = 0, seats = 2, maxLen = 1500, speed = 4, spacing = 26, cost = 80000, pylonH = 12, comfort = 0.5, wind = 70 },
+            new LiftDef { id = "carpet", name = "Tapis roulant débutants", kind = "carpet", tier = 1, seats = 1, maxLen = 200, speed = 1.2, spacing = 5, cost = 38000, pylonH = 0, comfort = 0.7, wind = 120 },
+            new LiftDef { id = "tow_tbar", name = "Téléski à archets 2 places", kind = "tow", tier = 1, seats = 2, maxLen = 1100, speed = 3.5, spacing = 17, cost = 72000, pylonH = 8, comfort = 0.3, wind = 95 },
+            new LiftDef { id = "chair_fixed_4", name = "Télésiège fixe 4 places", kind = "chair", tier = 1, seats = 4, maxLen = 1700, speed = 4.2, spacing = 30, cost = 150000, pylonH = 12, comfort = 0.55, wind = 70 },
+            new LiftDef { id = "chair_det_4", name = "Télésiège débrayable 4 places", kind = "chair", tier = 2, seats = 4, maxLen = 2200, speed = 5.5, spacing = 27, cost = 320000, pylonH = 13, comfort = 0.75, wind = 75 },
+            new LiftDef { id = "chair_det_6", name = "Télésiège débrayable 6 places", kind = "chair", tier = 3, seats = 6, maxLen = 2600, speed = 6, spacing = 28, cost = 520000, pylonH = 13, comfort = 0.8, wind = 75 },
+            new LiftDef { id = "gondola_8", name = "Télécabine 8 places", kind = "gondola", tier = 3, seats = 8, maxLen = 3400, speed = 6, spacing = 32, cost = 880000, pylonH = 16, comfort = 0.9, wind = 65 },
+            new LiftDef { id = "bubble_8", name = "Télésiège à bulles 8 places", kind = "chair", tier = 4, seats = 8, maxLen = 3000, speed = 6, spacing = 30, cost = 800000, pylonH = 13, comfort = 0.95, wind = 85, bubble = true },
+            new LiftDef { id = "gondola_10", name = "Télécabine 10 places", kind = "gondola", tier = 4, seats = 10, maxLen = 4000, speed = 6.5, spacing = 30, cost = 1200000, pylonH = 16, comfort = 0.95, wind = 70 },
+            new LiftDef { id = "cablecar", name = "Téléphérique 80 places", kind = "cablecar", tier = 5, seats = 80, maxLen = 5200, speed = 10, spacing = 0, cost = 2900000, pylonH = 34, comfort = 0.9, wind = 60 },
+            new LiftDef { id = "three_s", name = "Télécabine 3S 30 places", kind = "gondola", tier = 6, seats = 30, maxLen = 6000, speed = 8, spacing = 75, cost = 5100000, pylonH = 30, comfort = 1, wind = 105, big = true },
+            new LiftDef { id = "funicular", name = "Funiculaire 120 places", kind = "funi", tier = 6, seats = 120, maxLen = 4500, speed = 10, spacing = 0, cost = 5600000, pylonH = 0, comfort = 1, wind = 999 }
+        };
+        public static readonly BuildingDef[] BUILDINGS = {
+            new BuildingDef { id = "ticket", name = "Billetterie", cat = "Accueil", type = "ticket", cost = 30000, upkeep = 260, cap = 16, r = 14, look = "kiosk", seg = -1, desc = "Vente des forfaits. Plus de guichets = moins d'attente à l'arrivée.", hasPrice = false },
+            new BuildingDef { id = "parking", name = "Parking 200 places", cat = "Accueil", type = "parking", cost = 45000, upkeep = 120, cap = 200, r = 38, look = "parking", road = true, seg = -1, desc = "Accueille 200 visiteurs à la journée. Doit être desservi par une route.", hasPrice = false },
+            new BuildingDef { id = "bus", name = "Gare routière", cat = "Accueil", type = "parking", cost = 90000, upkeep = 380, cap = 320, r = 26, look = "bus", road = true, seg = -1, desc = "Navettes et autocars : 320 visiteurs à la journée.", hasPrice = false },
+            new BuildingDef { id = "snack", name = "Snack / crêperie", cat = "Restauration", type = "food", cost = 28000, upkeep = 330, cap = 14, price = 9, dur = 18, quality = 0.45, r = 10, look = "kiosk", alt = true, seg = -1, desc = "Petite faim, service rapide. Peut être posé en altitude.", hasPrice = true },
+            new BuildingDef { id = "restaurant", name = "Restaurant self-service", cat = "Restauration", type = "food", cost = 85000, upkeep = 900, cap = 60, price = 17, dur = 40, quality = 0.6, r = 20, look = "chalet", seg = -1, desc = "Grande capacité au pied des pistes.", hasPrice = true },
+            new BuildingDef { id = "alt_restaurant", name = "Restaurant d'altitude", cat = "Restauration", type = "food", cost = 140000, upkeep = 1150, cap = 50, price = 24, dur = 45, quality = 0.8, r = 20, look = "chalet_stone", alt = true, seg = -1, desc = "Terrasse panoramique : très apprécié, à relier au domaine par piste ou remontée.", hasPrice = true },
+            new BuildingDef { id = "gastro", name = "Table gastronomique", cat = "Restauration", type = "food", cost = 260000, upkeep = 1900, cap = 36, price = 58, dur = 70, quality = 1, r = 18, look = "chalet_lux", eve = true, research = "luxury", prestige = 4, seg = -1, desc = "Clientèle premium, fort prestige.", hasPrice = true },
+            new BuildingDef { id = "pizzeria", name = "Pizzeria familiale", cat = "Restauration", type = "food", cost = 70000, upkeep = 620, cap = 45, price = 14, dur = 35, quality = 0.55, r = 16, look = "chalet", eve = true, seg = -1, desc = "Abordable et rapide, ouverte midi et soir : parfaite pour les familles.", hasPrice = true },
+            new BuildingDef { id = "savoyard", name = "Restaurant savoyard", cat = "Restauration", type = "food", cost = 125000, upkeep = 980, cap = 40, price = 27, dur = 55, quality = 0.78, r = 17, look = "chalet_stone", eve = true, seg = -1, desc = "Fondues et raclettes : le dîner préféré des résidents.", hasPrice = true },
+            new BuildingDef { id = "bar", name = "Bar d'après-ski", cat = "Restauration", type = "drink", cost = 60000, upkeep = 520, cap = 40, price = 8, dur = 30, quality = 0.6, r = 14, look = "chalet", alt = true, eve = true, seg = -1, desc = "Boissons chaudes et ambiance. Redonne de l'énergie et du moral.", hasPrice = true },
+            new BuildingDef { id = "rental", name = "Location de matériel", cat = "Commerces", type = "rental", cost = 55000, upkeep = 420, cap = 16, price = 24, dur = 10, quality = 0.6, r = 15, look = "shop", seg = -1, desc = "Attire les visiteurs sans équipement (+35 % de demande).", hasPrice = true },
+            new BuildingDef { id = "shop", name = "Magasin de sport", cat = "Commerces", type = "shop", cost = 50000, upkeep = 380, cap = 14, price = 32, dur = 14, quality = 0.6, r = 14, look = "shop", seg = -1, desc = "Vêtements, souvenirs et accessoires.", hasPrice = true },
+            new BuildingDef { id = "gite", name = "Gîte d'étape (50 lits)", cat = "Hébergement", type = "lodging", cost = 90000, upkeep = 380, cap = 50, price = 30, quality = 0.4, r = 18, look = "chalet", road = true, seg = 0, stars = 1, desc = "Dortoirs et petits prix : attire les jeunes et les budgets serrés.", hasPrice = true },
+            new BuildingDef { id = "residence", name = "Résidence de tourisme (120 lits)", cat = "Hébergement", type = "lodging", cost = 360000, upkeep = 1100, cap = 120, price = 52, quality = 0.52, r = 26, look = "hotel", road = true, seg = 0, stars = 2, desc = "Appartements en location : beaucoup de lits, peu de services.", hasPrice = true },
+            new BuildingDef { id = "hotel2", name = "Hôtel ★★ (70 lits)", cat = "Hébergement", type = "lodging", cost = 210000, upkeep = 950, cap = 70, price = 64, quality = 0.5, r = 22, look = "hotel", road = true, seg = 0, stars = 2, desc = "Hôtel simple et fonctionnel.", hasPrice = true },
+            new BuildingDef { id = "chalets", name = "Hameau de chalets (40 lits)", cat = "Hébergement", type = "lodging", cost = 120000, upkeep = 500, cap = 40, price = 68, quality = 0.6, r = 26, look = "chalets", road = true, seg = 1, stars = 3, desc = "Chalets indépendants, très demandés par les familles.", hasPrice = true },
+            new BuildingDef { id = "hotel", name = "Hôtel ★★★ (90 lits)", cat = "Hébergement", type = "lodging", cost = 300000, upkeep = 1400, cap = 90, price = 95, quality = 0.7, r = 24, look = "hotel", road = true, seg = 1, stars = 3, desc = "Hébergement confortable au cœur de la station.", hasPrice = true },
+            new BuildingDef { id = "club", name = "Club de vacances (220 lits)", cat = "Hébergement", type = "lodging", cost = 880000, upkeep = 3600, cap = 220, price = 105, quality = 0.68, r = 34, look = "palace", road = true, seg = 1, stars = 3, hb = true, desc = "Formule tout compris pour les familles : demi-pension incluse d'office.", hasPrice = true },
+            new BuildingDef { id = "hotel4", name = "Hôtel ★★★★ (110 lits)", cat = "Hébergement", type = "lodging", cost = 560000, upkeep = 2400, cap = 110, price = 155, quality = 0.85, r = 26, look = "hotel", road = true, prestige = 3, seg = 2, stars = 4, desc = "Clientèle aisée : exige un domaine prestigieux pour se remplir.", hasPrice = true },
+            new BuildingDef { id = "palace", name = "Palace ★★★★★ (140 lits)", cat = "Hébergement", type = "lodging", cost = 950000, upkeep = 4200, cap = 140, price = 260, quality = 1, r = 30, look = "palace", road = true, research = "luxury", prestige = 8, seg = 2, stars = 5, desc = "Le sommet du luxe. Ne se remplit que si le prestige de la station suit.", hasPrice = true },
+            new BuildingDef { id = "luxchalet", name = "Chalet de prestige (10 lits)", cat = "Hébergement", type = "lodging", cost = 240000, upkeep = 650, cap = 10, price = 390, quality = 1, r = 16, look = "chalet_lux", road = true, research = "luxury", prestige = 2, seg = 2, stars = 5, desc = "Chalet privatif avec majordome : peu de lits, tarif très élevé.", hasPrice = true },
+            new BuildingDef { id = "refuge", name = "Refuge d'altitude (20 lits)", cat = "Hébergement", type = "lodging", cost = 90000, upkeep = 350, cap = 20, price = 58, quality = 0.6, r = 13, look = "chalet_stone", alt = true, research = "nordic", prestige = 2, seg = 0, stars = 1, desc = "Nuit en montagne pour randonneurs et skieurs de randonnée.", hasPrice = true },
+            new BuildingDef { id = "school", name = "École de ski", cat = "École & enfants", type = "school", cost = 70000, upkeep = 300, cap = 6, price = 42, r = 16, look = "school", seg = -1, desc = "Cours collectifs et individuels. Chaque moniteur encadre 8 élèves.", hasPrice = true },
+            new BuildingDef { id = "pioupiou", name = "Jardin des Piou-Piou", cat = "École & enfants", type = "kids", cost = 55000, upkeep = 260, cap = 30, price = 36, r = 34, look = "garden", seg = -1, desc = "Espace enfants clôturé avec tapis et arches. Indispensable aux familles.", hasPrice = true },
+            new BuildingDef { id = "rescue", name = "Poste de secours", cat = "Sécurité", type = "rescue", cost = 60000, upkeep = 640, cap = 4, r = 12, look = "rescue", alt = true, seg = -1, desc = "Base des pisteurs-secouristes (effectif réglable). Ils sécurisent les pistes le matin et interviennent sur les accidents.", hasPrice = false },
+            new BuildingDef { id = "heliport", name = "Héliport de secours", cat = "Sécurité", type = "heli", cost = 280000, upkeep = 1500, cap = 1, r = 22, look = "heli", research = "heli", prestige = 3, seg = -1, desc = "Évacuation héliportée des accidents graves.", hasPrice = false },
+            new BuildingDef { id = "garage", name = "Garage à dameuses", cat = "Exploitation", type = "garage", cost = 110000, upkeep = 700, cap = 2, r = 20, look = "garage", seg = -1, desc = "Abrite jusqu'à 6 dameuses (2 fournies). Chaque machine prépare environ 6 km de pistes par soirée.", hasPrice = false },
+            new BuildingDef { id = "snowpark", name = "Snowpark", cat = "Loisirs", type = "activity", cost = 90000, upkeep = 450, cap = 30, price = 0, dur = 35, quality = 0.8, r = 40, look = "snowpark", alt = true, research = "snowpark", attract = 0.05, fun = 0.1, tags = "sportif", seg = -1, desc = "Modules et big air. Attire les jeunes et les sportifs.", hasPrice = true },
+            new BuildingDef { id = "luge", name = "Piste de luge", cat = "Loisirs", type = "activity", cost = 48000, upkeep = 220, cap = 24, price = 9, dur = 30, quality = 0.7, r = 26, look = "luge", attract = 0.03, fun = 0.08, tags = "famille", seg = -1, desc = "Idéal pour les familles et l'après-ski.", hasPrice = true },
+            new BuildingDef { id = "rink", name = "Patinoire", cat = "Loisirs", type = "activity", cost = 120000, upkeep = 520, cap = 40, price = 11, dur = 40, quality = 0.7, r = 28, look = "rink", attract = 0.03, fun = 0.07, tags = "famille", seg = -1, desc = "Activité de fin de journée au village.", hasPrice = true },
+            new BuildingDef { id = "nordic", name = "Centre nordique", cat = "Loisirs", type = "activity", cost = 80000, upkeep = 380, cap = 40, price = 14, dur = 80, quality = 0.7, r = 22, look = "chalet", research = "nordic", attract = 0.04, fun = 0.07, tags = "contemplatif", summer = 60, seg = -1, desc = "Ski de fond, raquettes et randonnée.", hasPrice = true },
+            new BuildingDef { id = "dogs", name = "Chiens de traîneau", cat = "Loisirs", type = "activity", cost = 65000, upkeep = 420, cap = 12, price = 38, dur = 45, quality = 0.85, r = 22, look = "dogs", research = "nordic", attract = 0.03, fun = 0.1, tags = "famille", seg = -1, desc = "Balades en traîneau très demandées.", hasPrice = true },
+            new BuildingDef { id = "paraglide", name = "Base de parapente", cat = "Loisirs", type = "activity", cost = 70000, upkeep = 350, cap = 8, price = 75, dur = 40, quality = 0.9, r = 16, look = "paraglide", alt = true, research = "summer", prestige = 1, attract = 0.03, fun = 0.12, tags = "sportif", summer = 90, seg = -1, desc = "Vols biplace depuis les hauteurs.", hasPrice = true },
+            new BuildingDef { id = "spa", name = "Centre aqualudique & spa", cat = "Loisirs", type = "activity", cost = 420000, upkeep = 1700, cap = 80, price = 26, dur = 70, quality = 0.9, r = 30, look = "spa", research = "luxury", prestige = 3, attract = 0.06, fun = 0.1, tags = "contemplatif", summer = 150, seg = -1, desc = "Détente après le ski, ouvert toute l'année.", hasPrice = true },
+            new BuildingDef { id = "culture", name = "Musée de la montagne", cat = "Loisirs", type = "activity", cost = 150000, upkeep = 480, cap = 40, price = 9, dur = 45, quality = 0.7, r = 20, look = "culture", research = "summer", prestige = 2, attract = 0.02, fun = 0.05, tags = "contemplatif", summer = 70, seg = -1, desc = "Activité culturelle et familiale.", hasPrice = true },
+            new BuildingDef { id = "stage", name = "Scène de concerts", cat = "Loisirs", type = "activity", cost = 180000, upkeep = 600, cap = 150, price = 12, dur = 60, quality = 0.8, r = 26, look = "stage", research = "events", prestige = 2, attract = 0.04, fun = 0.1, tags = "fetard", seg = -1, desc = "Concerts d'après-ski et festivals.", hasPrice = true },
+            new BuildingDef { id = "stadium", name = "Stade de slalom", cat = "Compétition", type = "stadium", cost = 350000, upkeep = 900, cap = 0, r = 30, look = "stadium", alt = true, research = "events", prestige = 6, seg = -1, desc = "Aire d'arrivée, tribune et chronométrage. Requis pour les compétitions.", hasPrice = false },
+            new BuildingDef { id = "olympic", name = "Stade olympique", cat = "Compétition", type = "olympic", cost = 4500000, upkeep = 6000, cap = 0, r = 60, look = "olympic", road = true, research = "olympic", prestige = 15, seg = -1, desc = "Cérémonies, tremplins et village des athlètes. Requis pour les Jeux.", hasPrice = false }
+        };
+        public static readonly ResearchDef[] RESEARCH = {
+            new ResearchDef { cat = "Remontées", id = "tier1", name = "Remontées — palier 1", cost = 25000, days = 2, desc = "Tapis roulant, téléski à archets, télésiège fixe 4 places.", tier = 1 },
+            new ResearchDef { cat = "Remontées", id = "tier2", name = "Remontées — palier 2", cost = 70000, days = 3, desc = "Télésiège débrayable 4 places.", tier = 2, req = "tier1" },
+            new ResearchDef { cat = "Remontées", id = "tier3", name = "Remontées — palier 3", cost = 150000, days = 4, desc = "Débrayable 6 places et télécabine 8 places.", tier = 3, req = "tier2" },
+            new ResearchDef { cat = "Remontées", id = "tier4", name = "Remontées — palier 4", cost = 300000, days = 5, desc = "Télésiège à bulles 8 places, télécabine 10 places.", tier = 4, req = "tier3" },
+            new ResearchDef { cat = "Remontées", id = "tier5", name = "Remontées — palier 5", cost = 600000, days = 6, desc = "Téléphérique 80 places : franchit les grands vides.", tier = 5, req = "tier4" },
+            new ResearchDef { cat = "Remontées", id = "tier6", name = "Remontées — palier 6", cost = 1200000, days = 8, desc = "Télécabine 3S et funiculaire, insensibles au vent.", tier = 6, req = "tier5" },
+            new ResearchDef { cat = "Neige et pistes", id = "snowmaking", name = "Neige de culture", cost = 60000, days = 3, desc = "Permet d'équiper les pistes d'enneigeurs." },
+            new ResearchDef { cat = "Neige et pistes", id = "winch", name = "Dameuses à treuil", cost = 90000, days = 3, desc = "Damage des pistes noires et +40 % de rendement.", req = "snowmaking" },
+            new ResearchDef { cat = "Remontées", id = "handsfree", name = "Forfaits mains-libres", cost = 50000, days = 2, desc = "Embarquement plus fluide : +12 % de débit sur toutes les remontées." },
+            new ResearchDef { cat = "Sécurité", id = "padding", name = "Protections de pylônes", cost = 35000, days = 2, desc = "Matelas et filets : -30 % d'accidents." },
+            new ResearchDef { cat = "Sécurité", id = "gazex", name = "Déclencheurs d'avalanches", cost = 110000, days = 4, desc = "Sécurisation rapide : plus d'ouverture retardée après les grosses chutes." },
+            new ResearchDef { cat = "Sécurité", id = "heli", name = "Secours héliporté", cost = 80000, days = 3, desc = "Débloque l'héliport de secours.", req = "padding" },
+            new ResearchDef { cat = "Loisirs et événements", id = "snowpark", name = "Freestyle", cost = 40000, days = 2, desc = "Débloque le snowpark." },
+            new ResearchDef { cat = "Loisirs et événements", id = "nordic", name = "Activités nordiques", cost = 45000, days = 2, desc = "Centre nordique, chiens de traîneau, refuge." },
+            new ResearchDef { cat = "Accueil et hébergement", id = "luxury", name = "Hôtellerie de prestige", cost = 180000, days = 5, desc = "Palace, table gastronomique, spa." },
+            new ResearchDef { cat = "Loisirs et événements", id = "events", name = "Événementiel sportif", cost = 120000, days = 4, desc = "Stade de slalom, scène de concerts et calendrier d'événements." },
+            new ResearchDef { cat = "Neige et pistes", id = "night", name = "Ski nocturne", cost = 140000, days = 3, desc = "Éclairage des pistes et ouverture de 18 h 30 à 21 h des remontées désignées, avec un forfait du soir.", req = "snowmaking" },
+            new ResearchDef { cat = "Loisirs et événements", id = "summer", name = "Saison d'été", cost = 100000, days = 4, desc = "Saison d'été jouable de 30 jours : VTT et randonnée sur vos remontées (hors téléskis et tapis). Débloque aussi parapente et musée." },
+            new ResearchDef { cat = "Remontées", id = "energy", name = "Motorisations économes", cost = 90000, days = 4, desc = "Entretien et énergie des remontées : −15 %.", req = "tier2" },
+            new ResearchDef { cat = "Neige et pistes", id = "groomer2", name = "Dameuses nouvelle génération", cost = 110000, days = 4, desc = "Vitesse de damage +30 %.", req = "winch" },
+            new ResearchDef { cat = "Neige et pistes", id = "snowmaking2", name = "Enneigeurs basse énergie", cost = 130000, days = 4, desc = "Coût de la neige de culture −40 %, production dès −1 °C.", req = "snowmaking" },
+            new ResearchDef { cat = "Sécurité", id = "patrol2", name = "Motoneiges de secours", cost = 55000, days = 2, desc = "Les pisteurs interviennent 50 % plus vite." },
+            new ResearchDef { cat = "Sécurité", id = "signage", name = "Balisage renforcé", cost = 40000, days = 2, desc = "Filets, jalons et panneaux : −15 % d'accidents, chaque pisteur sécurise 1 km de plus." },
+            new ResearchDef { cat = "Accueil et hébergement", id = "training", name = "Formation du personnel", cost = 60000, days = 3, desc = "Qualité de tous les services en hausse." },
+            new ResearchDef { cat = "Accueil et hébergement", id = "kitchen", name = "Cuisines professionnelles", cost = 85000, days = 3, desc = "Restaurants : +15 % de couverts et service 12 % plus rapide.", req = "training" },
+            new ResearchDef { cat = "Accueil et hébergement", id = "booking", name = "Centrale de réservation", cost = 70000, days = 3, desc = "Demande d'hébergement +15 %." },
+            new ResearchDef { cat = "Gestion", id = "yield", name = "Tarification dynamique", cost = 80000, days = 3, desc = "Forfaits vendus 12 % plus cher les week-ends et vacances, sans perte de clientèle." },
+            new ResearchDef { cat = "Gestion", id = "loyalty", name = "Programme de fidélité", cost = 65000, days = 3, desc = "La réputation progresse 30 % plus vite quand les visiteurs sont contents." },
+            new ResearchDef { cat = "Gestion", id = "purchasing", name = "Centrale d'achats", cost = 75000, days = 3, desc = "Coût des marchandises (restauration, boutiques) −15 %." },
+            new ResearchDef { cat = "Loisirs et événements", id = "olympic", name = "Dossier olympique", cost = 900000, days = 10, desc = "Débloque le stade olympique et la candidature aux Jeux.", req = "events" }
+        };
+        public static readonly string[] RCATS = { "Remontées", "Neige et pistes", "Sécurité", "Accueil et hébergement", "Loisirs et événements", "Gestion" };
+        public static readonly string[] SEG = { "Économique", "Confort", "Luxe" };
+        public static readonly string[] RANGE = { "Économique", "Standard", "Premium" };
+        public static readonly string[] STAFF = { "Réduit", "Normal", "Renforcé" };
+        public static readonly LoanDef[] LOANS = {
+            new LoanDef { id = "short", name = "Crédit de trésorerie", amount = 150000, days = 40, rate = 0.0011 },
+            new LoanDef { id = "invest", name = "Prêt d'équipement", amount = 600000, days = 120, rate = 0.0007 },
+            new LoanDef { id = "long", name = "Prêt d'infrastructure", amount = 2000000, days = 260, rate = 0.0005 }
+        };
+        public static readonly WeatherDef[] WEATHER = {
+            new WeatherDef { id = "sun", name = "Grand soleil", icon = "☀️", demand = 1.15, sky = 8239598, snow = 0, light = 1 },
+            new WeatherDef { id = "cloud", name = "Nuageux", icon = "⛅", demand = 1, sky = 11124691, snow = 0, light = 0.8 },
+            new WeatherDef { id = "snow", name = "Chutes de neige", icon = "🌨️", demand = 0.85, sky = 12174287, snow = 12, light = 0.65 },
+            new WeatherDef { id = "heavy", name = "Fortes chutes", icon = "❄️", demand = 0.6, sky = 11186876, snow = 35, light = 0.5 },
+            new WeatherDef { id = "storm", name = "Tempête", icon = "🌬️", demand = 0.4, sky = 9278879, snow = 20, light = 0.45, wind = 60 },
+            new WeatherDef { id = "rain", name = "Pluie", icon = "🌧️", demand = 0.45, sky = 9411238, snow = 0, light = 0.6, rain = true },
+            new WeatherDef { id = "thaw", name = "Redoux", icon = "🌦️", demand = 0.8, sky = 10466500, snow = 0, light = 0.8, warm = 7 },
+            new WeatherDef { id = "frost", name = "Grand froid", icon = "🥶", demand = 0.9, sky = 8830448, snow = 0, light = 1, warm = -9 }
+        };
+        public static readonly ProfileDef[] PROFILES = {
+            new ProfileDef { id = "famille", name = "Famille", w = 0.3, spend = 0.9, tags = "famille", skill = new double[] { 0.45, 0.4, 0.13, 0.02 } },
+            new ProfileDef { id = "sportif", name = "Sportif", w = 0.25, spend = 0.9, tags = "sportif", skill = new double[] { 0.02, 0.2, 0.48, 0.3 } },
+            new ProfileDef { id = "contemplatif", name = "Contemplatif", w = 0.2, spend = 1.3, tags = "contemplatif", skill = new double[] { 0.2, 0.55, 0.22, 0.03 } },
+            new ProfileDef { id = "fetard", name = "Fêtard", w = 0.15, spend = 1.2, tags = "fetard", skill = new double[] { 0.15, 0.45, 0.32, 0.08 } },
+            new ProfileDef { id = "enfant", name = "Enfant", w = 0.1, spend = 0.4, tags = "famille", child = true, skill = new double[] { 0.8, 0.2, 0, 0 } }
+        };
+        public static readonly string[] MEDALS = { "Piou-Piou", "Ourson", "Flocon", "1re Étoile", "2e Étoile", "3e Étoile", "Étoile de Bronze", "Étoile d'Or", "Flèche", "Chamois" };
+        public static readonly string[] FIRST = { "Léa", "Hugo", "Emma", "Lucas", "Chloé", "Nathan", "Manon", "Théo", "Camille", "Enzo", "Sarah", "Louis", "Inès", "Jules", "Zoé", "Tom", "Jade", "Paul", "Lina", "Noah", "Anna", "Maël", "Clara", "Rayan", "Eva", "Arthur", "Lou", "Sacha", "Nina", "Victor", "Alice", "Gabin", "Romane", "Axel", "Margot", "Yanis", "Élise", "Bastien", "Hélène", "Marc", "Sophie", "Pierre", "Julie", "Karim", "Mei", "Olga", "Sven", "Marta", "Luca", "Ingrid" };
+        public static readonly string[] LAST = { "Martin", "Bernard", "Favre", "Blanc", "Roche", "Perrin", "Morel", "Girard", "Roux", "Fournier", "Mercier", "Dupont", "Lambert", "Bonnet", "Chevalier", "Rey", "Collomb", "Gaillard", "Besson", "Charvet", "Mollard", "Ducroz", "Simond", "Payot", "Müller", "Rossi", "Nilsson", "Tanaka", "Smith", "Garcia" };
+        public static readonly string[] PISTE_NAMES = { "Les Marmottes", "Chamois", "Combe Blanche", "Le Lièvre", "Edelweiss", "Les Mélèzes", "Grand Tétras", "L'Hermine", "Le Couloir", "Les Rhodos", "Plan du Lac", "Les Bouquetins", "La Face", "Gentiane", "Le Mur", "Belvédère", "Les Arolles", "Solaire", "La Forêt", "Glacier Bleu", "Les Myrtilles", "Le Gypaète", "La Cascade", "Les Crêtes", "Les Lutins", "Aigle Royal", "La Combe", "Les Écureuils", "Perce-Neige", "Le Renard", "Lagopède", "Les Génépis", "La Moraine", "L'Envers", "Le Stade", "Boulevard des Alpages", "Les Sources", "Le Névé", "Casse-Noisettes", "Les Séracs" };
+        public static readonly string[] LIFT_NAMES = { "Front de Neige", "Les Alpages", "Bellecôte", "Les Aiguilles", "Roc Noir", "Plan Soleil", "Grande Combe", "Les Chalets", "Col du Vent", "Tête Blanche", "Le Signal", "Les Glaciers", "Pierre Grise", "Mont Joly", "La Vizelle", "Les Écrins", "Dôme", "La Loze", "L'Arpette", "Pointe Percée" };
+    }
+}
