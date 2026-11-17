@@ -8,7 +8,7 @@
   SS.newGame = function (opts) {
     G = SS.G = {
       v: 1, mode: opts.mode || 'career', unlimited: !!opts.unlimited, allUnlocked: !!opts.allUnlocked, casual: !!opts.casual,
-      name: opts.name || 'Mont-Hélios', seed: opts.seed || 1337,
+      name: opts.name || 'Mont-Hélios', seed: opts.seed || 1337, big: !!SS.BIG,
       day: 0, year: 1, time: SS.DAY_START, speed: 1, paused: true,
       money: opts.mode === 'sandbox' ? 2500000 : [900000, 650000, 450000][opts.level === undefined ? 1 : opts.level], loan: 0, level: opts.level === undefined ? 1 : opts.level, ach: {},
       ledger: { inc: {}, exp: {} }, history: [],
@@ -21,8 +21,9 @@
       medals: {}, incidentsToday: 0, visitorsToday: 0, totalVisitors: 0, log: [], hints: {}
     };
     // équipements de départ : route d'accès, parking communal, billetterie
-    G.roads.push({ id: G.nextId++, fixed: true, pts: [{ x: 40, z: 3990 }, { x: 40, z: 3400 }, { x: 60, z: 3050 }, { x: 30, z: 2900 }] });
-    placeStarter('ticket', -40, 2620); placeStarter('parking', 120, 2960);
+    const ox = SS.OFFX, oz = SS.OFFZ;
+    G.roads.push({ id: G.nextId++, fixed: true, pts: [{ x: 40 + ox, z: SS.HALF - 10 }, { x: 40 + ox, z: 3400 + oz }, { x: 60 + ox, z: 3050 + oz }, { x: 30 + ox, z: 2900 + oz }] });
+    placeStarter('ticket', -40 + ox, 2620 + oz); placeStarter('parking', 120 + ox, 2960 + oz);
     SS.Mgmt.migrate(G);
     SS.Weather.init();
     SS.Net.rebuild();
@@ -429,7 +430,7 @@
   };
 
   // ---------- bâtiments ----------
-  SS.inVillage = (x, z) => Math.hypot(x - SS.VILLAGE.x, z - 2720) < 620;
+  SS.inVillage = (x, z) => Math.hypot(x - SS.VILLAGE.x, z - SS.VILLAGE.z + 30) < 620;
   SS.nearRoad = function (x, z, d) {
     for (const r of G.roads) for (let i = 0; i < r.pts.length - 1; i++) if (SS.segDist(x, z, r.pts[i].x, r.pts[i].z, r.pts[i + 1].x, r.pts[i + 1].z).d < d) return true;
     return false;

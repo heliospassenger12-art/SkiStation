@@ -4,11 +4,13 @@
   const SS = window.SS;
   SS.startGame = function (opts, saved) {
     const T = SS.Terrain, seed = saved ? saved.seed : (opts.seed || 1337);
+    SS.setWorld(saved ? !!saved.big : !!(opts && opts.mode === 'ae'));      // Alpine Empires : grande carte à quatre massifs
+    if (SS.AE) SS.AE.layout();
     T.init(seed); T.genTrees();
     if (saved) SS.restore(saved); else { opts.seed = seed; SS.newGame(opts); }
     SS.R.buildWorld();
     if (SS.AE) SS.AE.afterWorld();
-    SS.Cam.focus(0, 2250, 1900); SS.Cam.yaw = 0; SS.Cam.pitch = 0.62;
+    SS.Cam.focus(SS.HUB.x, SS.HUB.z - 230, 1900); SS.Cam.yaw = 0; SS.Cam.pitch = 0.62;
     SS.updatePrestige();
     SS.emit('game:start');
   };

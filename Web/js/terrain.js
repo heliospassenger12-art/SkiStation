@@ -1,7 +1,8 @@
 // SkiStation Web — massif 360°, 1600 → 4200 m, forêts, roches, glaciers
 (function () {
   'use strict';
-  const SS = window.SS, N = SS.N, CELL = SS.CELL, HALF = SS.HALF;
+  const SS = window.SS;
+  let N = SS.N, CELL = SS.CELL, HALF = SS.HALF;           // relus à chaque T.init (carte classique ou grande carte)
   const T = SS.Terrain = { POW: 2.4, TER: 0.4, H: new Float32Array(N * N), viewMode: 'normal', trees: [], treeGrid: new Map(), removedTrees: new Set() };
   let noise;
 
@@ -24,7 +25,7 @@
   function domeField(seed) {
     const r = SS.rng(seed * 31 + 7), f = new Float32Array(N * N), dj = DOMES.map(d => [d[0] + (r() - 0.5) * 0.14, d[1] + (r() - 0.5) * 0.12, d[2] * (0.85 + r() * 0.3), d[3] * 1.18 * (0.9 + r() * 0.2)]);
     for (let iz = 0; iz < N; iz++) for (let ix = 0; ix < N; ix++) {
-      const nx = (ix / (N - 1)) * 2 - 1, nz = (iz / (N - 1)) * 2 - 1;
+      const nx = (-HALF + ix * CELL) / 4000, nz = (-HALF + iz * CELL) / 4000;          // coordonnées normalisées : ±1 = cadre de 8 km
       const wx = nx + 0.16 * noise.fbm(nx * 1.7 + 11, nz * 1.7 + 3, 3), wz = nz + 0.16 * noise.fbm(nx * 1.7 - 7, nz * 1.7 + 19, 3);
       let e = 0; for (const d of dj) { const q = (wx - d[0]) * (wx - d[0]) + (wz - d[1]) * (wz - d[1]); e += d[2] * Math.exp(-q / (d[3] * d[3])); }
       const apron = SS.smooth(0.66, 0.02, nz);            // le massif ne démarre pas au village : la vallée d'accès monte progressivement
@@ -32,7 +33,8 @@
       const rid = noise.ridged(nx * 2.3 + 40, nz * 2.3 + 8, 4) - 0.5;                       // crêtes et combes (grande échelle)
       const rid2 = noise.ridged((nx + 0.15 * noise.fbm(nx * 3 + 5, nz * 3, 2)) * 4.8 + 13, nz * 4.8 + 57, 4) - 0.45;    // éperons, combes et replats (1 à 2 km)
       const calm = SS.smooth(0.62, 0.28, nz);              // près du village le terrain reste doux : pistes vertes et bleues pour les débutants
-      f[iz * N + ix] = e * 2250 + (rid * 560 * (0.25 + Math.min(1, e)) + rid2 * 470 * Math.min(1, 0.25 + e * 1.1) + noise.fbm(nx * 8 + 3, nz * 8 + 77, 3) * 26 * (0.3 + Math.min(1, e)) + noise.fbm(nx * 3.4 + 90, nz * 3.4 + 12, 3) * 140) * apron * calm;
+      const fall = EXT ? 1 - SS.smooth(0.74, 1.12, edgeOf(nx, nz)) : 1;     // grande carte : le massif retombe vers les vallées
+      f[iz * N + ix] = (e * 2250 + (rid * 560 * (0.25 + Math.min(1, e)) + rid2 * 470 * Math.min(1, 0.25 + e * 1.1) + noise.fbm(nx * 8 + 3, nz * 8 + 77, 3) * 26 * (0.3 + Math.min(1, e)) + noise.fbm(nx * 3.4 + 90, nz * 3.4 + 12, 3) * 140) * apron * calm) * fall;
     }
     return f;
   }
@@ -57,26 +59,33 @@
     h.set(o);
   }
 
-  T.init = function (seed) {
-    seed = seed || 1337; noise = SS.makeNoise(seed);
-    T.seed = seed; T.geo = null; T.snowMask = new Float32Array(N * N); T.removedTrees = new Set(); T.viewMode = 'normal'; T.summer = false;
-    const H = T.H, V = SS.VILLAGE, f = domeField(seed);
+  // un massif « classique » (8 × 8 km, village au sud) calculé sur la grille 257 × 257 ;
+  // sur la grande carte, le même massif est calculé dans un cadre de 10 km (EXT) où il retombe naturellement vers les vallées
+  const CV = { x: 0, z: 2750, h: 1650 };
+  let EXT = false;
+  // contour arrondi du massif (1 = 4 km du centre sur les côtés et à l'arrière ; la vallée d'accès reste ouverte)
+  const edgeOf = (nx, nz) => Math.hypot(nx, Math.min(0, nz + 0.2)) + 0.08 * noise.fbm(nx * 2 + 7, nz * 2 - 3, 2);
+  function classic(seed, H) {
+    noise = SS.makeNoise(seed);
+    const off = (HALF - 4000) / CELL;
+    const V = CV, f = domeField(seed);
     let mx = 0; for (let i = 0; i < f.length; i++) { f[i] = Math.max(0, f[i]); if (f[i] > mx) mx = f[i]; }
     const body = T.BODY;                                 // altitude visée du massif avant les aiguilles
     for (let i = 0; i < H.length; i++) H[i] = f[i] * (body - 1640) / mx;
     const pr = SS.rng(seed * 13 + 5);
     for (const pl of PLATEAUS) {                         // les plateaux sont creusés avant l'érosion : leurs accès deviennent des rampes douces
-      const cx = (pl[0] + (pr() - 0.5) * 0.12 + 1) / 2 * (N - 1), cz = (pl[1] + (pr() - 0.5) * 0.12 + 1) / 2 * (N - 1), rad = pl[3] * (N - 1) / 2, tgt = pl[2] - 1640;
-      for (let iz = 0; iz < N; iz++) for (let ix = 0; ix < N; ix++) { const q = Math.hypot(ix - cx, iz - cz) / rad; if (q > 2.2) continue; const w = 1 - SS.smooth(0.55, 2.2, q); H[iz * N + ix] = SS.lerp(H[iz * N + ix], tgt + noise.fbm(ix * 0.06, iz * 0.06, 2) * 40, w); }
+      const cx = ((pl[0] + (pr() - 0.5) * 0.12) * 4000 + HALF) / CELL, cz = ((pl[1] + (pr() - 0.5) * 0.12) * 4000 + HALF) / CELL, rad = pl[3] * 4000 / CELL, tgt = pl[2] - 1640;
+      for (let iz = 0; iz < N; iz++) for (let ix = 0; ix < N; ix++) { const q = Math.hypot(ix - cx, iz - cz) / rad; if (q > 2.2) continue; const w = 1 - SS.smooth(0.55, 2.2, q); H[iz * N + ix] = SS.lerp(H[iz * N + ix], tgt + noise.fbm((ix - off) * 0.06, (iz - off) * 0.06, 2) * 40, w); }
     }
     erode(H); smoothOnce(H, 0.3); smoothOnce(H, 0.2);
     for (let iz = 0; iz < N; iz++) for (let ix = 0; ix < N; ix++) {
-      const i = iz * N + ix, nx = (ix / (N - 1)) * 2 - 1, nz = (iz / (N - 1)) * 2 - 1;
+      const i = iz * N + ix, nx = (-HALF + ix * CELL) / 4000, nz = (-HALF + iz * CELL) / 4000;
       const zz = -HALF + iz * CELL;
       let h = 1640 + H[i] + SS.clamp((2760 - zz) * 0.07, 0, 130) * (1 - SS.smooth(1700, 2400, H[i] + 1640));      // vallée d'accès : monte doucement depuis le village
       for (const sp of SPIKES) { const q = (nx - sp[0]) * (nx - sp[0]) + (nz - sp[1]) * (nz - sp[1]); const rug = 0.55 + 0.9 * (noise.ridged(nx * 26 + sp[0] * 9, nz * 26, 3) - 0.35); h += sp[2] * Math.exp(-q / (sp[3] * sp[3])) * SS.clamp(rug, 0.25, 1.2); }
       h += noise.fbm(nx * 18 + 5, nz * 18 + 9, 3) * 6 * (0.4 + SS.smooth(1700, 2800, h));      // bosses et ondulations locales
-      H[i] = Math.max(1640, h);
+      if (EXT) h = 1560 + (h - 1560) * (1 - SS.smooth(0.8, 1.12, edgeOf(nx, nz)));   // socle qui rejoint les vallées
+      H[i] = Math.max(EXT ? 1560 : 1640, h);
     }
     // l'altitude maximale est recalée à 4 200 m par les aiguilles
     let top = 0; for (let i = 0; i < H.length; i++) if (H[i] > top) top = H[i];
@@ -86,6 +95,60 @@
       const x = -HALF + ix * CELL, z = -HALF + iz * CELL, d = Math.hypot((x - V.x) * 0.8, z - 2760), w = 1 - SS.smooth(330, 900, d);
       if (w > 0) H[iz * N + ix] = SS.lerp(H[iz * N + ix], V.h + SS.clamp((V.z - z) * 0.07, -8, 60), w);
     }
+  }
+
+  // --- grande carte (Alpine Empires) : quatre massifs distincts, un par quart de carte, séparés par deux vallées en croix ---
+  // Chaque massif est un relief complet (sa vallée d'accès, son village, ses replats, ses aiguilles), tourné vers l'extérieur :
+  // les deux massifs du sud regardent le sud, ceux du nord le nord. Certains sont retournés en miroir pour varier les formes.
+  function bigWorld(seed) {
+    const bigN = N, bigC = CELL, bigH = HALF, cN = 321, cC = 31.25, cH = 5000, Q = SS.QUAD;
+    const vr = SS.rng(seed * 17 + 3);
+    const M = T.MASSIFS = [{ cx: -Q, cz: Q, dir: 1, flip: 1 }, { cx: Q, cz: Q, dir: 1, flip: -1 }, { cx: Q, cz: -Q, dir: -1, flip: 1 }, { cx: -Q, cz: -Q, dir: -1, flip: -1 }];
+    M.forEach((m, k) => {                               // le massif du joueur reste celui choisi au menu ; les rivaux varient (orientation, étirement)
+      m.th = k ? (vr() - 0.5) * 0.36 : 0; m.sx = k ? 0.85 + vr() * 0.3 : 1; m.c = Math.cos(m.th); m.s = Math.sin(m.th);
+    });
+    const toLocal = (m, x, z, o) => { const px = (x - m.cx) * m.dir, pz = (z - m.cz) * m.dir; o.x = (px * m.c - pz * m.s) * m.flip / m.sx; o.z = px * m.s + pz * m.c; return o; };
+    const lo = {};
+    N = cN; CELL = cC; HALF = cH; EXT = true;
+    const parts = M.map((m, k) => { const h = new Float32Array(cN * cN); classic(k ? seed * 7 + k * 101 : seed, h); return h; });
+    N = bigN; CELL = bigC; HALF = bigH; EXT = false;
+    noise = SS.makeNoise(seed * 3 + 1);
+    const sample = (h, x, z) => {                       // hauteur bilinéaire d'un massif (coordonnées locales en m)
+      const gx = SS.clamp((x + cH) / cC, 0, cN - 1.001), gz = SS.clamp((z + cH) / cC, 0, cN - 1.001);
+      const ix = gx | 0, iz = gz | 0, fx = gx - ix, fz = gz - iz, i = iz * cN + ix;
+      return (h[i] * (1 - fx) + h[i + 1] * fx) * (1 - fz) + (h[i + cN] * (1 - fx) + h[i + cN + 1] * fx) * fz;
+    };
+    const H = T.H;
+    for (let iz = 0; iz < N; iz++) for (let ix = 0; ix < N; ix++) {
+      const x = -HALF + ix * CELL, z = -HALF + iz * CELL;
+      const floor = 1560 + noise.fbm(x * 0.0007, z * 0.0007, 3) * 60;              // fonds de vallée entre les massifs
+      let h = floor;
+      for (let k = 0; k < M.length; k++) {
+        const m = M[k]; toLocal(m, x, z, lo);                                         // repère local : +z vers le village du massif
+        const w = 1 - SS.smooth(0.9, 1.0, Math.max(Math.abs(lo.x), Math.abs(lo.z)) / cH); if (w <= 0) continue;
+        const hk = floor + w * (sample(parts[k], lo.x, lo.z) - floor);
+        if (hk > h) h = hk;
+      }
+      H[iz * N + ix] = h;
+    }
+    smoothOnce(H, 0.25);
+    T.villages = M.map(m => { const ux = m.dir * m.s, uz = m.dir * m.c; return { x: m.cx + ux * CV.z, z: m.cz + uz * CV.z, ux, uz }; });
+    for (const v of T.villages) {                          // replats des villages (le joueur au sud-ouest, les rivaux ailleurs)
+      for (let iz = 0; iz < N; iz++) for (let ix = 0; ix < N; ix++) {
+        const x = -HALF + ix * CELL, z = -HALF + iz * CELL, dx = x - v.x, dz = z - v.z, along = dx * v.ux + dz * v.uz, side = dx * v.uz - dz * v.ux, d = Math.hypot(side * 0.8, along - 10);
+        const w = 1 - SS.smooth(330, 900, d); if (w <= 0) continue;
+        H[iz * N + ix] = SS.lerp(H[iz * N + ix], CV.h + SS.clamp(-along * 0.07, -8, 60), w);
+      }
+    }
+  }
+
+  T.init = function (seed) {
+    seed = seed || 1337;
+    N = SS.N; CELL = SS.CELL; HALF = SS.HALF;
+    if (T.H.length !== N * N) T.H = new Float32Array(N * N);
+    T.seed = seed; T.geo = null; T.snowMask = new Float32Array(N * N); T.removedTrees = new Set(); T.viewMode = 'normal'; T.summer = false;
+    if (SS.BIG) bigWorld(seed); else { T.villages = [{ x: CV.x, z: CV.z, ux: 0, uz: 1 }]; classic(seed, T.H); noise = SS.makeNoise(seed); }
+    const H = T.H;
     T.minH = Infinity; T.maxH = -Infinity;
     for (let i = 0; i < H.length; i++) { if (H[i] < T.minH) T.minH = H[i]; if (H[i] > T.maxH) T.maxH = H[i]; }
   };
@@ -219,7 +282,7 @@
 
   // --- forêts ---
   T.genTrees = function () {
-    const r = SS.rng(T.seed + 99), step = 21, trees = T.trees = [];
+    const r = SS.rng(T.seed + 99), step = SS.BIG ? 25 : 21, trees = T.trees = [];
     T.treeGrid.clear();
     for (let z = -HALF + 30; z < HALF - 30; z += step) for (let x = -HALF + 30; x < HALF - 30; x += step) {
       const px = x + (r() - 0.5) * step, pz = z + (r() - 0.5) * step, rr = r(), rs = r();
@@ -230,8 +293,8 @@
       const fade = SS.smooth(line, line - 260, h);
       if (rr > (dens - 0.34) * 1.9 * fade) continue;
       if (T.slope(px, pz) > 0.8) continue;
-      if (Math.hypot(px - SS.VILLAGE.x, pz - 2720) < 560) continue;
-      if (Math.abs(px - 40) < 45 && pz > 2700) continue;             // route d'accès
+      if (T.villages.some(v => Math.hypot(px - v.x + v.ux * 30, pz - v.z + v.uz * 30) < 560)) continue;
+      if (Math.abs(px - SS.VILLAGE.x - 40) < 45 && pz > SS.VILLAGE.z - 50) continue;             // route d'accès
       trees.push({ x: px, z: pz, y: h, s: 0.75 + rs * 0.7, alive: true });
     }
     trees.forEach((t, i) => {

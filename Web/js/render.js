@@ -18,7 +18,7 @@
     scene = R.scene = new THREE.Scene();
     scene.background = new THREE.Color(0x7db9ee);
     scene.fog = new THREE.Fog(0x7db9ee, 5000, 24000);
-    camera = R.camera = new THREE.PerspectiveCamera(45, 1, 4, 40000);
+    camera = R.camera = new THREE.PerspectiveCamera(45, 1, 4, 70000);
     hemi = new THREE.HemisphereLight(0xdfeeff, 0x8c97a8, 0.95); scene.add(hemi);
     sun = new THREE.DirectionalLight(0xfff4e0, 1.6); scene.add(sun);
     winMat = new THREE.MeshBasicMaterial({ color: 0x2a3644 });
@@ -40,7 +40,7 @@
     T.summer = !!SS.G.summer;
     scene.add(T.buildMesh(ovTex));
     scene.add(T.buildTrees());
-    skirt = new THREE.Mesh(new THREE.PlaneGeometry(90000, 90000).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0xe9eef5 })); skirt.position.y = 1632; scene.add(skirt);
+    skirt = new THREE.Mesh(new THREE.PlaneGeometry(90000, 90000).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0xe9eef5 })); skirt.position.y = Math.min(1632, T.minH - 8); scene.add(skirt);
     for (const d of SS.DECOR) addStatic(Mo.building(d.k, d.x), d.x, T.getH(d.x, d.z), d.z, (d.x * 0.37) % 6.28);
     const per = Mo.person();
     jackets = new THREE.InstancedMesh(per.jacket, new THREE.MeshLambertMaterial({ vertexColors: false }), MAXV);
@@ -199,7 +199,7 @@
   // --- caméra ---
   Cam.apply = function () {
     Cam.tx = SS.clamp(Cam.tx, -SS.HALF, SS.HALF); Cam.tz = SS.clamp(Cam.tz, -SS.HALF, SS.HALF);
-    Cam.pitch = SS.clamp(Cam.pitch, 0.18, 1.5); Cam.dist = SS.clamp(Cam.dist, 60, 11000);
+    Cam.pitch = SS.clamp(Cam.pitch, 0.18, 1.5); Cam.dist = SS.clamp(Cam.dist, 60, SS.BIG ? 20000 : 11000);
     const ty = T.getH(Cam.tx, Cam.tz), cp = Math.cos(Cam.pitch), sp = Math.sin(Cam.pitch);
     let x = Cam.tx + Math.sin(Cam.yaw) * cp * Cam.dist, z = Cam.tz + Math.cos(Cam.yaw) * cp * Cam.dist, y = ty + sp * Cam.dist;
     const gh = T.getH(SS.clamp(x, -SS.HALF, SS.HALF), SS.clamp(z, -SS.HALF, SS.HALF)); if (y < gh + 12) y = gh + 12;
@@ -228,7 +228,7 @@
     const edge = Math.max(0, 1 - Math.abs(h - 17.8) / 1.1) + Math.max(0, 1 - Math.abs(h - 7.4) / 0.6);
     sky.set(w.sky).lerp(SUNSET, Math.min(0.55, edge * 0.55) * (w.light > 0.7 ? 1 : 0.3)); sky.lerp(SKY_N, 1 - day);
     scene.background.copy(sky); scene.fog.color.copy(sky);
-    const vis = w.snow > 25 ? 0.35 : w.snow > 0 ? 0.6 : 1; scene.fog.near = 5000 * vis; scene.fog.far = 24000 * vis;
+    const vis = w.snow > 25 ? 0.35 : w.snow > 0 ? 0.6 : 1; const fk = SS.BIG ? 1.6 : 1; scene.fog.near = 5000 * vis * fk; scene.fog.far = 24000 * vis * fk;
     const ang = (h - 12.5) / 12 * Math.PI;
     sun.position.set(Math.sin(ang) * 0.8 + 0.25, Math.max(0.12, Math.cos(ang) * 0.9), 0.55).normalize();
     sun.intensity = 1.7 * day * w.light; sun.color.setHex(0xfff4e0).lerp(SUNSET, Math.min(0.7, edge * 0.7));

@@ -19,12 +19,35 @@
     { id: 'r2', name: 'Secteur Nord', a0: 150, a1: 210 },
     { id: 'r3', name: 'Secteur Ouest', a0: -150, a1: -80 }
   ];
-  const PROTECT_R = 650;                           // sommet protégé : aucune construction
+  let PROTECT_R = 650;                             // sommet protégé : aucune construction
+  const SMALL = { start: ['Votre concession', -50, 50], 'ext-e': ['Extension Est', 50, 80], 'ext-w': ['Extension Ouest', -80, -50], r1: ['Secteur Est', 80, 150], r2: ['Secteur Nord', 150, 210], r3: ['Secteur Ouest', -150, -80] };
+  // grande carte : un massif par compagnie (vous au sud-ouest), deux vallées en croix, col central protégé
+  const BIG = { start: 'Votre massif (sud-ouest)', 'ext-e': 'Vallée du Sud (vers Valfroide)', 'ext-w': 'Vallée de l\'Ouest (vers Les Rochettes)', r1: 'Massif sud-est', r2: 'Massif nord-est', r3: 'Massif nord-ouest' };
+  const B = 1000;                                  // demi-largeur des vallées en croix (extensions) et du col central
+  AE.layout = function () {
+    PROTECT_R = AE.PROTECT_R = SS.BIG ? B : 650;
+    for (const zn of ZONES) { if (SS.BIG) zn.name = BIG[zn.id]; else { const z = SMALL[zn.id]; zn.name = z[0]; zn.a0 = z[1]; zn.a1 = z[2]; } }
+  };
   AE.ZONES = ZONES; AE.PROTECT_R = PROTECT_R;
   const angOf = (x, z) => { let a = Math.atan2(x, z) / DEG; if (a < -150) a += 360; return a; };   // -150..210
   AE.zoneAt = function (x, z) {
+    if (SS.BIG) {
+      const ax = Math.abs(x), az = Math.abs(z);
+      if (ax < B && az < B) return 'protected';
+      if (x <= -B && z >= B) return 'start';
+      if (ax < B && z >= B) return 'ext-e';
+      if (x <= -B && az < B) return 'ext-w';
+      if (x >= B && z > -B) return 'r1';
+      if (z <= -B && x > -B) return 'r2';
+      return 'r3';
+    }
     if (Math.hypot(x, z) < PROTECT_R) return 'protected';
     const a = angOf(x, z); for (const zn of ZONES) if (a >= zn.a0 && a < zn.a1) return zn.id; return 'r2';
+  };
+  // sommet vers lequel une compagnie construit ses remontées
+  AE.peakOf = function (r) {
+    if (!SS.BIG || !T.MASSIFS) return { x: 0, z: 0 };
+    const m = T.MASSIFS[{ r1: 1, r2: 2, r3: 3 }[r.zone] || 0]; return { x: m.cx - m.dir * m.s * 900, z: m.cz - m.dir * m.c * 900 };
   };
   AE.on = () => !!(SS.G && SS.G.ae);
   AE.canBuild = function (x, z) { if (!AE.on()) return true; const id = AE.zoneAt(x, z); return SS.G.ae.owned.indexOf(id) >= 0; };
@@ -34,10 +57,10 @@
     for (const p of pts) {
       if (AE.canBuild(p.x, p.z)) continue;
       const id = AE.zoneAt(p.x, p.z);
-      if (id === 'protected') return 'Sommet protégé : aucune construction au-dessus de la ligne de crête centrale.';
+      if (id === 'protected') return SS.BIG ? 'Col central protégé : aucune construction au carrefour des deux vallées.' : 'Sommet protégé : aucune construction au-dessus de la ligne de crête centrale.';
       const zn = ZONES.find(z => z.id === id), r = G.ae.rivals.find(r => r.zone === id);
       if (r) return 'Hors de votre concession : ce secteur appartient à ' + r.name + '.';
-      return 'Hors de votre concession : achetez l\'' + zn.name.toLowerCase() + ' (' + SS.eur(zn.price) + ') dans le panneau Alpine Empires.';
+      return 'Hors de votre concession : achetez « ' + zn.name + ' » (' + SS.eur(zn.price) + ') dans le panneau Alpine Empires.';
     }
     return null;
   };
@@ -77,8 +100,12 @@
   AE.TEAMS = { solo: 'Individuel : chacun pour soi', duo: 'Deux équipes : vous et Valfroide contre les deux autres' };
 
   function findBase(zn) {
+    if (SS.BIG && T.villages && T.villages.length === 4) {            // grande carte : chaque rival au village de son massif
+      const v = T.villages[{ r1: 1, r2: 2, r3: 3 }[zn.id] || 0]; return { x: v.x - v.ux * 120, z: v.z - v.uz * 120, h: T.getH(v.x, v.z) };
+    }
     let best = null;
-    for (let r = 2300; r <= 3700; r += 100) for (let a = zn.a0 + 8; a <= zn.a1 - 8; a += 3) {
+    const r0 = 2300, r1 = 3700;
+    for (let r = r0; r <= r1; r += 100) for (let a = zn.a0 + 8; a <= zn.a1 - 8; a += 3) {
       const x = Math.sin(a * DEG) * r, z = Math.cos(a * DEG) * r;
       if (!T.inside(x, z, 150) || T.slope(x, z) > 0.35) continue;
       const h = T.getH(x, z); if (!best || h < best.h) best = { x, z, h };
@@ -124,9 +151,9 @@
     for (let tries = 0; tries < 26; tries++) {
       const type = types[Math.min(types.length - 1, tries % 3)], def = D.lift(type);
       const s = starts[tries < 4 && goal !== 'high' ? 0 : Math.floor(Math.random() * starts.length)];
-      const ax = s.x + (Math.random() - 0.5) * 60, az = s.z + (Math.random() - 0.5) * 60, d = Math.hypot(ax, az) || 1;
+      const ax = s.x + (Math.random() - 0.5) * 60, az = s.z + (Math.random() - 0.5) * 60, pk = AE.peakOf(r), d = Math.hypot(pk.x - ax, pk.z - az) || 1;
       const ang = (Math.random() - 0.5) * (tries < 10 ? 70 : 120) * DEG, len = Math.min(def.maxLen * (0.5 + Math.random() * 0.4), 900 + Math.random() * 1400);
-      const ux = -ax / d, uz = -az / d, bx = ax + (ux * Math.cos(ang) - uz * Math.sin(ang)) * len, bz = az + (ux * Math.sin(ang) + uz * Math.cos(ang)) * len;
+      const ux = (pk.x - ax) / d, uz = (pk.z - az) / d, bx = ax + (ux * Math.cos(ang) - uz * Math.sin(ang)) * len, bz = az + (ux * Math.sin(ang) + uz * Math.cos(ang)) * len;
       if (!inWedge(r, ax, az) || !inWedge(r, bx, bz)) continue;
       if (R.lifts.some(l => Math.hypot(l.b.x - bx, l.b.z - bz) < 220 || SS.segDist(bx, bz, l.a.x, l.a.z, l.b.x, l.b.z).d < 70)) continue;
       const an = SS.analyzeLift(type, { x: ax, z: az }, { x: bx, z: bz }); if (!an.ok) continue;
@@ -336,7 +363,7 @@
   }
   const LADDER = ['fete', 'concert', 'regional', 'europe', 'xgames', 'worldcup'];
   function decide(r, s, vis) {
-    const P = PERSONA[r.persona], t = G.elapsed, reserve = 30000 + t * 250;
+    const P = PERSONA[r.persona], t = G.elapsed * (SS.BIG ? 0.86 : 1), reserve = 30000 + t * 250;     // grande carte : chaque rival a tout un massif, son rythme est un peu freiné
     const room = () => r.money - reserve, can = c => room() >= c;
     // trésorerie excédentaire : dividendes versés aux actionnaires (garde les comptes lisibles)
     if (r.money > 6000000) { const div = (r.money - 6000000) * 0.04; r.money -= div; r.exp += div; }
@@ -486,10 +513,19 @@
       c.strokeStyle = r.color; c.lineWidth = (p.width + 7) * k; path(p.pts);
       c.strokeStyle = '#e6edf6'; c.lineWidth = Math.max(1, (p.width - 3) * k); path(p.pts);
     }
-    c.setLineDash([30 * k, 22 * k]); c.lineWidth = Math.max(1.5, 6 * k);
+    const lw = SS.BIG ? 24 : 6; c.setLineDash([lw * 5 * k, lw * 3.7 * k]); c.lineWidth = Math.max(1.5, lw * k);
+    if (SS.BIG) {                                   // frontières : deux vallées en croix et col central
+      const H = SS.HALF, own = id => G.ae.owned.indexOf(id) >= 0, seg = (x0, z0, x1, z1, o) => { c.strokeStyle = o ? 'rgba(255,178,56,0.85)' : 'rgba(90,100,120,0.55)'; c.beginPath(); c.moveTo(X(x0), Z(z0)); c.lineTo(X(x1), Z(z1)); c.stroke(); };
+      seg(-B, B, -B, H, own('start') || own('ext-e')); seg(B, B, B, H, own('ext-e'));
+      seg(-H, B, -B, B, own('start') || own('ext-w')); seg(-H, -B, -B, -B, own('ext-w'));
+      seg(-B, B, B, B, own('ext-e')); seg(-B, -B, -B, B, own('ext-w'));
+      seg(B, -B, B, B, false); seg(-B, -B, B, -B, false); seg(B, -B, H, -B, false); seg(-B, -H, -B, -B, false);
+      c.strokeStyle = 'rgba(200,60,60,0.6)'; c.strokeRect(X(-B), Z(-B), 2 * B * k, 2 * B * k); c.setLineDash([]);
+      return;
+    }
     for (const zn of ZONES) for (const a of [zn.a0]) {
       const own = G.ae.owned.indexOf(zn.id) >= 0; c.strokeStyle = own ? 'rgba(255,178,56,0.85)' : 'rgba(90,100,120,0.55)';
-      c.beginPath(); c.moveTo(X(Math.sin(a * DEG) * PROTECT_R), Z(Math.cos(a * DEG) * PROTECT_R)); c.lineTo(X(Math.sin(a * DEG) * 6000), Z(Math.cos(a * DEG) * 6000)); c.stroke();
+      c.beginPath(); c.moveTo(X(Math.sin(a * DEG) * PROTECT_R), Z(Math.cos(a * DEG) * PROTECT_R)); c.lineTo(X(Math.sin(a * DEG) * SS.WORLD), Z(Math.cos(a * DEG) * SS.WORLD)); c.stroke();
     }
     c.strokeStyle = 'rgba(200,60,60,0.6)'; c.beginPath(); c.arc(X(0), Z(0), PROTECT_R * k, 0, 7); c.stroke(); c.setLineDash([]);
   };
