@@ -1,0 +1,14 @@
+{
+  "source": "SkiStation Alpine Empires Avant Premi\u00e8re",
+  "unity": "6000.3.7f1",
+  "files": {
+    "Assets/SkiStation/Scripts/Arcade/RiderBoostVisual.cs": {
+      "before": "115c4c1e565e3f475675fece6c446c03dccae723590ae5c1f5b860bfbf423ea8",
+      "after": "c248efbab84b7ae41089aaa7d7ad3f09d128d82f04e649a449500a61047b6c1a"
+    },
+    "Assets/SkiStation/Scripts/Arcade/ArcadeThirdPersonCamera.cs": {
+      "before": "f73960838093dc1f0737f74585a949315aaf3072e3391d0d4c969d3ad2a3059b",
+      "after": "f2a2f46061a5d542a70ea076f48f508adb87a6738d5958cd50dd0190a551cf46"
+    }
+  }
+}
