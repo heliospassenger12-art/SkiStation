@@ -657,7 +657,7 @@
       const ev = D.EVENTS.find(e => e.id === G.event.id); G.event.left--;
       if (G.event.left <= 0) {
         const ok = G.sat >= 50; G.eventsHosted[ev.id] = (G.eventsHosted[ev.id] || 0) + 1;
-        G.reputation = SS.clamp(G.reputation + (ok ? ev.prestige * 0.6 : -3), 0, 100);
+        G.reputation = SS.clamp(G.reputation + (ok ? ev.prestige * 0.6 : -3), 0, 100); G.fame = SS.clamp(G.fame + (ok ? ev.fameGain : -ev.fameGain * 0.6), 0, 100);
         report.notes.push((ok ? '🏆 ' + ev.name + ' : un succès ! Réputation en hausse.' : '😕 ' + ev.name + ' : organisation critiquée (satisfaction trop basse).'));
         if (ev.id === 'olympics' && ok) report.victory = true;
         G.event = null;
@@ -670,7 +670,7 @@
     Mg.closeDay(G.ledger, G.visitorsToday);
     G.ledger0 = G.ledger.inc; G.ledger = { inc: {}, exp: {} };
     W.night();
-    SS.updatePrestige();
+    SS.updatePrestige(); G.elapsed++; SS.Scn.dailyFame(); SS.Scn.dailyBid(report);
     SS.checkCareer(report);
     SS.checkAch(report);
     G.day++; W.next();
@@ -718,18 +718,6 @@
     const s = SS.stats(); s.money = G.money; s.total = G.totalVisitors; s.medals = Object.values(G.medals).reduce((a, b) => a + b, 0); s.year = G.year; s.loan = G.loan; s.night = G.ledger0 && G.ledger0['Forfaits nocturnes'] > 0; s.research = G.research.done.length;
     for (const a of D.ACH) if (!G.ach[a.id] && a.test(s, G)) { G.ach[a.id] = G.day + 1 + (G.year - 1) * SS.SEASON_DAYS; const msg = '🏅 Succès débloqué : ' + a.name + '.'; if (report) report.notes.push(msg); else SS.log(msg, 'good'); }
   };
-  SS.checkCareer = function (report) {
-    if (G.mode !== 'career' || G.career.done) return;
-    const st = D.CAREER[G.career.stage], s = SS.stats();
-    if (st.goals.every(g => g[1](s))) {
-      G.money += st.reward; G.career.stage++;
-      const msg = '🎖️ Étape « ' + st.title + ' » accomplie ! Prime : ' + SS.eur(st.reward) + '.';
-      if (report) report.notes.push(msg); else SS.log(msg, 'good');
-      if (G.career.stage >= D.CAREER.length) { G.career.done = true; G.career.stage = D.CAREER.length - 1; if (report) report.victory = true; }
-      SS.emit('career');
-    }
-  };
-
   // remise en cohérence des visiteurs quand le réseau change en cours de journée
   SS.on('network', function (old) {
     if (!old || !old.length) return;

@@ -41,28 +41,39 @@
     $('modalBox').innerHTML =
       '<div class="logo">Ski<span>Station</span></div><p class="tag">Construisez, gérez et faites vivre votre station de ski — du premier téléski aux Jeux Olympiques.</p>' +
       '<label class="field">Nom de la station<input id="sm_name" maxlength="28" value="Mont-Hélios"></label>' +
-      '<div class="modes"><button class="mode on" data-act="sm_mode" data-arg="career"><b>Carrière</b><span>Budget de 450 000 à 900 000 € selon la difficulté, recherche à débloquer, six étapes jusqu\'aux Jeux.</span></button>' +
+      '<div class="modes"><button class="mode on" data-act="sm_mode" data-arg="career"><b>Carrière</b><span>Des scénarios à objectifs : du premier téléski aux Jeux Olympiques.</span></button>' +
       '<button class="mode" data-act="sm_mode" data-arg="sandbox"><b>Bac à sable</b><span>Liberté totale pour bâtir le domaine de vos rêves.</span></button></div>' +
+      '<div id="sm_scenarios">' + scenarioCards() + '</div>' +
       '<div class="smrow"><span>Difficulté</span>' + ['Détente', 'Normale', 'Exigeante'].map((n, i) => btn(n, 'sm_level', i, 'chip lvl' + (i === 1 ? ' on' : ''))).join('') + '</div>' +
-      '<div class="smrow"><span>Montagne</span>' + [['Classique', 1337], ['Dents Blanches', 4242], ['Val Perdu', 9001], ['Aléatoire', 0]].map((m, i) => btn(m[0], 'sm_seed', m[1], 'chip seed' + (i === 0 ? ' on' : ''))).join('') + '</div>' +
+      '<div class="smrow" id="sm_seedrow"><span>Montagne</span>' + [['Classique', 1337], ['Dents Blanches', 4242], ['Val Perdu', 9001], ['Aléatoire', 0]].map((m, i) => btn(m[0], 'sm_seed', m[1], 'chip seed' + (i === 0 ? ' on' : ''))).join('') + '</div>' +
       '<div id="sm_opts" class="opts" hidden><label><input type="checkbox" id="sm_unl" checked> Argent illimité</label><label><input type="checkbox" id="sm_all" checked> Tout le catalogue débloqué</label></div>' +
       '<div class="opts"><label><input type="checkbox" id="sm_casual"> Neige simplifiée (pas de verglas, de soupe ni de manque de neige)</label></div>' +
       '<div class="actions">' + btn('Nouvelle partie', 'sm_new', undefined, 'primary big') + (has ? btn('Continuer la sauvegarde', 'sm_load', undefined, 'big') : '') + btn('Importer un code', 'sm_import', undefined, 'big') + '</div><div id="sm_imp" hidden><textarea id="sm_code" placeholder="Collez ici un code de sauvegarde (SKI1:…)"></textarea>' + btn('Charger ce code', 'sm_importGo', undefined, 'primary') + '</div>' +
       '<p class="fine">Souris : glisser pour déplacer, clic droit pour tourner, molette pour zoomer. Tactile : un doigt déplace, deux doigts zooment et tournent.</p>';
-    UI.mode = 'career'; UI.level = 1; UI.seed = 1337;
+    UI.mode = 'career'; UI.level = 1; UI.seed = 1337; UI.scn = 'first'; UI.seedTouched = false;
+  }
+  function scenarioCards() {
+    const rec = SS.Scn.records();
+    return D.SCENARIOS.map(sc => { const r = rec[sc.id]; return '<button class="scn' + (sc.id === 'first' ? ' on' : '') + '" data-act="sm_scn" data-arg="' + sc.id + '"><b>' + sc.name + '</b><i class="tagx d' + sc.diff + '">' + sc.tag + '</i>' + (r ? '<em class="rec">' + '★'.repeat(r.stars) + '☆'.repeat(3 - r.stars) + ' · ' + r.days + ' j</em>' : '') + '<span>' + sc.brief + '</span><small>' + SS.eur(sc.start.money) + ' au départ' + (sc.deadline ? ' · ' + sc.deadline + ' jours' : ' · sans limite de temps') + ' · ' + sc.stages.length + ' étape(s)</small></button>'; }).join('');
   }
 
+  function scnLayout() {
+    const sc = UI.mode === 'career' ? SS.Scn.get(UI.scn) : null, sr = $('sm_seedrow'); if (sr) sr.hidden = !!(sc && sc.seedLock);
+  }
   // ---------------- actions ----------------
   function act(a, arg, el) {
     G = SS.G;
     switch (a) {
-      case 'sm_mode': UI.mode = arg; document.querySelectorAll('.mode').forEach(m => m.classList.toggle('on', m.dataset.arg === arg)); $('sm_opts').hidden = arg !== 'sandbox'; break;
+      case 'sm_mode': UI.mode = arg; document.querySelectorAll('.mode').forEach(m => m.classList.toggle('on', m.dataset.arg === arg)); $('sm_opts').hidden = arg !== 'sandbox'; $('sm_scenarios').hidden = arg !== 'career'; scnLayout(); break;
+      case 'sm_scn': UI.scn = arg; document.querySelectorAll('.scn').forEach(m => m.classList.toggle('on', m.dataset.arg === arg)); scnLayout(); break;
+      case 'scnFree': SS.Scn.free(); $('modal').hidden = true; G.paused = false; renderTop(); UI.refresh(true); toast('Mode libre : plus d\'objectifs ni de limite de temps.', 'info'); break;
+      case 'bidStart': { const e = SS.Scn.bidStart(); if (e) toast(e, 'warn'); UI.refresh(true); break; }
       case 'sm_level': UI.level = +arg; document.querySelectorAll('.lvl').forEach(m => m.classList.toggle('on', m.dataset.arg === arg)); break;
-      case 'sm_seed': UI.seed = +arg; document.querySelectorAll('.seed').forEach(m => m.classList.toggle('on', m.dataset.arg === arg)); break;
+      case 'sm_seed': UI.seedTouched = true; UI.seed = +arg; document.querySelectorAll('.seed').forEach(m => m.classList.toggle('on', m.dataset.arg === arg)); break;
       case 'sm_import': $('sm_imp').hidden = !$('sm_imp').hidden; break;
       case 'sm_importGo': { const d = SS.importSave($('sm_code').value); if (d) SS.startGame(null, d); else { el.textContent = 'Code invalide — réessayer'; } break; }
       case 'export': { const code = SS.exportSave(); UI.code = code; UI.refresh(true); const ta = $('exportCode'); if (ta) { ta.value = code; ta.select(); } if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(() => toast('Code copié dans le presse-papiers.', 'good')).catch(() => toast('Sélectionnez le code et copiez-le.', 'info')); break; }
-      case 'sm_new': SS.startGame({ level: UI.level, seed: UI.seed || (1 + Math.floor(Math.random() * 99999)), mode: UI.mode, name: ($('sm_name').value || 'Mont-Hélios').trim(), unlimited: UI.mode === 'sandbox' && $('sm_unl').checked, allUnlocked: UI.mode === 'sandbox' && $('sm_all').checked, casual: $('sm_casual').checked }); break;
+      case 'sm_new': { const sc = UI.mode === 'career' ? SS.Scn.get(UI.scn) : null; SS.startGame({ scn: sc ? sc.id : undefined, level: UI.level, seed: sc ? (sc.seedLock || !UI.seedTouched ? sc.start.seed : (UI.seed || (1 + Math.floor(Math.random() * 99999)))) : (UI.seed || (1 + Math.floor(Math.random() * 99999))), mode: UI.mode, name: ($('sm_name').value || 'Mont-Hélios').trim(), unlimited: UI.mode === 'sandbox' && $('sm_unl').checked, allUnlocked: UI.mode === 'sandbox' && $('sm_all').checked, casual: $('sm_casual').checked }); break; }
       case 'sm_load': { const d = SS.loadData(); if (d) SS.startGame(null, d); break; }
       case 'menu': if (sure(el)) { SS.save(); SS.G.paused = true; $('hud').hidden = true; startMenu(); } break;
       case 'speed': if (arg === '0') G.paused = !G.paused; else { G.speed = +arg; G.paused = false; } renderTop(); break;
@@ -122,12 +133,12 @@
   function renderTop() {
     G = SS.G; if (!G) return;
     const w = D.WEATHER[G.weather.type];
-    $('t_name').textContent = G.name; $('t_mode').textContent = (G.mode === 'career' ? 'Carrière · ' + D.CAREER[G.career.stage].title : 'Bac à sable') + (G.summer ? ' · Été' : '');
+    $('t_name').textContent = G.name; { const sc = SS.Scn.cur(); $('t_mode').textContent = (sc ? sc.name + (G.scn.failed ? ' · échoué' : G.scn.done ? ' · accompli' : ' · étape ' + (G.scn.stage + 1) + '/' + sc.stages.length) : 'Bac à sable') + (G.summer ? ' · Été' : ''); }
     $('t_date').textContent = SS.dateStr(G.day) + ' · An ' + G.year; $('t_time').textContent = SS.hhmm(G.time);
     $('t_weather').textContent = w.icon + ' ' + G.weather.temp + '°'; $('t_weather').title = w.name;
     $('t_money').textContent = G.unlimited ? '∞' : eur(G.money); $('t_money').classList.toggle('neg', G.money < 0);
     $('t_vis').textContent = Sim.present + ' / ' + (Sim.expected || 0);
-    $('t_sat').textContent = G.sat + ' %'; $('t_stars').innerHTML = stars(G.prestige); $('t_stars').title = 'Prestige ' + G.prestige + ' / 100';
+    $('t_sat').textContent = G.sat + ' %'; $('t_stars').textContent = Math.round(G.fame) + ' %'; $('t_stars').title = 'Notoriété ' + Math.round(G.fame) + ' % · prestige ' + G.prestige + ' / 100 · réputation ' + Math.round(G.reputation) + ' / 100';
     document.querySelectorAll('#speed .sp').forEach(b => b.classList.toggle('on', b.dataset.arg === '0' ? G.paused : !G.paused && +b.dataset.arg === G.speed));
     $('skipBtn').disabled = Sim.present > 0 || (Sim.arrivals.length > 0 && G.time < 17 * 3600);
   }
@@ -150,6 +161,7 @@
     if (!G.summer && !s.rental) return ['🎿', 'Sans location de matériel, un quart des clients potentiels ne vient pas.'];
     if (!G.summer && !s.garage && G.pistes.length > 1) return ['🚜', 'Sans garage à dameuses, vos pistes se dégradent chaque jour.'];
     if (!s.rescue && G.visitorsToday > 80) return ['🚑', 'Aucun poste de secours : un accident ruinerait votre réputation.'];
+    { const sg = SS.Scn.hint(); if (sg) return ['🎯', sg]; }
     if (G.mode === 'career' && !G.research.active.length && G.tier < 6 && G.money > 150000) return ['🔬', 'Pensez à lancer une recherche pour débloquer de nouvelles remontées et équipements.'];
     return null;
   }
@@ -287,24 +299,6 @@
       }
       return h;
     },
-    career() {
-      const s = SS.stats(); let h = '<div class="kpis"><div><b>' + stars(G.prestige) + '</b>prestige ' + G.prestige + '/100</div><div><b>' + Math.round(G.reputation) + '</b>réputation</div><div><b>' + G.bestDay + '</b>record visiteurs</div></div>';
-      if (G.mode === 'career') {
-        if (G.career.done) h += '<div class="msg">🏅 Carrière accomplie : ' + esc(G.name) + ' est une station olympique !</div>';
-        D.CAREER.forEach((st, i) => {
-          if (i < G.career.stage && !(G.career.done && i === G.career.stage)) { h += '<div class="card done"><div class="ctitle"><b>' + (i + 1) + '. ' + st.title + '</b><span>✔</span></div></div>'; return; }
-          if (i > G.career.stage) { h += '<div class="card locked"><div class="ctitle"><b>' + (i + 1) + '. ' + st.title + '</b><span>prime ' + eur(st.reward) + '</span></div></div>'; return; }
-          h += '<div class="card cur"><div class="ctitle"><b>' + (i + 1) + '. ' + st.title + '</b><span>prime ' + eur(st.reward) + '</span></div>' + st.goals.map(g => '<div class="goal ' + (g[1](s) ? 'ok' : '') + '">' + (g[1](s) ? '✔' : '○') + ' ' + g[0] + '</div>').join('') + '</div>';
-        });
-      } else h += '<p class="fine">Bac à sable : pas d\'objectifs imposés. Les événements restent disponibles.</p>';
-      const na = D.ACH.filter(a => G.ach[a.id]).length;
-      h += '<h4>Succès — ' + na + ' / ' + D.ACH.length + '</h4><div class="achs">' + D.ACH.map(a => '<div class="ach' + (G.ach[a.id] ? ' on' : '') + '"><b>' + (G.ach[a.id] ? '🏅 ' : '🔒 ') + a.name + '</b><small>' + a.desc + '</small></div>').join('') + '</div>';
-      h += '<h4>Événements</h4>';
-      if (!SS.researched('events')) h += '<p class="fine">Recherchez « Événementiel sportif » pour débloquer les compétitions et les concerts. La fête du village est toujours possible.</p>';
-      if (G.event) { const ev = D.EVENTS.find(e => e.id === G.event.id); h += '<div class="msg">📅 ' + ev.name + (G.event.day > G.day ? ' dans ' + (G.event.day - G.day) + ' jour(s)' : ' en cours — ' + G.event.left + ' jour(s) restants') + '.</div>'; }
-      for (const ev of D.EVENTS) { if (ev.id !== 'fete' && !SS.researched('events')) continue; const ok = ev.need(s); h += '<div class="card' + (ok ? '' : ' locked') + '"><div class="ctitle"><b>' + ev.name + '</b><span>' + eur(ev.cost) + '</span></div><div class="cmeta">' + ev.days + ' jour(s) · fréquentation ×' + ev.boost + ' · prestige +' + ev.prestige + ' · ' + ev.needTxt + (G.eventsHosted[ev.id] ? ' · organisé ' + G.eventsHosted[ev.id] + ' fois' : '') + '</div>' + (ok && !G.event ? btn('Programmer', 'event', ev.id, 'small') : '') + '</div>'; }
-      return h;
-    },
     weather() {
       const w = G.weather, def = D.WEATHER[w.type];
       let h = '<div class="wnow"><span class="big">' + def.icon + '</span><div><b>' + def.name + '</b><br>' + w.temp + ' °C au village · vent ' + Math.round(W.windNow) + ' km/h' + (w.snow ? ' · ' + w.snow + ' cm attendus' : '') + '</div></div>';
@@ -399,12 +393,13 @@
     const res = r.inc - r.opex;
     toast('📋 Bilan ' + r.date + ' : <b>' + r.visitors + '</b> visiteurs · satisfaction <b>' + r.sat + ' %</b> · résultat <b class="' + (res >= 0 ? 'pos' : 'neg') + '">' + (res >= 0 ? '+' : '') + eur(res) + '</b>', 'info');
     for (const n of r.notes) toast(n, 'good');
-    if (r.victory || r.notes.length) {
+    if (r.failed || r.victory || r.notes.length) {
       const fbk = Object.keys(r.fb).sort((a, b) => r.fb[b] - r.fb[a]).slice(0, 3);
       $('modal').hidden = false; $('modal').className = 'report';
-      $('modalBox').innerHTML = '<h2>' + (r.victory ? '🏅 Triomphe olympique !' : 'Bilan du ' + r.date) + '</h2>' + (r.victory ? '<p>' + esc(G.name) + ' entre dans la légende des stations de ski. Vous pouvez continuer à développer votre domaine.</p>' : '') +
+      const sc = SS.Scn.cur();
+      $('modalBox').innerHTML = '<h2>' + (r.failed ? '❌ ' + r.failTitle : r.victory ? '🏅 ' + (sc ? sc.name + ' : accompli !' : 'Bravo !') : 'Bilan du ' + r.date) + '</h2>' + (r.victory ? '<p>' + esc(r.victoryText || '') + '</p>' + (r.stars ? '<div class="bigstars">' + '★'.repeat(r.stars) + '<span>' + '★'.repeat(3 - r.stars) + '</span></div><p class="fine">Terminé en ' + r.elapsed + ' jours. Vous pouvez continuer à développer votre domaine.</p>' : '') : '') + (r.failed ? '<p>' + r.failText + '</p>' : '') +
         r.notes.map(n => '<div class="msg">' + n + '</div>').join('') + '<div class="kpis"><div><b>' + r.visitors + '</b>visiteurs</div><div><b>' + r.sat + ' %</b>satisfaction</div><div><b class="' + (res >= 0 ? 'pos' : 'neg') + '">' + eur(res) + '</b>résultat</div></div>' +
-        (fbk.length ? '<p class="fine">Principales remarques : ' + fbk.map(k => k + ' (' + r.fb[k] + ')').join(', ') + '.</p>' : '') + btn('Continuer', 'modalClose', undefined, 'primary');
+        (fbk.length ? '<p class="fine">Principales remarques : ' + fbk.map(k => k + ' (' + r.fb[k] + ')').join(', ') + '.</p>' : '') + (r.failed ? btn('Continuer en mode libre', 'scnFree', undefined, 'primary') + btn('Fermer', 'modalClose') : btn('Continuer', 'modalClose', undefined, 'primary'));
       if (!r.victory) G.paused = true;
     }
     renderTop(); UI.refresh();

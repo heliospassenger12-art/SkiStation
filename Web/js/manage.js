@@ -33,6 +33,11 @@
     if (G.groomNight === undefined) G.groomNight = false;
     if (!G.groomReport) G.groomReport = null;
     if (G.negDays === undefined) G.negDays = 0;
+    if (G.fame === undefined) G.fame = Math.round(0.5 * (G.prestige || 0) + 0.2 * (G.reputation || 0));
+    if (G.elapsed === undefined) G.elapsed = ((G.year || 1) - 1) * SS.SEASON_DAYS + (G.day || 0);
+    if (G.bid === undefined) G.bid = null;
+    if (G.scn === undefined) G.scn = G.mode === 'career' && G.career ? { id: 'olympic', stage: Math.min(G.career.stage || 0, 7), done: !!G.career.done, failed: false, stars: 0 } : null;
+    delete G.career;
     for (const b of G.buildings) M.initBuilding(b);
     for (const p of G.pistes) if (p.prio === undefined) p.prio = p.noGroom ? 0 : 1;
     M.syncLoan();

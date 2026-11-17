@@ -116,28 +116,74 @@
     { id: 'long', name: 'Prêt d\'infrastructure', amount: 2000000, days: 260, rate: 0.0005 }
   ];
 
-  D.CAREER = [
-    { title: 'Premiers flocons', reward: 60000, goals: [
-      ['Construire une remontée', s => s.lifts >= 1], ['Tracer une piste reliée au front de neige', s => s.connected >= 1], ['Accueillir 40 visiteurs en une journée', s => s.bestDay >= 40]] },
-    { title: 'Station familiale', reward: 120000, goals: [
-      ['2 pistes vertes ou bleues ouvertes', s => s.easy >= 2], ['Un point de restauration', s => s.food >= 1], ['Une location de matériel', s => s.rental >= 1], ['150 visiteurs en une journée', s => s.bestDay >= 150], ['Satisfaction ≥ 60 %', s => s.sat >= 60]] },
-    { title: 'Station reconnue', reward: 250000, goals: [
-      ['École de ski et Jardin des Piou-Piou', s => s.school >= 1 && s.kids >= 1], ['6 km de pistes', s => s.km >= 6], ['Un garage à dameuses et un poste de secours', s => s.garage >= 1 && s.rescue >= 1], ['100 lits touristiques', s => s.beds >= 100], ['400 visiteurs en une journée', s => s.bestDay >= 400]] },
-    { title: 'Station sportive', reward: 500000, goals: [
-      ['Une piste rouge et une piste noire', s => s.red >= 1 && s.black >= 1], ['Un stade de slalom', s => s.stadium >= 1], ['Organiser une compétition', s => s.eventsHosted >= 1], ['Prestige ≥ 45', s => s.prestige >= 45], ['700 visiteurs en une journée', s => s.bestDay >= 700]] },
-    { title: 'Grande station', reward: 1000000, goals: [
-      ['Une remontée arrivant au-dessus de 3 000 m', s => s.topAlt >= 3000], ['15 km de pistes', s => s.km >= 15], ['500 lits touristiques', s => s.beds >= 500], ['Accueillir une Coupe du monde', s => s.worldCup >= 1], ['Prestige ≥ 70', s => s.prestige >= 70]] },
-    { title: 'Station olympique', reward: 3000000, goals: [
-      ['Stade olympique et héliport', s => s.olympic >= 1 && s.heli >= 1], ['900 lits touristiques', s => s.beds >= 900], ['Prestige ≥ 88', s => s.prestige >= 88], ['Organiser les Jeux Olympiques d\'hiver', s => s.olympics >= 1]] }
+  // ---- Scénarios : chaque étape est une liste d'objectifs [texte, test(stats), valeur affichée(stats)] ----
+  const v = (k, unit) => s => SS.num(s[k] || 0) + (unit || '');
+  D.SCENARIOS = [
+    { id: 'first', name: 'Premiers pas', tag: 'Facile', diff: 1,
+      brief: 'Une montagne vierge, 420 000 € en poche et 70 jours pour prouver que votre station peut attirer du monde. Objectif : faire venir 250 visiteurs en une seule journée.',
+      start: { money: 420000, seed: 1337, fame: 6, research: [] }, deadline: 70, victory: 'Plus de 250 visiteurs en une journée : votre station est sur la carte des Alpes !',
+      stages: [
+        { title: 'Ouvrir la station', reward: 40000, goals: [
+          ['Construire une remontée', s => s.lifts >= 1, v('lifts')], ['Relier une piste au front de neige', s => s.connected >= 1, v('connected')], ['Accueillir 60 visiteurs en une journée', s => s.bestDay >= 60, s => s.bestDay + ' / 60']] },
+        { title: '250 visiteurs', reward: 120000, goals: [
+          ['250 visiteurs en une seule journée', s => s.bestDay >= 250, s => s.bestDay + ' / 250'], ['Satisfaction d\'au moins 55 %', s => s.sat >= 55, s => s.sat + ' %']] }] },
+    { id: 'rescue', name: 'Station en perdition', tag: 'Difficile', diff: 3, seedLock: true,
+      brief: 'Val-Mort vieillit mal : remontées usées, forfait trop cher, clients mécontents et 470 000 € de dettes. Remettez les comptes à flot, modernisez, puis faites de cette station une destination incontournable avant 320 jours.',
+      start: { money: 45000, seed: 4242, fame: 12, rep: 24, sat: 38, prebuilt: 'decay', research: ['tier1'] }, deadline: 320, victory: 'Val-Mort est redevenue incontournable : la presse parle d\'un miracle alpin !',
+      stages: [
+        { title: 'Éviter la faillite', reward: 60000, goals: [
+          ['Satisfaction d\'au moins 55 %', s => s.sat >= 55, s => s.sat + ' %'], ['Résultat positif en moyenne sur 7 jours', s => s.profit7 > 0, s => (s.profit7 >= 0 ? '+' : '−') + SS.num(Math.abs(s.profit7)) + ' € / jour'], ['Un poste de secours', s => s.rescue >= 1, v('rescue')]] },
+        { title: 'Remise à niveau', reward: 150000, goals: [
+          ['Toutes les remontées en bon état (≥ 80 %)', s => s.minCond >= 0.8, s => Math.round(s.minCond * 100) + ' %'], ['Au moins 2 dameuses', s => s.machines >= 2, v('machines')], ['Dette ramenée à 250 000 € ou moins', s => s.debt <= 250000, s => SS.num(s.debt) + ' €'], ['Satisfaction d\'au moins 68 %', s => s.sat >= 68, s => s.sat + ' %'], ['10 km de pistes', s => s.km >= 10, s => s.km.toFixed(1) + ' km']] },
+        { title: 'Incontournable', reward: 400000, goals: [
+          ['Notoriété d\'au moins 55 %', s => s.fame >= 55, s => Math.round(s.fame) + ' %'], ['600 visiteurs en une journée', s => s.bestDay >= 600, s => s.bestDay + ' / 600'], ['Satisfaction d\'au moins 78 %', s => s.sat >= 78, s => s.sat + ' %'], ['Prestige d\'au moins 45', s => s.prestige >= 45, v('prestige')], ['Organiser une course régionale', s => s.h_regional >= 1, v('h_regional')], ['Dette inférieure à 100 000 €', s => s.debt < 100000, s => SS.num(s.debt) + ' €']] }] },
+    { id: 'family', name: 'Capitale des familles', tag: 'Moyen', diff: 2,
+      brief: 'Faites de votre station la référence des vacances en famille : Piou-Piou, école de ski, pistes faciles, hébergements et activités pour toutes les générations. Vous avez deux saisons.',
+      start: { money: 520000, seed: 9001, fame: 8, research: ['tier1'] }, deadline: 240, victory: 'Les familles du monde entier réservent chez vous : Capitale des familles !',
+      stages: [
+        { title: 'Accueillir les petits', reward: 80000, goals: [
+          ['Jardin des Piou-Piou', s => s.kids >= 1, v('kids')], ['École de ski', s => s.school >= 1, v('school')], ['2 pistes vertes ou bleues ouvertes', s => s.easy >= 2, v('easy')], ['Un restaurant', s => s.food >= 1, v('food')]] },
+        { title: 'Station familiale', reward: 250000, goals: [
+          ['350 visiteurs en une journée', s => s.bestDay >= 350, s => s.bestDay + ' / 350'], ['150 lits touristiques', s => s.beds >= 150, s => SS.num(s.beds) + ' / 150'], ['Satisfaction d\'au moins 72 %', s => s.sat >= 72, s => s.sat + ' %'], ['200 médailles délivrées par l\'école', s => s.medals >= 200, s => s.medals + ' / 200'], ['Une luge ou une patinoire', s => (s.luge || 0) + (s.rink || 0) >= 1, s => ((s.luge || 0) + (s.rink || 0)) + '']] }] },
+    { id: 'luxe', name: 'Station de prestige', tag: 'Difficile', diff: 3,
+      brief: 'Une clientèle fortunée, des palaces et des tables étoilées. Avec 1,4 M€ et la recherche hôtelière acquise, bâtissez l\'adresse la plus prisée des Alpes en moins de 300 jours.',
+      start: { money: 1400000, seed: 1337, fame: 10, research: ['tier1', 'tier2', 'luxury'] }, deadline: 300, victory: 'Votre palace affiche complet : vous êtes l\'adresse des Alpes !',
+      stages: [
+        { title: 'Les premières étoiles', reward: 200000, goals: [
+          ['Un hôtel ★★★★ ou un palace', s => (s.hotel4 || 0) + (s.palace || 0) >= 1, s => ((s.hotel4 || 0) + (s.palace || 0)) + ''], ['Une table gastronomique', s => s.gastro >= 1, v('gastro')], ['Prestige d\'au moins 40', s => s.prestige >= 40, v('prestige')], ['Satisfaction d\'au moins 70 %', s => s.sat >= 70, s => s.sat + ' %']] },
+        { title: 'L\'adresse des Alpes', reward: 500000, goals: [
+          ['Un palace ★★★★★', s => s.palace >= 1, v('palace')], ['2 chalets de prestige', s => s.luxchalet >= 2, v('luxchalet')], ['Notoriété d\'au moins 55 %', s => s.fame >= 55, s => Math.round(s.fame) + ' %'], ['Prestige d\'au moins 65', s => s.prestige >= 65, v('prestige')], ['Organiser 2 événements', s => s.eventsHosted >= 2, v('eventsHosted')], ['Satisfaction d\'au moins 80 %', s => s.sat >= 80, s => s.sat + ' %']] }] },
+    { id: 'olympic', name: 'La route des Jeux', tag: 'Campagne', diff: 2, bid: true,
+      brief: 'La grande campagne : de la première remontée aux Jeux Olympiques d\'hiver. Gagnez en notoriété, organisez des compétitions, les X Games puis une Coupe du monde, et obtenez la candidature olympique. Pas de limite de temps.',
+      start: { money: 650000, seed: 1337, fame: 5, research: [] }, deadline: 0, victory: 'Les Jeux Olympiques d\'hiver se sont tenus chez vous. Votre station est entrée dans la légende !',
+      stages: [
+        { title: 'Premiers flocons', reward: 60000, goals: [
+          ['Construire une remontée', s => s.lifts >= 1, v('lifts')], ['Relier une piste au front de neige', s => s.connected >= 1, v('connected')], ['40 visiteurs en une journée', s => s.bestDay >= 40, s => s.bestDay + ' / 40']] },
+        { title: 'Station familiale', reward: 120000, goals: [
+          ['2 pistes vertes ou bleues', s => s.easy >= 2, v('easy')], ['Un restaurant et une location de matériel', s => s.food >= 1 && s.rental >= 1, s => (s.food >= 1 ? '✔' : '✘') + ' / ' + (s.rental >= 1 ? '✔' : '✘')], ['150 visiteurs en une journée', s => s.bestDay >= 150, s => s.bestDay + ' / 150'], ['Satisfaction d\'au moins 60 %', s => s.sat >= 60, s => s.sat + ' %']] },
+        { title: 'Station reconnue', reward: 250000, fame: 20, goals: [
+          ['École de ski et Jardin des Piou-Piou', s => s.school >= 1 && s.kids >= 1, s => (s.school >= 1 ? '✔' : '✘') + ' / ' + (s.kids >= 1 ? '✔' : '✘')], ['6 km de pistes', s => s.km >= 6, s => s.km.toFixed(1) + ' km'], ['Garage à dameuses et poste de secours', s => s.garage >= 1 && s.rescue >= 1, s => (s.garage >= 1 ? '✔' : '✘') + ' / ' + (s.rescue >= 1 ? '✔' : '✘')], ['100 lits touristiques', s => s.beds >= 100, s => SS.num(s.beds) + ' / 100'], ['400 visiteurs en une journée', s => s.bestDay >= 400, s => s.bestDay + ' / 400'], ['Notoriété de 20 %', s => s.fame >= 20, s => Math.round(s.fame) + ' %']] },
+        { title: 'Terre de compétition', reward: 400000, fame: 35, goals: [
+          ['Une piste rouge et une piste noire', s => s.red >= 1 && s.black >= 1, s => s.red + ' rouge · ' + s.black + ' noire'], ['Un stade de slalom', s => s.stadium >= 1, v('stadium')], ['Organiser une course régionale', s => s.h_regional >= 1, v('h_regional')], ['600 visiteurs en une journée', s => s.bestDay >= 600, s => s.bestDay + ' / 600'], ['Notoriété de 35 %', s => s.fame >= 35, s => Math.round(s.fame) + ' %']] },
+        { title: 'Les X Games', reward: 700000, fame: 50, goals: [
+          ['Un snowpark et une scène de concerts', s => s.snowpark >= 1 && s.stage >= 1, s => (s.snowpark >= 1 ? '✔' : '✘') + ' / ' + (s.stage >= 1 ? '✔' : '✘')], ['300 lits touristiques', s => s.beds >= 300, s => SS.num(s.beds) + ' / 300'], ['Organiser les X Games d\'hiver', s => s.h_xgames >= 1, v('h_xgames')], ['Notoriété de 55 %', s => s.fame >= 55, s => Math.round(s.fame) + ' %']] },
+        { title: 'Coupe du monde', reward: 1000000, fame: 62, goals: [
+          ['Une remontée arrivant au-dessus de 3 000 m', s => s.topAlt >= 3000, s => SS.num(s.topAlt) + ' m'], ['15 km de pistes', s => s.km >= 15, s => s.km.toFixed(1) + ' km'], ['500 lits touristiques', s => s.beds >= 500, s => SS.num(s.beds) + ' / 500'], ['Organiser une Coupe du monde', s => s.h_worldcup >= 1, v('h_worldcup')], ['Notoriété de 70 %', s => s.fame >= 70, s => Math.round(s.fame) + ' %']] },
+        { title: 'Candidature olympique', reward: 1500000, fame: 70, goals: [
+          ['Dossier « Jeux Olympiques » étudié', s => s.research_olympic, s => s.research_olympic ? '✔' : '✘'], ['Héliport de secours', s => s.heli >= 1, v('heli')], ['700 lits touristiques', s => s.beds >= 700, s => SS.num(s.beds) + ' / 700'], ['Candidature acceptée par le CIO', s => s.bidOk, s => s.bidOk ? '✔' : '✘'], ['Notoriété de 80 %', s => s.fame >= 80, s => Math.round(s.fame) + ' %']] },
+        { title: 'Les Jeux Olympiques', reward: 3000000, fame: 80, goals: [
+          ['Stade olympique', s => s.olympic >= 1, v('olympic')], ['Organiser les Jeux Olympiques d\'hiver', s => s.h_olympics >= 1, v('h_olympics')]] }] }
   ];
 
+  // fame : notoriété minimale ; fameGain : notoriété gagnée si l'événement est réussi (satisfaction ≥ 50 %)
   D.EVENTS = [
-    { id: 'fete', name: 'Fête du village', cost: 15000, boost: 1.25, prestige: 1, days: 1, need: s => true, needTxt: 'Aucun prérequis' },
-    { id: 'concert', name: 'Festival de concerts', cost: 60000, boost: 1.4, prestige: 2, days: 2, need: s => s.stage >= 1, needTxt: 'Scène de concerts' },
-    { id: 'regional', name: 'Course régionale', cost: 40000, boost: 1.3, prestige: 3, days: 1, comp: true, need: s => s.stadium >= 1 && s.red >= 1, needTxt: 'Stade de slalom + piste rouge' },
-    { id: 'europe', name: 'Coupe d\'Europe', cost: 150000, boost: 1.5, prestige: 6, days: 2, comp: true, need: s => s.stadium >= 1 && s.black >= 1 && s.prestige >= 40, needTxt: 'Stade, piste noire, prestige 40' },
-    { id: 'worldcup', name: 'Coupe du monde', cost: 500000, boost: 1.8, prestige: 10, days: 3, comp: true, need: s => s.stadium >= 1 && s.black >= 1 && s.prestige >= 60 && s.beds >= 300, needTxt: 'Stade, piste noire, prestige 60, 300 lits' },
-    { id: 'olympics', name: 'Jeux Olympiques d\'hiver', cost: 3000000, boost: 2.2, prestige: 25, days: 6, comp: true, need: s => s.olympic >= 1 && s.heli >= 1 && s.prestige >= 85 && s.beds >= 900, needTxt: 'Stade olympique, héliport, prestige 85, 900 lits' }
+    { id: 'fete', name: 'Fête du village', cost: 15000, boost: 1.25, prestige: 1, fame: 0, fameGain: 0.8, days: 1, need: s => true, needTxt: 'Aucun prérequis' },
+    { id: 'concert', name: 'Festival de concerts', cost: 60000, boost: 1.4, prestige: 2, fame: 10, fameGain: 1.8, days: 2, need: s => s.stage >= 1 && s.fame >= 10, needTxt: 'Scène de concerts · notoriété 10 %' },
+    { id: 'regional', name: 'Course régionale', cost: 40000, boost: 1.3, prestige: 3, fame: 18, fameGain: 3, days: 1, comp: true, need: s => s.stadium >= 1 && s.red >= 1 && s.fame >= 18, needTxt: 'Stade de slalom, piste rouge · notoriété 18 %' },
+    { id: 'europe', name: 'Coupe d\'Europe', cost: 150000, boost: 1.5, prestige: 6, fame: 35, fameGain: 5, days: 2, comp: true, need: s => s.stadium >= 1 && s.black >= 1 && s.fame >= 35, needTxt: 'Stade, piste noire · notoriété 35 %' },
+    { id: 'xgames', name: 'X Games d\'hiver', cost: 320000, boost: 1.9, prestige: 8, fame: 50, fameGain: 9, days: 3, comp: true, need: s => s.snowpark >= 1 && s.stage >= 1 && s.beds >= 250 && s.rescue >= 1 && s.fame >= 50, needTxt: 'Snowpark, scène de concerts, 250 lits, poste de secours · notoriété 50 %' },
+    { id: 'worldcup', name: 'Coupe du monde', cost: 500000, boost: 1.8, prestige: 10, fame: 62, fameGain: 10, days: 3, comp: true, need: s => s.stadium >= 1 && s.black >= 1 && s.beds >= 300 && s.fame >= 62, needTxt: 'Stade, piste noire, 300 lits · notoriété 62 %' },
+    { id: 'olympics', name: 'Jeux Olympiques d\'hiver', cost: 3000000, boost: 2.2, prestige: 25, fame: 80, fameGain: 20, days: 6, comp: true, bid: true, need: s => false, needTxt: 'Uniquement via la candidature olympique (notoriété 70 % pour candidater)' }
   ];
 
   D.ACH = [

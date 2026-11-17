@@ -17,7 +17,7 @@
       passPrice: 26, nightPrice: 14, summerPass: 12, summer: false, maint: 1, marketing: { social: 0, tv: 0 },
       reputation: 50, prestige: 0, satToday: [], sat: 60,
       weather: null, forecast: [], snowBase: 55,
-      career: { stage: 0, done: false }, event: null, eventsHosted: {}, bestDay: 0,
+      scn: null, fame: 8, elapsed: 0, bid: null, event: null, eventsHosted: {}, bestDay: 0,
       medals: {}, incidentsToday: 0, visitorsToday: 0, totalVisitors: 0, log: [], hints: {}
     };
     // équipements de départ : route d'accès, parking communal, billetterie
@@ -25,6 +25,8 @@
     placeStarter('ticket', -40, 2620); placeStarter('parking', 120, 2960);
     SS.Mgmt.migrate(G);
     SS.Weather.init();
+    SS.Net.rebuild();
+    if (opts.scn) { SS.Scn.setup(G, opts); SS.Weather.init(); }
     SS.Net.rebuild();
     SS.Sim.startDay();
     return G;
@@ -492,6 +494,12 @@
     }
     s.stage = s.stage || 0; s.eventsHosted = Object.values(G.eventsHosted).reduce((a, b) => a + b, 0);
     s.worldCup = G.eventsHosted.worldcup || 0; s.olympics = G.eventsHosted.olympics || 0;
+    s.fame = G.fame; s.debt = G.loan; s.machines = SS.Mgmt.groomerCount(); s.patrol = SS.Mgmt.patrolCount(); s.todayV = G.visitorsToday;
+    s.capacity = G.lifts.reduce((a, l) => a + l.capacity, 0); s.minCond = G.lifts.length ? Math.min(...G.lifts.map(l => l.cond)) : 1;
+    const h7 = G.history.slice(-7); s.profit7 = h7.length ? h7.reduce((a, x) => a + x.inc - x.exp, 0) / h7.length : -1;
+    for (const e of D.EVENTS) s['h_' + e.id] = G.eventsHosted[e.id] || 0;
+    s.medals = Object.values(G.medals).reduce((a, b) => a + b, 0); s.research_olympic = SS.researched('olympic');
+    s.bidOk = !!(G.bid && ['prep', 'games', 'done'].indexOf(G.bid.phase) >= 0) || (G.eventsHosted.olympics || 0) > 0;
     return s;
   };
   SS.updatePrestige = function () {

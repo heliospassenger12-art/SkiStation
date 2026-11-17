@@ -111,3 +111,14 @@ textarea{width:100%;min-height:74px;margin:8px 0;padding:8px;border-radius:10px;
 .ach.on{opacity:1;outline:1px solid rgba(255,178,56,.5)}.ach small{display:block;color:var(--mut);font-size:11px}
 .jrow.li2{grid-template-columns:1.6fr 1fr 1fr 1.1fr;cursor:pointer}.jrow.li2:hover{background:rgba(255,255,255,.05)}
 .li .chips{margin-top:6px}.li .btn.small{margin-top:4px;margin-right:4px}
+#sm_scenarios{display:flex;flex-direction:column;gap:6px;margin-top:10px;max-height:34vh;overflow-y:auto}
+.scn{display:grid;grid-template-columns:1fr auto;gap:2px 8px;text-align:left;padding:10px 12px;border-radius:12px;background:var(--bg2);border:2px solid transparent}
+.scn b{font-size:14.5px}.scn span{grid-column:1/-1;font-size:12px;color:var(--mut)}.scn small{grid-column:1/-1;font-size:11.5px;color:var(--acc)}.scn.on{border-color:var(--acc)}
+.scn .rec{grid-column:1/-1;font-style:normal;font-size:12px;color:var(--acc)}
+.tagx{font-style:normal;font-size:11px;padding:1px 9px;border-radius:9px;background:rgba(255,255,255,.1);align-self:start}.tagx.d1{background:rgba(53,208,127,.2);color:var(--ok)}.tagx.d2{background:rgba(79,195,247,.2);color:var(--blue)}.tagx.d3{background:rgba(255,93,93,.2);color:var(--bad)}
+.bigstars{font-size:38px;color:var(--acc);letter-spacing:6px;margin:6px 0}.bigstars span{color:rgba(255,255,255,.2)}
+.fameg{position:relative;height:16px;border-radius:8px;background:rgba(255,255,255,.1);margin:8px 0 22px}.fameg i{position:absolute;left:0;top:0;bottom:0;border-radius:8px;background:linear-gradient(90deg,var(--blue),var(--acc))}
+.fameg u{position:absolute;top:-4px;bottom:-4px;width:2px;background:rgba(255,255,255,.5);text-decoration:none}.fameg u small{position:absolute;top:22px;left:50%;transform:translateX(-50%);font-size:9.5px;color:var(--mut);white-space:nowrap}
+.dl{display:flex;justify-content:space-between;font-size:12.5px;color:var(--mut)}.dl b.low{color:var(--bad)}
+.goal small{color:var(--mut);margin-left:6px}.phase{display:flex;gap:4px;margin:8px 0}.phase span{flex:1;text-align:center;padding:5px 2px;border-radius:8px;background:var(--bg2);font-size:11px;color:var(--mut)}.phase span.on{background:var(--acc);color:#1a1205;font-weight:700}.phase span.past{color:var(--ok)}
+.fameg u:nth-child(even) small{top:auto;bottom:22px}.fameg{margin:26px 0 24px}.fameg u small{font-size:9px}
