@@ -55,3 +55,11 @@ Notoriété 82 %, prestige 72, satisfaction moyenne 78 %, snowpark + scène + st
 - Les villes rivales du CIO deviennent les autres compagnies : leur note de dossier se calcule avec `SS.Scn.dossierScore()` sur leur propre station.
 - Une seule compagnie peut obtenir les Jeux d'une édition. La première à atteindre le jour 1 des Jeux remporte la partie.
 - Les X Games restent un événement que plusieurs compagnies peuvent organiser, sans condition de victoire.
+
+## Alignement avec le Bloc 2 de la version Unity ChatGPT (Drive, 16/11/2026)
+Référence copiée dans `Docs/AlpineEmpires_Bloc2/` (kit « Comptes alliés », statut PARTIEL, tests Unity en attente).
+- **4 compagnies** (`company-1` à `company-4`), chacune avec sa station, son gestionnaire et son grand livre ; de 1 à 4 humains, les autres places sont des alliés ou adversaires.
+- **Modes d'équipe** : Individuel (4 équipes), Deux équipes (1-2 contre 3-4), Empire partagé (une seule équipe).
+- **Concessions** : une concession de départ gratuite par compagnie, deux extensions achetables (50 000 € et 100 000 €), une zone protégée non constructible (haute altitude). Altitudes autorisées 1 300 → 4 050 m.
+- **Comptes** : chaque dépense et recette (construction, ventes d'un service, charges) est attribuée à la compagnie propriétaire, au centime, avec un journal rejouable (opérations idempotentes) pour la sauvegarde.
+- Dans notre modèle : chaque compagnie aura son propre `GameState` (argent, prestige, notoriété, prêts, recherche) sur un massif commun ; le réseau de pistes et les visiteurs restent partagés, les recettes d'un service vont à son propriétaire. La victoire reste le **jour 1 des Jeux Olympiques** : une seule compagnie par édition.
