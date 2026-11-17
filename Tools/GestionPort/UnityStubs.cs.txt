@@ -6,9 +6,9 @@ namespace UnityEngine {
   public class Component : Object { public GameObject gameObject; public Transform transform; public string tag; public T GetComponent<T>(){return default(T);} public T AddComponent<T>() where T:Component{return null;} }
   public class Behaviour : Component { public bool enabled; }
   public class MonoBehaviour : Behaviour { public void Invoke(string n,float t){} public void StartCoroutine(System.Collections.IEnumerator e){} }
-  public class GameObject : Object { public GameObject(){} public GameObject(string n){} public Transform transform; public string tag; public T AddComponent<T>() where T:Component{return null;} public T GetComponent<T>(){return default(T);} public void SetActive(bool b){} public static GameObject CreatePrimitive(PrimitiveType t){return null;} public static GameObject Find(string n){return null;} }
+  public class GameObject : Object { public GameObject(){} public GameObject(string n){} public Transform transform; public string tag; public T AddComponent<T>() where T:Component{return null;} public Component AddComponent(Type t){return null;} public T GetComponent<T>(){return default(T);} public void SetActive(bool b){} public static GameObject CreatePrimitive(PrimitiveType t){return null;} public static GameObject Find(string n){return null;} }
   public enum PrimitiveType{Sphere,Capsule,Cylinder,Cube,Plane,Quad}
-  public class Transform : Component, System.Collections.IEnumerable { public Vector3 position, localPosition, localScale, forward, right, up; public Quaternion rotation, localRotation; public Transform parent; public void SetParent(Transform p, bool w=true){} public void SetPositionAndRotation(Vector3 p, Quaternion q){} public void LookAt(Vector3 p){} public Transform Find(string n){return null;} public System.Collections.IEnumerator GetEnumerator(){return null;} }
+  public class Transform : Component, System.Collections.IEnumerable { public Vector3 position, localPosition, localScale, forward, right, up; public Quaternion rotation, localRotation; public Transform parent; public void SetParent(Transform p, bool w=true){} public void SetPositionAndRotation(Vector3 p, Quaternion q){} public void SetPositionAndRotation_(Vector3 p, Quaternion q){} public void LookAt(Vector3 p){} public Transform Find(string n){return null;} public System.Collections.IEnumerator GetEnumerator(){return null;} }
   public struct Vector2 { public float x,y; public Vector2(float x,float y){this.x=x;this.y=y;} public float sqrMagnitude{get{return 0;}} public static Vector2 zero; public static implicit operator Vector2(Vector3 v){return new Vector2(v.x,v.y);} }
   public struct Vector3 { public float x,y,z; public Vector3(float x,float y,float z){this.x=x;this.y=y;this.z=z;} public static Vector3 zero, one, up, forward, right; public Vector3 normalized{get{return this;}} public float magnitude{get{return 0;}} public float sqrMagnitude{get{return 0;}}
     public static Vector3 operator+(Vector3 a,Vector3 b){return a;} public static Vector3 operator-(Vector3 a,Vector3 b){return a;} public static Vector3 operator-(Vector3 a){return a;} public static Vector3 operator*(Vector3 a,float b){return a;} public static Vector3 operator*(float b,Vector3 a){return a;} public static Vector3 operator/(Vector3 a,float b){return a;} public static bool operator==(Vector3 a,Vector3 b){return true;} public static bool operator!=(Vector3 a,Vector3 b){return false;} public override bool Equals(object o){return false;} public override int GetHashCode(){return 0;} }
@@ -62,20 +62,5 @@ namespace UnityEngine {
     public static void BeginHorizontal(params GUILayoutOption[] o){} public static void EndHorizontal(){} public static void BeginArea(Rect r){} public static void EndArea(){} public static Vector2 BeginScrollView(Vector2 v,params GUILayoutOption[] o){return v;} public static void EndScrollView(){} public static void FlexibleSpace(){} public static void Space(float f){} public static GUILayoutOption Width(float f){return null;} public static GUILayoutOption Height(float f){return null;} }
   public class HeaderAttribute : Attribute { public HeaderAttribute(string s){} }
 }
-namespace UnityEngine.Rendering { public enum ShadowCastingMode{Off,On} }
-namespace UnityEngine.SceneManagement { public struct Scene { public string name; } public static class SceneManager { public static Scene GetActiveScene(){return default(Scene);} } }
-namespace SkiStation { public static class AlpineRockMaterial { public static UnityEngine.Material Shared; } public sealed class AlpineForestVisual262 : UnityEngine.MonoBehaviour {} }
-namespace SkiStation.Arcade {
-  using UnityEngine;
-  public sealed class ArcadeSkiController : MonoBehaviour { public void BeginAt(Vector3 p,Quaternion q){} public void StopPlaying(){} }
-  public sealed class ArcadeSkiSession : MonoBehaviour { public ArcadeSkiController player; public Camera playerCamera, managementCamera; public MonoBehaviour managementCameraControls; public bool IsPlaying{get;private set;} public bool EnterWorld(Vector3 p,Quaternion q){return true;} public void ExitWorld(){} }
-  public static class ArcadeSkierRig { public static void Build(Transform a,ArcadeSkiController c,Material j,Material d,Material s){} }
-  public sealed class ArcadeBigAirLanding : MonoBehaviour { public ArcadeSkiController skier; }
-  public sealed class ArcadeComboHUD : MonoBehaviour { public ArcadeSkiController skier; }
-  public sealed class ArcadeTrickNameHUD : MonoBehaviour { public ArcadeSkiController skier; }
-  public sealed class ArcadeLandingCelebrationHUD : MonoBehaviour { }
-  public sealed class ArcadeSkiTrickVisual : MonoBehaviour { public ArcadeSkiController controller; public Transform bodyVisual, leftSki, rightSki; }
-  public sealed class ArcadeCarvingVisual : MonoBehaviour { public ArcadeSkiController controller; public Transform body, leftSki, rightSki; public TrailRenderer leftTrack, rightTrack; }
-  public sealed class ArcadeThirdPersonCamera : MonoBehaviour { public Transform target; public ArcadeSkiController controller; public void SnapBehind(){} }
-  public sealed class ArcadePeripheralSpeedEffect : MonoBehaviour { public ArcadeSkiController controller; public bool showBlurWhenSupported; }
-}
+namespace UnityEngine.Rendering { public enum ShadowCastingMode{Off,On} public class RenderPipelineAsset : UnityEngine.Object {} public static class GraphicsSettings { public static RenderPipelineAsset currentRenderPipeline; } }
+namespace UnityEngine.SceneManagement { public struct Scene { public string name; public UnityEngine.GameObject[] GetRootGameObjects(){return null;} } public static class SceneManager { public static Scene GetActiveScene(){return default(Scene);} } }

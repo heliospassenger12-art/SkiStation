@@ -23,7 +23,6 @@ namespace SkiStation
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
         {
-            if (SkiStation.Arcade.ArcadeSceneIsolation.IsActive) return;
             if (FindObjectOfType<StationMarketingBank249>() == null)
                 new GameObject("SkiStation_MarketingBank249").AddComponent<StationMarketingBank249>();
         }

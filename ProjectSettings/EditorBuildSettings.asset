@@ -6,7 +6,7 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/SkiStation_Gestion.unity
+    path: Assets/Scenes/SkiStation_Arcade_Test_Gestion.unity
     guid: 3e0855b018cc472fb03595b804eb5843
   - enabled: 1
     path: Assets/Scenes/SkiStation_Bootstrap.unity

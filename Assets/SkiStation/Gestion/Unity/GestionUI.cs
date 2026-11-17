@@ -272,7 +272,7 @@ namespace SkiStation.GestionUnity
             if (!p.cannons && GUILayout.Button("Installer des enneigeurs — " + GMath.Eur(Game.R(p.len * 55)))) Msg(Actions.Cannons(p), "Enneigeurs installés.");
             if (!p.lit && Game.Researched("night") && GUILayout.Button("Éclairage nocturne — " + GMath.Eur(Game.R(p.len * 45)))) Msg(Actions.Light(p), "Éclairage installé.");
             GUILayout.BeginHorizontal(); GUILayout.Label("Damage"); string[] pr = { "Jamais", "Normal", "Prioritaire" }; for (int i = 0; i < 3; i++) if (GUILayout.Button(pr[i], p.prio == i ? btnOn : GUI.skin.button)) Actions.GroomPrio(p, i); GUILayout.EndHorizontal();
-            if (GUILayout.Button("<b>⛷ Descendre en arcade (rider)</b>", GUILayout.Height(S(36)))) { if (!arcade.Launch(p)) Toast("Descente impossible."); }
+            if (GUILayout.Button("<b>⛷ Descendre en arcade (rider)</b>", GUILayout.Height(S(36)))) { if (!arcade.Launch(p)) Toast(arcade.lastError ?? "Descente impossible."); }
             Demolish(p);
         }
         void LiftSheet(Lift l)

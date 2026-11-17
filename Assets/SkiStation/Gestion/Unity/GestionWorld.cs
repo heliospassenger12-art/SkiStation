@@ -2,7 +2,6 @@
 // la palette et la texture de roche de la version ChatGPT (AlpineMountainSurface261 / AlpineRockMaterial), forêts
 // dessinées par instanciation avec le sapin étagé de AlpineForestVisual262.
 using System.Collections.Generic;
-using System.Reflection;
 using UnityEngine;
 using UnityEngine.Rendering;
 using SkiStation.Gestion;
@@ -19,7 +18,16 @@ namespace SkiStation.GestionUnity
         public static float Yaw(double dx, double dz) { return Mathf.Atan2((float)dx, (float)-dz) * Mathf.Rad2Deg; }
 
         static readonly Dictionary<string, Material> mats = new Dictionary<string, Material>();
-        public static Shader Lit { get { var s = Shader.Find("Standard"); if (s == null) s = Shader.Find("Universal Render Pipeline/Lit"); if (s == null) s = Shader.Find("Unlit/Color"); return s; } }
+        /// <summary>Shader éclairé adapté au pipeline du projet (URP dans les versions récentes, intégré dans les anciennes).</summary>
+        public static Shader Lit
+        {
+            get
+            {
+                bool urp = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null;
+                var s = Shader.Find(urp ? "Universal Render Pipeline/Lit" : "Standard"); if (s == null) s = Shader.Find(urp ? "Standard" : "Universal Render Pipeline/Lit");
+                if (s == null) s = Shader.Find("Universal Render Pipeline/Simple Lit"); if (s == null) s = Shader.Find("Unlit/Color"); return s;
+            }
+        }
         public static Material Mat(string name, Color c, float smooth = 0.2f, bool instancing = false)
         {
             Material m; if (mats.TryGetValue(name, out m) && m != null) return m;
@@ -31,7 +39,7 @@ namespace SkiStation.GestionUnity
         public static Material Unlit(string name, Color c)
         {
             Material m; if (mats.TryGetValue(name, out m) && m != null) return m;
-            var s = Shader.Find("Unlit/Color"); if (s == null) s = Lit;
+            var s = Shader.Find(UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null ? "Universal Render Pipeline/Unlit" : "Unlit/Color"); if (s == null) s = Shader.Find("Unlit/Color"); if (s == null) s = Lit;
             m = new Material(s) { name = name, color = c }; mats[name] = m; return m;
         }
         public static Color Hex(string h) { Color c; return ColorUtility.TryParseHtmlString(h, out c) ? c : Color.magenta; }
@@ -71,7 +79,7 @@ namespace SkiStation.GestionUnity
         /// <summary>Palette de la surface 2.61 de la version ChatGPT ; seuils d'altitude adaptés au massif 1 640 → 4 200 m.</summary>
         Material[] SurfaceMaterials()
         {
-            var rock = AlpineRockMaterial.Shared ?? W.Mat("Roche", new Color(.38f, .36f, .33f), .09f);
+            var rock = ChatGPTAssets.RockMaterial() ?? W.Mat("Roche", new Color(.38f, .36f, .33f), .09f);
             return new[] {
                 W.Mat("261_NeigeFraiche", new Color(.94f, .97f, .985f), .34f),
                 W.Mat("261_NeigeCompacte", new Color(.80f, .87f, .91f), .22f),
@@ -131,8 +139,7 @@ namespace SkiStation.GestionUnity
         // ---------- forêts : sapin étagé 2.62 de la version ChatGPT, dessiné par instanciation ----------
         void BuildTreeAssets()
         {
-            var mi = typeof(AlpineForestVisual262).GetMethod("BuildCrown", BindingFlags.NonPublic | BindingFlags.Static);
-            crown = mi != null ? mi.Invoke(null, null) as Mesh : null;
+            crown = ChatGPTAssets.PineCrown();
             if (crown == null) { var tmp = GameObject.CreatePrimitive(PrimitiveType.Capsule); crown = tmp.GetComponent<MeshFilter>().sharedMesh; Destroy(tmp); }
             var cyl = GameObject.CreatePrimitive(PrimitiveType.Cylinder); trunk = cyl.GetComponent<MeshFilter>().sharedMesh; Destroy(cyl);
             needles = W.Mat("262_Aiguilles", new Color(.035f, .13f, .075f), .12f, true);
