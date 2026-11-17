@@ -148,7 +148,8 @@ namespace SkiStation.Gestion
         }
         // JONCTIONS : une piste ne chevauche jamais une autre. Elle peut partir d'une piste existante (embranchement) et,
         // dès qu'elle en touche une autre, elle s'arrête dessus et la rejoint ; le réseau les relie à cet endroit.
-        public static List<Piste> PistePool;                 // pistes prises en compte (null = celles du joueur)
+        public static List<Piste> PistePool;
+        public static string AutoDest = "any";                 // pistes prises en compte (null = celles du joueur)
         public sealed class Junction { public int i; public Piste piste; public double s, apart; public P2 at; }
         public static Junction FindJunction(IList<P3> pts, double width, IList<Piste> pool = null)
         {
@@ -171,7 +172,28 @@ namespace SkiStation.Gestion
             }
             return null;
         }
+        // RACCORD AUX REMONTÉES : départ près de l'arrivée d'une remontée → depuis la gare ; fin près du départ d'une remontée plus basse → à la gare.
+        public static List<Lift> LiftPool;                   // remontées prises en compte (null = celles du joueur)
+        public static List<P2> AttachPiste(IList<P2> ctrl, out Lift startLift, out Lift endLift)
+        {
+            var lifts = LiftPool ?? G.lifts; var o = ctrl.ToList(); startLift = null; endLift = null;
+            if (o.Count < 2) return o;
+            P2 f = o[0]; double hf = T.GetH(f.x, f.z), bd = 140;
+            foreach (var l in lifts) { double d = GMath.Hypot(l.b.x - f.x, l.b.z - f.z); if (d < bd && l.b.y >= hf - 15) { bd = d; startLift = l; } }
+            if (startLift != null) { var st = new P2(R(startLift.b.x), R(startLift.b.z)); if (bd < 35 || o.Count > 2) o[0] = st; else o.Insert(0, st); }
+            P2 e = o[o.Count - 1]; double he = T.GetH(e.x, e.z); bd = 160;
+            foreach (var l in lifts) { if (l == startLift) continue; double d = GMath.Hypot(l.a.x - e.x, l.a.z - e.z); if (d < bd && l.a.y <= he + 5) { bd = d; endLift = l; } }
+            if (endLift == null && startLift != null) { var l = startLift; double d = GMath.Hypot(l.a.x - e.x, l.a.z - e.z); if (d < 160 && l.a.y <= he + 5) { endLift = l; bd = d; } }
+            if (endLift != null) { var st = new P2(R(endLift.a.x), R(endLift.a.z)); if (bd < 35) o[o.Count - 1] = st; else o.Add(st); }
+            return o;
+        }
         public static PisteAnalysis AnalyzePiste(IList<P2> ctrl, double width = 30)
+        {
+            Lift sl, el; var c2 = AttachPiste(ctrl, out sl, out el);
+            var r = AnalyzePisteJ(c2, width); r.startLift = sl != null ? sl.name : null; r.endLift = r.joins == null && el != null ? el.name : null;
+            return r;
+        }
+        static PisteAnalysis AnalyzePisteJ(IList<P2> ctrl, double width)
         {
             if (width <= 0) width = 30;
             if (ctrl.Count < 2) { var r0 = AnalyzePiste0(ctrl, width); r0.ctrl = ctrl.ToList(); return r0; }
@@ -306,8 +328,27 @@ namespace SkiStation.Gestion
             l.queue = new List<Visitor>(); l.brokenUntil = 0; l.windStop = false; l.rides = 0;
             T.TreesNearPath(new List<P2> { l.a.Xz, l.b.Xz }, 9, true);
             foreach (var st in new[] { l.a, l.b }) { T.Flatten(st.x, st.z, 12, st.y, 14); if (loaded == null) G.flats.Add(new Flat { x = st.x, z = st.z, r = 12, h = st.y, blend = 14 }); }
-            if (loaded == null) { G.lifts.Add(l); Net.Rebuild(); Emit("lift:add", l); Emit("world"); }
+            if (loaded == null) { G.lifts.Add(l); ReattachPistes(l); Net.Rebuild(); Emit("lift:add", l); Emit("world"); }
             return l;
+        }
+        /// <summary>Une nouvelle remontée raccorde d'elle-même les pistes voisines (fins vers sa gare de départ, départs vers son arrivée).</summary>
+        public static int ReattachPistes(Lift l, List<Piste> pistes = null)
+        {
+            var list = pistes ?? G.pistes; int n = 0;
+            foreach (var p in list.ToList())
+            {
+                P3 a = p.pts[0], z = p.pts[p.pts.Count - 1];
+                double de = GMath.Hypot(l.a.x - z.x, l.a.z - z.z), ds = GMath.Hypot(l.b.x - a.x, l.b.z - a.z);
+                bool nearEnd = de < 160 && de > 8 && l.a.y <= z.y + 5, nearStart = p.on == 0 && ds < 140 && ds > 8 && l.b.y >= a.y - 15;
+                if (!nearEnd && !nearStart) continue;
+                var prev = PistePool; PistePool = list.Where(o => o != p).ToList();
+                var an = AnalyzePiste(p.ctrl, p.width); PistePool = prev;
+                if (!an.ok || an.pts == null) continue;
+                p.ctrl = an.ctrl.Select(c => new P2(R(c.x), R(c.z))).ToList(); p.pts = an.pts; p.len = an.len; p.drop = an.drop; p.avg = an.avg; p.p90 = an.p90; p.diff = an.diff; p.topAlt = an.topAlt;
+                T.TreesNearPath(p.pts.Select(q => q.Xz).ToList(), p.width / 2 + 5, true); T.SnowAlong(p.pts, p.width / 2 + Relief.CELL);
+                Emit("piste:refresh", p); n++;
+            }
+            return n;
         }
         /// <summary>Remplace le modèle sur la même ligne (gares inchangées) ; remontée vide uniquement. dry = devis seul.</summary>
         public static string Modernize(Lift l, string type, bool dry, out double cost, out LiftAnalysis an)
@@ -347,14 +388,30 @@ namespace SkiStation.Gestion
             const int S = 2; int N = Relief.N, M = (int)Math.Ceiling((double)N / S); double C = Relief.CELL;
             Func<int, P2> to = i => new P2(-Relief.HALF + (i % M) * S * C, -Relief.HALF + (i / M) * S * C);
             P2 gx0 = goal ?? Relief.HUB;
+            // sans arrivée imposée : front de neige ou départ d'une remontée plus basse (AutoDest : "any", "self", "hub")
+            var dests = new List<Tuple<P2, double, string, Lift>>();
+            if (!goal.HasValue)
+            {
+                dests.Add(Tuple.Create(Relief.HUB, 110.0, "le front de neige", (Lift)null));
+                if (AutoDest != "hub")
+                {
+                    double h0 = T.GetH(start.x, start.z); var pool = LiftPool ?? G.lifts; var own = pool.FirstOrDefault(l => GMath.Hypot(l.b.x - start.x, l.b.z - start.z) < 80);
+                    foreach (var l in pool)
+                    {
+                        if (AutoDest == "self" ? l != own : l == own) continue;
+                        if (l.a.y < h0 - 40 && GMath.Hypot(l.a.x - start.x, l.a.z - start.z) > 250) dests.Add(Tuple.Create(l.a.Xz, 45.0, l.name, l));
+                    }
+                    if (AutoDest == "self" && dests.Count > 1) dests.RemoveAt(0);
+                }
+            }
             Func<double, double, int> ci = (x, z) => (int)R((z + Relief.HALF) / C / S) * M + (int)R((x + Relief.HALF) / C / S);
             Func<int, double> hAt = i => { var p = to(i); return T.GetH(p.x, p.z); };
             int si = ci(start.x, start.z), gi = ci(gx0.x, gx0.z); double stepL = S * C;
-            if (hAt(si) < T.GetH(gx0.x, gx0.z) + 8) return new AutoPisteResult { err = "Le départ doit être nettement plus haut que l'arrivée." };
+            if (hAt(si) < (goal.HasValue ? T.GetH(gx0.x, gx0.z) : dests.Min(d => T.GetH(d.Item1.x, d.Item1.z))) + 8) return new AutoPisteResult { err = "Le départ doit être nettement plus haut que l'arrivée." };
             var heap = new MinHeap(); heap.Push(0, si);
             var cost = new Dictionary<int, double> { { si, 0 } }; var prev = new Dictionary<int, int>(); var done = new HashSet<int>();
             int[] nbx = { 1, -1, 0, 0, 1, -1, 1, -1 }, nbz = { 0, 0, 1, -1, 1, 1, -1, -1 };
-            var hg = to(gi); int iter = 0, reached = -1;
+            var hg = to(gi); int iter = 0, reached = -1; Tuple<P2, double, string, Lift> hitDest = null;
             var corr = new HashSet<int>(); foreach (var o in PistePool ?? G.pistes) if (o.pts != null) foreach (var q in o.pts) corr.Add(ci(q.x, q.z));
             var tows = new List<P2[]>();
             foreach (var l in G.lifts) if (Catalog.Lift(l.type).kind == "tow") { double dx = l.b.x - l.a.x, dz = l.b.z - l.a.z, n = GMath.Hypot(dx, dz); if (n == 0) n = 1; tows.Add(new[] { new P2(l.a.x + dx / n * 45, l.a.z + dz / n * 45), new P2(l.b.x - dx / n * 45, l.b.z - dz / n * 45) }); }
@@ -362,7 +419,7 @@ namespace SkiStation.Gestion
             {
                 int i = heap.Pop(); if (done.Contains(i)) continue; done.Add(i);
                 var p = to(i);
-                if (GMath.Hypot(p.x - hg.x, p.z - hg.z) < (goal.HasValue ? 60 : 110)) { reached = i; break; }
+                if (goal.HasValue ? GMath.Hypot(p.x - hg.x, p.z - hg.z) < 60 : (hitDest = dests.FirstOrDefault(d => GMath.Hypot(p.x - d.Item1.x, p.z - d.Item1.z) < d.Item2)) != null) { reached = i; break; }
                 double hi = hAt(i);
                 for (int k = 0; k < 8; k++)
                 {
@@ -378,12 +435,12 @@ namespace SkiStation.Gestion
                     if (T.Slope(q.x, q.z) > 1.0) pen += 30;
                     if (corr.Contains(j) && GMath.Hypot(q.x - start.x, q.z - start.z) > 200) pen += 2.5;   // ne pas longer une piste existante
                     double nc = cost[i] + len * pen, oc; if (nc >= (cost.TryGetValue(j, out oc) ? oc : 1e18)) continue;
-                    cost[j] = nc; prev[j] = i; heap.Push(nc + GMath.Hypot(q.x - hg.x, q.z - hg.z), j);
+                    cost[j] = nc; prev[j] = i; heap.Push(nc + (goal.HasValue ? GMath.Hypot(q.x - hg.x, q.z - hg.z) : dests.Min(d => GMath.Hypot(q.x - d.Item1.x, q.z - d.Item1.z) - d.Item2)), j);
                 }
             }
             if (reached < 0) return new AutoPisteResult { err = goal.HasValue ? "Aucune descente continue ne mène à ce point depuis le départ." : "Aucune descente continue ne mène au front de neige depuis ce point. Choisissez un départ plus bas, ou activez la carte des zones desservables pour repérer les emplacements possibles." };
             var pts = new List<P2>(); for (int i = reached; ; ) { pts.Insert(0, to(i)); int pi; if (!prev.TryGetValue(i, out pi)) break; i = pi; }
-            pts[0] = start; if (goal.HasValue) pts.Add(gx0);
+            pts[0] = start; if (goal.HasValue) pts.Add(gx0); else if (hitDest != null && hitDest.Item4 != null) pts.Add(hitDest.Item1);
             { double m = T.GetH(start.x, start.z); var o = new List<P2> { pts[0] };
               for (int i = 1; i < pts.Count; i++) { double h = T.GetH(pts[i].x, pts[i].z); if (h <= m + 0.4) { o.Add(pts[i]); m = Math.Min(m, h); } }
               if (o.Count < 2) return new AutoPisteResult { err = "Départ trop plat pour tracer une descente." }; pts = o; }
@@ -395,6 +452,7 @@ namespace SkiStation.Gestion
                 if (an.ok) { best = new AutoPisteResult { ctrl = ctrl, an = an }; break; }
                 if (best == null) best = new AutoPisteResult { ctrl = ctrl, an = an, bad = true };
             }
+            if (best != null) best.dest = hitDest != null ? hitDest.Item3 : null;
             return best ?? new AutoPisteResult { err = "Tracé trop complexe : choisissez un départ plus proche." };
         }
         static List<P2> DP(List<P2> a, double tol)       // simplification de Douglas-Peucker

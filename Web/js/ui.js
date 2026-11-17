@@ -89,6 +89,7 @@
       case 'tab': UI.tab = arg; UI.refresh(); break;
       case 'tool': { const [k, t] = arg.split(':'); B.start(k, t); if (R.coarse || innerWidth < 800) UI.close(); break; }
       case 'ease': B.setEase(+arg); break;
+      case 'dest': B.setDest(arg); break;
       case 'reach': R.showReach = !R.showReach; R.drawOverlay(); UI.refresh(); break;
       case 'width': B.setWidth(+arg); break;
       case 'b_confirm': B.confirm(); break;
@@ -180,11 +181,12 @@
     if (t.kind === 'piste') {
       title = t.auto ? '🧭 Tracé assisté' : '⛷️ Tracé de piste'; help = t.auto && !t.ctrl.length ? 'Cliquez le point de départ (en haut, idéalement l\'arrivée d\'une remontée) : la descente jusqu\'au front de neige est calculée pour vous.' : t.ctrl.length ? (t.auto ? 'Tracé proposé : validez, ou « Annuler le point » pour recommencer.' : 'Ajoutez des points en descendant, puis validez.') : 'Cliquez le départ (en haut), puis descendez point par point. Les zones vertes mènent au front de neige.';
       if (t.auto) body += '<div class="chips">Difficulté visée ' + ['Verte', 'Bleue', 'Rouge', 'Libre'].map((n, i) => btn(n, 'ease', i, 'chip' + (t.ease === i ? ' on' : ''))).join('') + '</div>';
+      if (t.auto) body += '<div class="chips">Arrivée ' + [['any', 'Autre remontée ou front de neige'], ['self', 'Retour à sa remontée'], ['hub', 'Front de neige']].map(d => btn(d[1], 'dest', d[0], 'chip' + ((t.dest || 'any') === d[0] ? ' on' : ''))).join('') + '</div>';
       if (B.autoMsg) body += '<div class="msg warn">🧭 ' + B.autoMsg + '</div>';
       body += '<div class="chips">Largeur ' + [20, 30, 40].map(w => btn(w + ' m', 'width', w, 'chip' + (t.width === w ? ' on' : ''))).join('') + '</div>';
       if (an && an.pts) {
         const a = an.pts[0], z = an.pts[an.pts.length - 1];
-        body += '<div class="grid">' + row('Longueur', SS.num(an.len) + ' m') + row('Dénivelé', SS.num(an.drop) + ' m') + row('Pente moy. / forte', Math.round(an.avg * 100) + ' % / ' + Math.round(an.p90 * 100) + ' %') + row('Difficulté', dot(an.diff) + D.DIFF[an.diff].name) + row('Arbres à couper', an.trees) + row('Départ', B.describe(a.x, a.z) || '<em class="warn">non raccordé</em>') + row('Arrivée', an.joins ? '↘ jonction avec ' + esc(an.joins) : B.describe(z.x, z.z) || '<em class="warn">non raccordée</em>') + row('Coût', eur(an.cost), 'cost') + '</div>';
+        body += '<div class="grid">' + row('Longueur', SS.num(an.len) + ' m') + row('Dénivelé', SS.num(an.drop) + ' m') + row('Pente moy. / forte', Math.round(an.avg * 100) + ' % / ' + Math.round(an.p90 * 100) + ' %') + row('Difficulté', dot(an.diff) + D.DIFF[an.diff].name) + row('Arbres à couper', an.trees) + row('Départ', an.startLift ? '⬆ arrivée du ' + esc(an.startLift) : B.describe(a.x, a.z) || '<em class="warn">non raccordé</em>') + row('Arrivée', an.joins ? '↘ jonction avec ' + esc(an.joins) : an.endLift ? '⬇ départ du ' + esc(an.endLift) : B.describe(z.x, z.z) || '<em class="warn">non raccordée</em>') + row('Coût', eur(an.cost), 'cost') + '</div>';
       }
     } else if (t.kind === 'lift') {
       const def = D.lift(t.type); title = '🚡 ' + def.name; help = !t.a ? 'Cliquez l\'emplacement exact de la gare de départ (en bas).' : !t.b ? 'Cliquez la gare d\'arrivée (en haut). Portée max. ' + SS.maxLen(def) + ' m.' : 'Vérifiez le devis puis validez. Un nouveau clic déplace la gare d\'arrivée.';

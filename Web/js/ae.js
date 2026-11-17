@@ -115,7 +115,7 @@
     const prefs = r.persona === 'lux' ? ['cablecar', 'gondola_10', 'gondola_8', 'chair_det_6', 'chair_det_4', 'chair_fixed_4', 'chair_fixed_2'] : ['gondola_8', 'chair_det_6', 'chair_det_4', 'chair_fixed_4', 'chair_fixed_2'];
     return prefs.filter(id => D.lift(id).tier <= r.tier);
   }
-  function tryBuildLift(r, goal) { AE.busy = true; SS.pistePool = runtime(r).pistes; try { return tryBuildLift0(r, goal); } finally { AE.busy = false; SS.pistePool = null; } }
+  function tryBuildLift(r, goal) { AE.busy = true; SS.pistePool = runtime(r).pistes; SS.liftPool = runtime(r).lifts; try { return tryBuildLift0(r, goal); } finally { AE.busy = false; SS.pistePool = null; SS.liftPool = null; } }
   function tryBuildLift0(r, goal) {
     const R = runtime(r); let types = goal === 'premium' ? ['cablecar'].filter(id => D.lift(id).tier <= r.tier) : liftTypeFor(r); if (!types.length) return null;
     let starts = [{ x: r.base.x, z: r.base.z }].concat(R.lifts.map(l => ({ x: l.b.x, z: l.b.z })), R.lifts.map(l => ({ x: l.a.x, z: l.a.z })));
@@ -156,7 +156,7 @@
     const an = SS.analyzePiste(pts, 30);
     return an.ok && an.diff === 3 ? { ctrl: pts, an } : null;
   }
-  function buildLiftAndPiste(r, plan, silent) { AE.busy = true; SS.pistePool = runtime(r).pistes; try { return buildLiftAndPiste0(r, plan, silent); } finally { AE.busy = false; SS.pistePool = null; } }
+  function buildLiftAndPiste(r, plan, silent) { AE.busy = true; SS.pistePool = runtime(r).pistes; SS.liftPool = runtime(r).lifts; try { return buildLiftAndPiste0(r, plan, silent); } finally { AE.busy = false; SS.pistePool = null; SS.liftPool = null; } }
   function buildLiftAndPiste0(r, plan, silent) {
     const R = runtime(r), n = r.lifts.length + 1, short = { tow: 'TK', chair: 'TS', gondola: 'TC', cablecar: 'TPH', funi: 'Funi' }[plan.an.def.kind] || 'TS';
     const ld = { id: r.id + '-l' + G.ae.nextId++, type: plan.type, name: short + ' ' + r.name + ' ' + n, a: { x: Math.round(plan.an.a.x), z: Math.round(plan.an.a.z) }, b: { x: Math.round(plan.an.b.x), z: Math.round(plan.an.b.z) } };
@@ -196,9 +196,9 @@
     for (const r of G.ae.rivals) {
       const R = rt[r.id] = { lifts: [], pistes: [], blds: [] };
       for (const ld of r.lifts) { const an = SS.analyzeLift(ld.type, ld.a, ld.b, true); if (an.path) R.lifts.push(liftObj(r, ld, an)); }
-      SS.pistePool = R.pistes;
+      SS.pistePool = R.pistes; SS.liftPool = R.lifts;
       for (const pd of r.pistes) { const an = SS.analyzePiste(pd.ctrl, pd.width); if (an.pts) R.pistes.push(pisteObj(r, pd, an)); }
-      SS.pistePool = null;
+      SS.pistePool = null; SS.liftPool = null;
       for (const bd of r.blds) R.blds.push({ id: bd.id, type: bd.type, x: bd.x, z: bd.z, y: T.getH(bd.x, bd.z), rot: bd.rot, owner: r.id });
     }
     AE.busy = false;

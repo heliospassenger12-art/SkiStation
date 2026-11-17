@@ -119,6 +119,7 @@
   SS.on('building:add', addBuilding); SS.on('lift:add', addLift); SS.on('piste:add', addPiste);
   SS.on('removed', (kind, o) => { remove(o); R.select(null); });
   SS.on('lift:refresh', l => { remove(l); addLift(l); });
+  SS.on('piste:refresh', p => R.refreshPiste(p));
   SS.on('world', () => R.drawOverlay());
   SS.on('season', () => {
     if (!T.geo) return; T.summer = !!SS.G.summer; T.updateRegion(0, 0, SS.N - 1, SS.N - 1);
