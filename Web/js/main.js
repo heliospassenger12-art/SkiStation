@@ -7,6 +7,7 @@
     T.init(seed); T.genTrees();
     if (saved) SS.restore(saved); else { opts.seed = seed; SS.newGame(opts); }
     SS.R.buildWorld();
+    if (SS.AE) SS.AE.afterWorld();
     SS.Cam.focus(0, 2250, 1900); SS.Cam.yaw = 0; SS.Cam.pitch = 0.62;
     SS.updatePrestige();
     SS.emit('game:start');

@@ -27,6 +27,7 @@
     SS.Weather.init();
     SS.Net.rebuild();
     if (opts.scn) { SS.Scn.setup(G, opts); SS.Weather.init(); }
+    if (opts.mode === 'ae' && SS.AE) SS.AE.setup(G, opts);
     SS.Net.rebuild();
     SS.Sim.startDay();
     return G;
@@ -575,6 +576,7 @@
     for (const l of lifts) { const an = SS.analyzeLift(l.type, l.a, l.b, true); if (an.path) { SS.commitLift(an, l); G.lifts.push(l); } }
     for (const p of pistes) { const an = SS.analyzePiste(p.ctrl, p.width); if (an.pts) { SS.commitPiste(p.ctrl, an, p); G.pistes.push(p); } }
     for (const b of G.buildings) { b.queue = []; b.occ = 0; }
+    if (G.ae && SS.AE) SS.AE.rebuild();
     if (G.time > 9 * 3600) G.time = 8 * 3600;
     Net.rebuild();
     SS.Sim.startDay();

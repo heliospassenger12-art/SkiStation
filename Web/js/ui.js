@@ -26,7 +26,7 @@
     SS.on('day:end', dayReport);
     SS.on('speed', renderTop); SS.on('career', () => UI.refresh());
     SS.on('arcade', arcadeHud);
-    SS.on('game:start', () => { G = SS.G; $('hud').hidden = false; $('modal').hidden = true; renderTop(); renderRecap(); UI.close(); if (!G.hints.welcome) { G.hints.welcome = 1; UI.open('help'); } });
+    SS.on('game:start', () => { G = SS.G; $('hud').hidden = false; $('modal').hidden = true; renderTop(); renderRecap(); UI.close(); const aeb = document.querySelector('#toolbar .tb[data-arg="ae"]'); if (aeb) aeb.hidden = !G.ae; if (!G.hints.welcome) { G.hints.welcome = 1; UI.open(G.ae ? 'ae' : 'help'); } });
     for (const k of ['left', 'right', 'tuck', 'brake', 'jump']) {
       const el = $('ak_' + k); if (!el) continue;
       el.addEventListener('pointerdown', e => { SS.Arcade.touch[k] = true; e.preventDefault(); }); const off = () => { SS.Arcade.touch[k] = false; };
@@ -43,7 +43,9 @@
       '<div class="logo">Ski<span>Station</span></div><p class="tag">Construisez, gérez et faites vivre votre station de ski — du premier téléski aux Jeux Olympiques.</p>' +
       '<label class="field">Nom de la station<input id="sm_name" maxlength="28" value="Mont-Hélios"></label>' +
       '<div class="modes"><button class="mode on" data-act="sm_mode" data-arg="career"><b>Carrière</b><span>Des scénarios à objectifs : du premier téléski aux Jeux Olympiques.</span></button>' +
-      '<button class="mode" data-act="sm_mode" data-arg="sandbox"><b>Bac à sable</b><span>Liberté totale pour bâtir le domaine de vos rêves.</span></button></div>' +
+      '<button class="mode" data-act="sm_mode" data-arg="sandbox"><b>Bac à sable</b><span>Liberté totale pour bâtir le domaine de vos rêves.</span></button>' +
+      '<button class="mode" data-act="sm_mode" data-arg="ae"><b>Alpine Empires</b><span>Compétition : trois stations rivales sur le même massif. La première aux Jeux Olympiques gagne.</span></button></div>' +
+      '<div class="smrow" id="sm_team" hidden><span>Équipes</span>' + btn('Chacun pour soi', 'sm_team', 'solo', 'chip team on') + btn('Deux équipes', 'sm_team', 'duo', 'chip team') + '</div>' +
       '<div id="sm_scenarios">' + scenarioCards() + '</div>' +
       '<div class="smrow"><span>Difficulté</span>' + ['Détente', 'Normale', 'Exigeante'].map((n, i) => btn(n, 'sm_level', i, 'chip lvl' + (i === 1 ? ' on' : ''))).join('') + '</div>' +
       '<div class="smrow" id="sm_seedrow"><span>Montagne</span>' + [['Classique', 1337], ['Dents Blanches', 4242], ['Val Perdu', 9001], ['Aléatoire', 0]].map((m, i) => btn(m[0], 'sm_seed', m[1], 'chip seed' + (i === 0 ? ' on' : ''))).join('') + '</div>' +
@@ -65,7 +67,9 @@
   function act(a, arg, el) {
     G = SS.G;
     switch (a) {
-      case 'sm_mode': UI.mode = arg; document.querySelectorAll('.mode').forEach(m => m.classList.toggle('on', m.dataset.arg === arg)); $('sm_opts').hidden = arg !== 'sandbox'; $('sm_scenarios').hidden = arg !== 'career'; scnLayout(); break;
+      case 'sm_mode': UI.mode = arg; document.querySelectorAll('.mode').forEach(m => m.classList.toggle('on', m.dataset.arg === arg)); $('sm_opts').hidden = arg !== 'sandbox'; $('sm_scenarios').hidden = arg !== 'career'; $('sm_team').hidden = arg !== 'ae'; scnLayout(); break;
+      case 'sm_team': UI.team = arg; document.querySelectorAll('.team').forEach(m => m.classList.toggle('on', m.dataset.arg === arg)); break;
+      case 'aeBuy': { const e = SS.AE.buyZone(arg); toast(e || 'Concession agrandie.', e ? 'warn' : 'good'); UI.refresh(true); break; }
       case 'sm_scn': UI.scn = arg; document.querySelectorAll('.scn').forEach(m => m.classList.toggle('on', m.dataset.arg === arg)); scnLayout(); break;
       case 'scnFree': SS.Scn.free(); $('modal').hidden = true; G.paused = false; renderTop(); UI.refresh(true); toast('Mode libre : plus d\'objectifs ni de limite de temps.', 'info'); break;
       case 'bidStart': { const e = SS.Scn.bidStart(); if (e) toast(e, 'warn'); UI.refresh(true); break; }
@@ -74,7 +78,7 @@
       case 'sm_import': $('sm_imp').hidden = !$('sm_imp').hidden; break;
       case 'sm_importGo': { const d = SS.importSave($('sm_code').value); if (d) SS.startGame(null, d); else { el.textContent = 'Code invalide — réessayer'; } break; }
       case 'export': { const code = SS.exportSave(); UI.code = code; UI.refresh(true); const ta = $('exportCode'); if (ta) { ta.value = code; ta.select(); } if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(() => toast('Code copié dans le presse-papiers.', 'good')).catch(() => toast('Sélectionnez le code et copiez-le.', 'info')); break; }
-      case 'sm_new': { const sc = UI.mode === 'career' ? SS.Scn.get(UI.scn) : null; SS.startGame({ scn: sc ? sc.id : undefined, level: UI.level, seed: sc ? (sc.seedLock || !UI.seedTouched ? sc.start.seed : (UI.seed || (1 + Math.floor(Math.random() * 99999)))) : (UI.seed || (1 + Math.floor(Math.random() * 99999))), mode: UI.mode, name: ($('sm_name').value || 'Mont-Hélios').trim(), unlimited: UI.mode === 'sandbox' && $('sm_unl').checked, allUnlocked: UI.mode === 'sandbox' && $('sm_all').checked, casual: $('sm_casual').checked }); break; }
+      case 'sm_new': { const sc = UI.mode === 'career' ? SS.Scn.get(UI.scn) : null; SS.startGame({ scn: sc ? sc.id : undefined, level: UI.level, seed: sc ? (sc.seedLock || !UI.seedTouched ? sc.start.seed : (UI.seed || (1 + Math.floor(Math.random() * 99999)))) : (UI.seed || (1 + Math.floor(Math.random() * 99999))), mode: UI.mode, name: ($('sm_name').value || 'Mont-Hélios').trim(), unlimited: UI.mode === 'sandbox' && $('sm_unl').checked, allUnlocked: UI.mode === 'sandbox' && $('sm_all').checked, casual: $('sm_casual').checked, team: UI.team || 'solo' }); break; }
       case 'sm_load': { const d = SS.loadData(); if (d) SS.startGame(null, d); break; }
       case 'menu': if (sure(el)) { SS.save(); SS.G.paused = true; $('hud').hidden = true; startMenu(); } break;
       case 'speed': if (arg === '0') G.paused = !G.paused; else { G.speed = +arg; G.paused = false; } renderTop(); break;
@@ -134,7 +138,7 @@
   function renderTop() {
     G = SS.G; if (!G) return;
     const w = D.WEATHER[G.weather.type];
-    $('t_name').textContent = G.name; { const sc = SS.Scn.cur(); $('t_mode').textContent = (sc ? sc.name + (G.scn.failed ? ' · échoué' : G.scn.done ? ' · accompli' : ' · étape ' + (G.scn.stage + 1) + '/' + sc.stages.length) : 'Bac à sable') + (G.summer ? ' · Été' : ''); }
+    $('t_name').textContent = G.name; { const sc = SS.Scn.cur(); $('t_mode').textContent = (sc ? sc.name + (G.scn.failed ? ' · échoué' : G.scn.done ? ' · accompli' : ' · étape ' + (G.scn.stage + 1) + '/' + sc.stages.length) : G.ae ? 'Alpine Empires' + (G.ae.winner ? (G.ae.winner === 'player' ? ' · victoire' : ' · terminé') : '') : 'Bac à sable') + (G.summer ? ' · Été' : ''); }
     $('t_date').textContent = SS.dateStr(G.day) + ' · An ' + G.year; $('t_time').textContent = SS.hhmm(G.time);
     $('t_weather').textContent = w.icon + ' ' + G.weather.temp + '°'; $('t_weather').title = w.name;
     $('t_money').textContent = G.unlimited ? '∞' : eur(G.money); $('t_money').classList.toggle('neg', G.money < 0);
@@ -201,7 +205,7 @@
   }
 
   // ---------------- panneaux ----------------
-  const TITLES = { exploit: 'Exploitation', journal: 'Journal de la station', build: 'Construire', domain: 'Domaine skiable', finance: 'Finances', visitors: 'Visiteurs', research: 'Recherche', career: 'Carrière & événements', weather: 'Météo & neige', options: 'Options', inspect: 'Fiche', help: 'Bienvenue' };
+  const TITLES = { exploit: 'Exploitation', journal: 'Journal de la station', build: 'Construire', domain: 'Domaine skiable', finance: 'Finances', visitors: 'Visiteurs', research: 'Recherche', career: 'Carrière & événements', ae: 'Alpine Empires', weather: 'Météo & neige', options: 'Options', inspect: 'Fiche', help: 'Bienvenue' };
   UI.open = function (id) { UI.panel = id; $('panel').hidden = false; UI.refresh(true); document.querySelectorAll('#toolbar .tb').forEach(b => b.classList.toggle('on', b.dataset.arg === id)); };
   UI.close = function () { UI.panel = null; $('panel').hidden = true; document.querySelectorAll('#toolbar .tb').forEach(b => b.classList.remove('on')); };
   UI.refresh = function (force) {

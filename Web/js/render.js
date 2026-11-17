@@ -156,6 +156,7 @@
       c.strokeStyle = fill; c.globalAlpha = R.mapMode === 'map' ? 0.75 : 1; c.lineWidth = Math.max(1, (p.width - 3) * k); path(p.pts); c.globalAlpha = 1;
       if (!R.mapMode && open && p.groomed > 0.5) { c.strokeStyle = 'rgba(255,255,255,0.75)'; c.lineWidth = Math.max(1, p.width * 0.28 * k); path(p.pts); }
     }
+    if (SS.AE) SS.AE.paint(c, X, Z, k, path);
     ovTex.needsUpdate = true;
   };
 
@@ -249,7 +250,7 @@
   }
   function updateLiftsVis() {
     const hf = 1;
-    for (const l of SS.G.lifts) {
+    for (const l of SS.AE ? SS.G.lifts.concat(SS.AE.lifts()) : SS.G.lifts) {
       const g = R.objs.get(l); if (!g) continue;
       const u = g.userData, def = u.def, veh = u.veh, L2 = 2 * l.L, hang = Mo.hang(def), vs = def.kind === 'tow' ? 1 : 1.5;
       for (let i = 0; i < l.n; i++) {
@@ -283,6 +284,7 @@
       put(n, x, y, z, Math.atan2(v.hx, v.hz), sc * (v.child ? 0.72 : 1), lie);
       jackets.setColorAt(n, c3.setHex(v.color)); n++;
     }
+    if (SS.AE) n = SS.AE.drawAmbient(n, MAXV, (i, x, y, z, yaw, col) => { put(i, x, y, z, yaw, sc, false); jackets.setColorAt(i, c3.set(col)); });
     jackets.count = rests.count = n;
     jackets.instanceMatrix.needsUpdate = rests.instanceMatrix.needsUpdate = true; if (jackets.instanceColor) jackets.instanceColor.needsUpdate = true;
   }
@@ -311,6 +313,7 @@
         el.style.transform = 'translate(' + Math.round(lp.x) + 'px,' + Math.round(lp.y) + 'px) translate(-50%,-100%)'; seen.add(key);
       };
       add('hub', '❄ FRONT DE NEIGE', '#ffb238', SS.HUB.x, T.getH(SS.HUB.x, SS.HUB.z) + 26, SS.HUB.z);
+      if (SS.AE) SS.AE.labels(add);
       for (const l of SS.G.lifts) { const w = l.queue.length; add(l, l.name + (G_broken(l) ? ' ⚠' : w > 6 ? ' · ' + w + ' en file' : ''), '#f2c230', l.a.x, l.a.y + 16, l.a.z); }
       for (const p of SS.G.pistes) { SS.pisteAt(p, p.len * 0.45, tmp); add(p, p.name + (SS.pisteOpen(p) ? '' : ' ✕'), D.DIFF[p.diff].color, tmp.x, T.getH(tmp.x, tmp.z) + 8, tmp.z); }
     }

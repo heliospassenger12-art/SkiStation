@@ -153,7 +153,7 @@
       C('Débit de 16 000 pers./h et une remontée d\'exception', s => s.capacity >= 16000 && s.premiumLift, s => SS.num(s.capacity) + ' / 16 000 · ' + (s.premiumLift ? 'exception ✔' : 'exception ✘')),
       C('18 pisteurs, 3 postes de secours et un héliport', s => s.patrol >= 18 && s.rescue >= 3 && s.heli >= 1, s => s.patrol + ' · ' + s.rescue + ' postes · héliport ' + (s.heli ? '✔' : '✘')),
       C('8 restaurants', s => s.restaurants >= 8, s => s.restaurants + ' / 8'),
-      C('6 dameuses et la neige de culture', s => s.machines >= 6 && SS.researched('snowmaking'), s => s.machines + ' dameuses · ' + (SS.researched('snowmaking') ? 'neige ✔' : 'neige ✘')),
+      C('6 dameuses et la neige de culture', s => s.machines >= 6 && (s.snowmaking !== undefined ? s.snowmaking : SS.researched('snowmaking')), s => s.machines + ' dameuses · ' + ((s.snowmaking !== undefined ? s.snowmaking : SS.researched('snowmaking')) ? 'neige ✔' : 'neige ✘')),
       C('Une Coupe d\'Europe et une Coupe du monde organisées', s => s.h_europe >= 1 && s.h_worldcup >= 1, s => s.h_europe + ' · ' + s.h_worldcup),
       C('Dette inférieure à 1 M€', s => s.debt < 1000000, s => SS.num(s.debt) + ' €')
     ]
@@ -173,6 +173,7 @@
   Sc.bidCan = function () {
     G = SS.G; const s = Sc.stats(), why = [];
     if (G.bid && ['eval', 'prep', 'games', 'done'].indexOf(G.bid.phase) >= 0) return { ok: false, why: ['Une candidature est déjà en cours.'] };
+    if (SS.AE && SS.AE.on()) { const h = SS.AE.editionHolder(); if (h && h !== 'player') why.push('Les Jeux de cette édition sont déjà attribués à ' + SS.AE.rivalOf(h).name + '.'); }
     if (G.bid && G.bid.phase === 'refused' && G.elapsed < G.bid.retry) why.push('Nouvelle candidature possible dans ' + (G.bid.retry - G.elapsed) + ' jours.');
     if (!SS.researched('olympic')) why.push('Recherche « Dossier olympique » requise.');
     if (!Sc.critOk('xgames')) why.push('Le niveau X Games doit être atteint (tous ses critères remplis).');
@@ -191,6 +192,7 @@
     if (!SS.spend(Sc.BID_COST, 'Événements')) return 'Fonds insuffisants.';
     const pool = RIVALS.slice().sort(() => Math.random() - 0.5).slice(0, 3);
     G.bid = { phase: 'eval', due: G.elapsed + Sc.EVAL_DAYS, rivals: pool.map(n => ({ name: n, score: Math.round(74 + Math.random() * 16) })), tries: ((G.bid && G.bid.tries) || 0) + 1 };
+    if (SS.AE && SS.AE.on()) { G.bid.rivals = G.bid.rivals.slice(0, 2); for (const r of G.ae.rivals) if (!r.ally) G.bid.rivals.push({ name: r.name, ae: r.id, score: Math.round(SS.AE.dossierOf(r)) }); }
     SS.log('📁 Dossier de candidature olympique déposé. La commission du CIO évalue les 4 candidatures pendant ' + Sc.EVAL_DAYS + ' jours.', 'info'); return null;
   };
   Sc.bidReqState = () => Sc.critState('olympics');
@@ -198,8 +200,9 @@
   Sc.dailyBid = function (report) {
     G = SS.G; const b = G.bid; if (!b) return;
     if (b.phase === 'eval') {
-      for (const r of b.rivals) r.score = SS.clamp(r.score + (Math.random() - 0.45) * 0.6, 60, 97);   // les rivaux progressent aussi
+      for (const r of b.rivals) r.score = r.ae && SS.AE ? Math.round(SS.AE.dossierOf(SS.AE.rivalOf(r.ae))) : SS.clamp(r.score + (Math.random() - 0.45) * 0.6, 60, 97);   // les rivaux progressent aussi
       if (G.elapsed < b.due) return;
+      if (SS.AE && SS.AE.on()) { const h = SS.AE.editionHolder(); if (h && h !== 'player') { b.phase = 'refused'; b.retry = G.elapsed + 60; report.notes.push('🏛️ Le CIO a déjà attribué cette édition des Jeux à ' + SS.AE.rivalOf(h).name + ' : votre candidature est close.'); return; } }
       const me = Math.round(Sc.dossierScore()), best = b.rivals.reduce((a, r) => r.score > a.score ? r : a, b.rivals[0]);
       b.score = me;
       if (me > best.score) { b.phase = 'prep'; b.due = G.elapsed + Sc.PREP_DAYS; b.mid = G.elapsed + Math.round(Sc.PREP_DAYS / 2); report.notes.push('🏛️ Vote du CIO : votre dossier (' + me + ' / 100) devance ' + b.rivals.map(r => r.name + ' (' + Math.round(r.score) + ')').join(', ') + '. Les Jeux Olympiques vous sont attribués ! ' + Sc.PREP_DAYS + ' jours pour remplir tout le cahier des charges.'); }

@@ -21,7 +21,7 @@
     const mk = 1 + (G.marketing.social > 0 ? 0.15 : 0) + (G.marketing.tv > 0 ? 0.35 : 0);
     const ev = G.event && G.event.day <= G.day ? D.EVENTS.find(e => e.id === G.event.id).boost : 1;
     const rental = s.rental > 0 || G.summer ? 1 : 0.74;
-    const demand = base * rep * cal * W.def().demand * priceF * mk * ev * rental;
+    const demand = base * rep * cal * W.def().demand * priceF * mk * ev * rental * (SS.AE && SS.AE.on() ? SS.AE.marketMul() : 1);
     const lodgers = Mg.allocateLodging(demand, cal, ev);
     const day = Math.round(Math.min(demand, s.access));
     const cap = 1500, total = Math.min(cap, day + lodgers);
@@ -608,7 +608,7 @@
     if (!Sim.flags.night && G.time >= SS.NIGHT_OPEN && SS.nightOn()) { Sim.flags.night = true; Net.touch(); SS.emit('toast', '🌙 18:30 — ouverture du ski nocturne sur les pistes éclairées.', 'info'); }
     if (!Sim.flags.nightEnd && G.time >= SS.NIGHT_CLOSE && SS.nightOn()) { Sim.flags.nightEnd = true; Net.touch(); }
     if (!Sim.flags.close && G.time >= SS.LIFT_CLOSE) { Sim.flags.close = true; Net.touch(); if (G.lifts.length) SS.emit('toast', '16:45 — fermeture des remontées, dernier retour station.', 'info'); }
-    updateLifts(dt);
+    updateLifts(dt); if (SS.AE) SS.AE.tick(dt);
     const vs = Sim.visitors;
     for (let i = 0; i < vs.length; i++) if (vs[i].state !== 'gone') updateVisitor(vs[i], dt);
     if (Sim.rescues.length) updateRescues(dt);
@@ -670,6 +670,7 @@
     G.ledger0 = G.ledger.inc; G.ledger = { inc: {}, exp: {} };
     W.night();
     SS.updatePrestige(); G.elapsed++; SS.Scn.dailyFame(); SS.Scn.dailyBid(report);
+    if (SS.AE && SS.AE.on()) SS.AE.daily(report);
     SS.checkCareer(report);
     SS.checkAch(report);
     G.day++; W.next();
