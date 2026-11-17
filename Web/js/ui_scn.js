@@ -117,7 +117,7 @@
       if (!r.you) h += row('Forfait · satisfaction', eur(r.price) + ' · ' + Math.round(r.sat) + ' %');
       h += `<div class="cmeta">Niveau X Games ${Math.round(r.xg * 100)} % · cahier olympique ${Math.round(r.oly * 100)} %${r.bid ? ' · ' + (PH[r.bid] || r.bid) : ''}</div>${bar(r.oly, r.color)}</div>`;
     }
-    h += '<h4>Concessions</h4><p class="fine">Vous ne pouvez construire que sur vos terrains (traits orange sur la carte). Le sommet central est protégé. Les autres secteurs appartiennent aux rivaux.</p>';
+    h += '<h4>Concessions</h4><p class="fine">Vous ne pouvez construire que sur vos terrains (traits orange sur la carte). ' + (SS.BIG ? 'Chaque compagnie possède son propre massif ; les vallées en croix qui les séparent sont à acheter, le col central est protégé.' : 'Le sommet central est protégé. Les autres secteurs appartiennent aux rivaux.') + '</p>';
     for (const zn of AE.ZONES) {
       if (!zn.price && zn.id !== 'start') continue;
       const own = G.ae.owned.indexOf(zn.id) >= 0;

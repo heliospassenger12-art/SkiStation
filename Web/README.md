@@ -12,7 +12,7 @@ tout est en JavaScript, three.js est fourni dans `js/three.min.js`.
 
 | Cahier des charges | Dans la version web |
 |---|---|
-| Modes | Carrière par scénarios, Bac à sable (argent illimité / catalogue libre en option) et **Alpine Empires** (compétition contre 3 stations rivales sur le même massif) |
+| Modes | Carrière par scénarios, Bac à sable (argent illimité / catalogue libre en option) et **Alpine Empires** (compétition contre 3 stations rivales, chacune sur son massif, grande carte de 18 × 18 km) |
 | Scénarios | **Premiers pas** (420 000 €, 250 visiteurs en une journée en 70 jours) · **Station en perdition** (station endettée et vieillissante à rendre incontournable en 320 jours) · **Capitale des familles** · **Station de prestige** · **La route des Jeux** (campagne en 8 étapes jusqu'aux Jeux Olympiques). Objectifs chiffrés en direct, délai, échec (faillite ou délai dépassé), victoire notée de 1 à 3 étoiles, records gardés dans le navigateur |
 | Prestige et notoriété | Deux indicateurs distincts. **Prestige** (★ à ★★★★★) : le standing — domaine, remontées d'exception, hébergement de luxe, loisirs, gastronomie, spa — plafonné sans luxe, sans loisirs ou sans remontée d'exception. **Notoriété** (%) : la renommée — surtout l'humeur des visiteurs et le rapport qualité/prix ; une station simple aux clients ravis peut être très réputée. Détail dans `ALPINE_EMPIRES_REGLES.md` |
 | Grands événements | Échelle : concerts, course régionale, Coupe d'Europe, **X Games** (10 critères, facultatifs à organiser), Coupe du monde, **Jeux Olympiques** (12 critères reprenant ceux des X Games avec des seuils plus élevés) |
@@ -40,7 +40,7 @@ tout est en JavaScript, three.js est fourni dans `js/three.min.js`.
 | Saison d'été | Après la recherche « Saison d'été » : 30 jours jouables de VTT et de randonnée sur les remontées (hors téléskis et tapis), paysage d'été, météo et forfait dédiés ; peut être abrégée |
 | Succès | 18 succès à débloquer, listés dans Carrière |
 | Arcade | Descente à la troisième personne sur n'importe quelle piste construite : sauts, vrilles, flips |
-| Alpine Empires (prototype) | Massif découpé en concessions : la vôtre au sud, deux extensions à acheter (50 000 € et 100 000 €), sommet protégé, trois secteurs rivaux. Valfroide (bâtisseur), Pic-Royal (luxe) et Les Rochettes (populaire) construisent pour de vrai remontées, pistes et bâtiments, fixent leurs prix, se disputent la même clientèle, gravissent l'échelle des événements et candidatent aux Jeux. Mode « chacun pour soi » ou « deux équipes » (vous et Valfroide). Victoire : la première compagnie au jour 1 des Jeux Olympiques ; si c'est un rival, la partie est perdue |
+| Alpine Empires (prototype) | **Grande carte de 18 × 18 km à quatre massifs** séparés par deux vallées en croix : le vôtre au sud-ouest (relief choisi au menu), un massif par rival. Deux vallées à acheter (50 000 € et 100 000 €) pour s'étendre vers les voisins, col central protégé. Valfroide (bâtisseur), Pic-Royal (luxe) et Les Rochettes (populaire) construisent pour de vrai remontées, pistes et bâtiments, fixent leurs prix, se disputent la même clientèle, gravissent l'échelle des événements et candidatent aux Jeux. Mode « chacun pour soi » ou « deux équipes » (vous et Valfroide). Victoire : la première compagnie au jour 1 des Jeux Olympiques ; si c'est un rival, la partie est perdue |
 
 ## Interface
 

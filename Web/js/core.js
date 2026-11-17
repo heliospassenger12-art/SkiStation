@@ -3,15 +3,28 @@
   'use strict';
   const SS = window.SS = { VERSION: 'Web 1.8' };
 
-  SS.WORLD = 8000;            // côté de la carte en mètres (360°)
-  SS.HALF = SS.WORLD / 2;
-  SS.N = 257;                 // sommets par côté
-  SS.CELL = SS.WORLD / (SS.N - 1);
-  SS.VILLAGE = { x: 0, z: 2750, h: 1650 };
-  SS.HUB = { x: 0, z: 2480 };            // front de neige
-  SS.ARRIVAL = { x: 60, z: 2990 };
-  SS.HUB_R = 320;
-  SS.inHub = (x, z) => Math.hypot(x - SS.HUB.x, z - SS.HUB.z) < SS.HUB_R;   // le front de neige : espace libre, tout ce qui y finit y est raccordé                        // rayon du front de neige : toute gare ou fin de piste dans ce cercle s'y raccorde       // route d'accès / parking de départ
+  // Monde : carte classique 8 × 8 km (un massif) ou grande carte 18 × 18 km à quatre massifs (Alpine Empires).
+  // Les repères du village sont décalés pour que la station du joueur garde la même géométrie locale.
+  const DECOR0 = [
+    { x: -150, z: 2800, r: 16, k: 'church' }, { x: -90, z: 2870, r: 11, k: 'house' }, { x: -210, z: 2870, r: 11, k: 'house' }, { x: -250, z: 2790, r: 11, k: 'house' },
+    { x: -40, z: 2790, r: 11, k: 'house' }, { x: -130, z: 2930, r: 11, k: 'house' }, { x: 230, z: 2830, r: 11, k: 'house' }, { x: 290, z: 2890, r: 11, k: 'house' }, { x: -310, z: 2880, r: 11, k: 'house' }
+  ];
+  SS.QUAD = 4500;                        // grande carte : chaque massif occupe un quart (centre à ±4,5 km)
+  SS.setWorld = function (big) {
+    SS.BIG = !!big;
+    SS.WORLD = big ? 18000 : 8000;       // côté de la carte en mètres (360°)
+    SS.HALF = SS.WORLD / 2;
+    SS.N = big ? 505 : 257;              // sommets par côté
+    SS.CELL = SS.WORLD / (SS.N - 1);
+    const ox = SS.OFFX = big ? -SS.QUAD : 0, oz = SS.OFFZ = big ? SS.QUAD : 0;      // le joueur : massif sud-ouest
+    SS.VILLAGE = { x: ox, z: 2750 + oz, h: 1650 };
+    SS.HUB = { x: ox, z: 2480 + oz };    // front de neige
+    SS.ARRIVAL = { x: 60 + ox, z: 2990 + oz };  // route d'accès / parking de départ
+    SS.DECOR = DECOR0.map(d => Object.assign({}, d, { x: d.x + ox, z: d.z + oz }));     // maisons décoratives du vieux village (non interactives)
+  };
+  SS.setWorld(false);
+  SS.HUB_R = 320;                        // rayon du front de neige : toute gare ou fin de piste dans ce cercle s'y raccorde
+  SS.inHub = (x, z) => Math.hypot(x - SS.HUB.x, z - SS.HUB.z) < SS.HUB_R;   // le front de neige : espace libre, tout ce qui y finit y est raccordé
 
   // Une seule horloge : tout est exprimé en secondes de jeu.
   SS.CLOCK_RATE = 30;         // secondes de jeu par seconde réelle à x1
@@ -23,12 +36,6 @@
   SS.NIGHT_OPEN = 18.5 * 3600;     // ski nocturne : pistes éclairées et remontées désignées
   SS.NIGHT_CLOSE = 21 * 3600;
   SS.SUMMER_DAYS = 30;             // saison d'été jouable (VTT, randonnée) après la recherche dédiée
-
-  // maisons décoratives du vieux village (non interactives)
-  SS.DECOR = [
-    { x: -150, z: 2800, r: 16, k: 'church' }, { x: -90, z: 2870, r: 11, k: 'house' }, { x: -210, z: 2870, r: 11, k: 'house' }, { x: -250, z: 2790, r: 11, k: 'house' },
-    { x: -40, z: 2790, r: 11, k: 'house' }, { x: -130, z: 2930, r: 11, k: 'house' }, { x: 230, z: 2830, r: 11, k: 'house' }, { x: 290, z: 2890, r: 11, k: 'house' }, { x: -310, z: 2880, r: 11, k: 'house' }
-  ];
 
   SS.clamp = (v, a, b) => v < a ? a : v > b ? b : v;
   SS.lerp = (a, b, t) => a + (b - a) * t;
