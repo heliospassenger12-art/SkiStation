@@ -275,10 +275,10 @@ index 4ff8866e01fa653a46cc010e50423d73d0ba2f66..d41dfdfeab275f291cb79235227c684a
              if(flake!=null)Destroy(flake);
          }
 diff --git a/Assets/SkiStation/Shaders/ArcadeAlpineSky257.shader b/Assets/SkiStation/Shaders/ArcadeAlpineSky257.shader
-index 55bc255caa2a3ccac9fcca396158e639f10ab75e..d19f482c6a5069c42277f8f38ce71ad9f8038c2f 100644
+index 55bc255caa2a3ccac9fcca396158e639f10ab75e..751283635a59659d5ce56a35114eebd37a64293e 100644
 --- a/Assets/SkiStation/Shaders/ArcadeAlpineSky257.shader
 +++ b/Assets/SkiStation/Shaders/ArcadeAlpineSky257.shader
-@@ -1,12 +1,12 @@
+@@ -1,27 +1,78 @@
  Shader "SkiStation/Arcade/AlpineSky257" {
 - Properties {_Zenith("Zenith",Color)=(.19,.36,.58,1) _Horizon("Horizon",Color)=(.63,.74,.82,1) _Clouds("Nuages",Range(0,1))=.25 _Clock("Temps domaine",Float)=0 _SunDir("Soleil",Vector)=(.5,.5,-.5,0) _SunTint("Couleur soleil",Color)=(1,.96,.90,1) _SunStrength("Intensite",Float)=1 _DetailQuality("Detail",Float)=1}
 + Properties {_Zenith("Zenith",Color)=(.19,.36,.58,1) _Horizon("Horizon",Color)=(.63,.74,.82,1) _Clouds("Nuages",Range(0,1))=.25 _Clock("Temps domaine",Float)=0 _SunDir("Soleil",Vector)=(.5,.5,-.5,0) _SunTint("Couleur soleil",Color)=(1,.96,.90,1) _SunStrength("Intensite",Float)=1 _DetailQuality("Detail",Float)=1 _MoonDir("Lune",Vector)=(0,1,0,0) _Night("Nuit",Range(0,1))=0 _TwilightTint("Lueur horizon",Color)=(1,.5,.4,1) _TwilightStrength("Intensite crepuscule",Range(0,1))=0}
@@ -293,7 +293,38 @@ index 55bc255caa2a3ccac9fcca396158e639f10ab75e..d19f482c6a5069c42277f8f38ce71ad9
   struct app{float4 vertex:POSITION;};struct v2f{float4 position:SV_POSITION;float3 direction:TEXCOORD0;};
   v2f vert(app v){v2f o;o.position=UnityObjectToClipPos(v.vertex);o.direction=mul((float3x3)unity_ObjectToWorld,v.vertex.xyz);return o;}
   float hash(float2 p){return frac(sin(dot(p,float2(127.1,311.7)))*43758.5453);}
-@@ -15,13 +15,35 @@ Shader "SkiStation/Arcade/AlpineSky257" {
+  float n(float2 p){float2 a=floor(p),f=frac(p);f=f*f*(3-2*f);return lerp(lerp(hash(a),hash(a+float2(1,0)),f.x),lerp(hash(a+float2(0,1)),hash(a+1),f.x),f.y);}
++ float TwilightStrata(float2 azimuth,float elevation){
++  float layers=n(azimuth*2.6+float2(_Clock*.0003,elevation*37));
++  float filaments=n(azimuth*5.7+float2(elevation*65,_Clock*.0002));
++  return smoothstep(.46,.71,layers*.72+filaments*.28);
++ }
++
++ float ShaftCloud(float3 direction){
++  direction=normalize(direction);
++  float2 azimuth=normalize(direction.xz+float2(.00001,0));
++  return TwilightStrata(azimuth,saturate(direction.y))*smoothstep(.015,.09,direction.y);
++ }
++
++ float SunShafts(float3 view,float3 sun,float cosine,float coverage){
++  float lowSun=smoothstep(.005,.065,sun.y)*(1-smoothstep(.22,.46,sun.y));
++  float strength=lowSun*_TwilightStrength*saturate(_Clouds*4);
++  if(strength<.002 || cosine<.80 || view.y<.015)return 0;
++
++  // Compare the opening on this spoke with cloud on either side of it.
++  // Every point on the same spoke samples the same gap near the sun.
++  float3 radial=view-sun*cosine;
++  float radius=length(radial);
++  float3 spoke=radial/max(radius,.0001);
++  float3 flank=cross(sun,spoke)*.050;
++  float3 nearSun=sun+spoke*.16;
++  float opening=ShaftCloud(nearSun);
++  float neighbours=max(ShaftCloud(nearSun+flank),ShaftCloud(nearSun-flank));
++  float contrast=smoothstep(.035,.34,neighbours-opening);
++  float lengthFade=smoothstep(.04,.12,radius)*(1-smoothstep(.24,.57,radius));
++  return strength*contrast*(1-opening)*lengthFade*smoothstep(.015,.09,view.y)*(1-coverage)*.22;
++ }
+  float4 frag(v2f i):SV_Target{
    float3 d=normalize(i.direction);float3 sun=normalize(_SunDir.xyz);float h=saturate(d.y);
    float3 col=lerp(_Horizon.rgb,_Zenith.rgb,pow(h,.42));float sd=saturate(dot(d,sun));
    col+=_SunTint.rgb*pow(sd,64)*.075*_SunStrength;
@@ -309,15 +340,14 @@ index 55bc255caa2a3ccac9fcca396158e639f10ab75e..d19f482c6a5069c42277f8f38ce71ad9
    float coverage=smoothstep(.72-_Clouds*.25,.83-_Clouds*.25,cloud)*smoothstep(.05,.22,d.y)*saturate(_Clouds*2);
 -  float shade=saturate(.67+.2*dot(d,sun)+cloud*.12);col=lerp(col,lerp(_Horizon.rgb*.85,_SunTint.rgb*.95,shade),coverage*.75);
 +  // At low light, stretched strata replace part of the broad daytime cloud shapes.
-+  float layers=n(azimuth*2.6+float2(_Clock*.0003,h*37));
-+  float filaments=n(azimuth*5.7+float2(h*65,_Clock*.0002));
-+  float strata=smoothstep(.46,.71,layers*.72+filaments*.28);
++  float strata=TwilightStrata(azimuth,h);
 +  strata*=smoothstep(.01,.075,h)*(1-smoothstep(.3,.53,h));
 +  coverage=lerp(coverage,strata*.53,_TwilightStrength*.88);
 +  float shade=saturate(.67+.2*dot(d,sun)+cloud*.12);
 +  float3 cloudColor=lerp(_Horizon.rgb*.85,_SunTint.rgb*.95,shade*(1-_Night));
 +  cloudColor=lerp(cloudColor,_TwilightTint.rgb,_TwilightStrength*(.12+.48*sunSide)*exp2(-h*4));
 +  col=lerp(col,cloudColor,coverage*.75);
++  col+=lerp(_SunTint.rgb,_TwilightTint.rgb,.25)*SunShafts(d,sun,sd,coverage);
    float disc=smoothstep(.99984,.99996,sd)*smoothstep(-.02,.04,sun.y);col+=_SunTint.rgb*disc*1.4*_SunStrength*(1-coverage*.75);
 +  if(_Night>0){
 +   float3 moon=normalize(_MoonDir.xyz);
