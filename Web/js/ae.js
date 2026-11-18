@@ -54,7 +54,7 @@
   // sommet vers lequel une compagnie construit ses remontées
   AE.peakOf = function (r) {
     if (!SS.BIG || !T.MASSIFS) return { x: 0, z: 0 };
-    const m = T.MASSIFS[{ r1: 1, r2: 2, r3: 3 }[r.zone] || 0]; return { x: m.cx - m.dir * m.s * 900, z: m.cz - m.dir * m.c * 900 };
+    const m = T.MASSIFS[{ r1: 1, r2: 2, r3: 3 }[r.zone] || 0]; return m.peak || { x: m.cx, z: m.cz };
   };
   AE.on = () => !!(SS.G && SS.G.ae);
   AE.canBuild = function (x, z) { if (!AE.on()) return true; const id = AE.zoneAt(x, z); return SS.G.ae.owned.indexOf(id) >= 0; };
@@ -370,7 +370,7 @@
   }
   const LADDER = ['fete', 'concert', 'regional', 'europe', 'xgames', 'worldcup'];
   function decide(r, s, vis) {
-    const P = PERSONA[r.persona], t = G.elapsed * (SS.BIG ? 0.86 : 1), reserve = 30000 + t * 250;     // grande carte : chaque rival a tout un massif, son rythme est un peu freiné
+    const P = PERSONA[r.persona], t = G.elapsed, reserve = 30000 + t * 250;
     const room = () => r.money - reserve, can = c => room() >= c;
     // trésorerie excédentaire : dividendes versés aux actionnaires (garde les comptes lisibles)
     if (r.money > 6000000) { const div = (r.money - 6000000) * 0.04; r.money -= div; r.exp += div; }
