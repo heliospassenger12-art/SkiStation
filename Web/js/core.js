@@ -3,20 +3,21 @@
   'use strict';
   const SS = window.SS = { VERSION: 'Web 1.8' };
 
-  // Monde : carte classique 8 × 8 km (un massif) ou grande carte 18 × 18 km à quatre massifs (Alpine Empires).
+  // Monde : carte classique 8 × 8 km (un massif) ou grande carte 22 × 22 km à quatre massifs (Alpine Empires).
   // Les repères du village sont décalés pour que la station du joueur garde la même géométrie locale.
   const DECOR0 = [
     { x: -150, z: 2800, r: 16, k: 'church' }, { x: -90, z: 2870, r: 11, k: 'house' }, { x: -210, z: 2870, r: 11, k: 'house' }, { x: -250, z: 2790, r: 11, k: 'house' },
     { x: -40, z: 2790, r: 11, k: 'house' }, { x: -130, z: 2930, r: 11, k: 'house' }, { x: 230, z: 2830, r: 11, k: 'house' }, { x: 290, z: 2890, r: 11, k: 'house' }, { x: -310, z: 2880, r: 11, k: 'house' }
   ];
-  SS.QUAD = 4500;                        // grande carte : chaque massif occupe un quart (centre à ±4,5 km)
+  SS.QUAD = 5500;                        // grande carte : chaque massif occupe un quart (centre à ±5,5 km)
+  SS.BIG_VZ = 3300;                      // grande carte : village à 3,3 km en aval du centre de chaque massif
   SS.setWorld = function (big) {
     SS.BIG = !!big;
-    SS.WORLD = big ? 18000 : 8000;       // côté de la carte en mètres (360°)
+    SS.WORLD = big ? 22000 : 8000;       // côté de la carte en mètres (360°)
     SS.HALF = SS.WORLD / 2;
-    SS.N = big ? 505 : 257;              // sommets par côté
+    SS.N = big ? 551 : 257;              // sommets par côté
     SS.CELL = SS.WORLD / (SS.N - 1);
-    const ox = SS.OFFX = big ? -SS.QUAD : 0, oz = SS.OFFZ = big ? SS.QUAD : 0;      // le joueur : massif sud-ouest
+    const ox = SS.OFFX = big ? -SS.QUAD : 0, oz = SS.OFFZ = big ? SS.QUAD + SS.BIG_VZ - 2750 : 0;      // le joueur : massif sud-ouest
     SS.VILLAGE = { x: ox, z: 2750 + oz, h: 1650 };
     SS.HUB = { x: ox, z: 2480 + oz };    // front de neige
     SS.ARRIVAL = { x: 60 + ox, z: 2990 + oz };  // route d'accès / parking de départ

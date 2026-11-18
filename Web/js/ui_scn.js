@@ -112,12 +112,13 @@
     for (const r of sorted) {
       h += `<div class="card${r.you ? ' cur' : ''}" style="border-left:4px solid ${r.color}"><div class="ctitle"><b>${esc(r.name)}${r.you ? ' (vous)' : r.ally ? ' (allié)' : ''}</b><span>dossier ${Math.round(r.dossier)} / 100</span></div>`;
       if (r.motto) h += `<div class="cmeta">${esc(r.motto)}</div>`;
+      if (r.mountain) h += `<div class="cmeta">⛰ ${esc(r.mountain)}</div>`;
       h += row('Visiteurs (dernier jour)', SS.num(r.visitors)) + row('Domaine', r.km.toFixed(1) + ' km · ' + r.lifts + ' remontée(s)') + row('Trésorerie', eur(r.money));
       h += row('Notoriété · prestige', Math.round(r.fame) + ' % · ' + UI.starHtml(SS.prestigeStars(r.prestige))) + row('Événements organisés', r.hosted);
       if (!r.you) h += row('Forfait · satisfaction', eur(r.price) + ' · ' + Math.round(r.sat) + ' %');
       h += `<div class="cmeta">Niveau X Games ${Math.round(r.xg * 100)} % · cahier olympique ${Math.round(r.oly * 100)} %${r.bid ? ' · ' + (PH[r.bid] || r.bid) : ''}</div>${bar(r.oly, r.color)}</div>`;
     }
-    h += '<h4>Concessions</h4><p class="fine">Vous ne pouvez construire que sur vos terrains (traits orange sur la carte). ' + (SS.BIG ? 'Chaque compagnie possède son propre massif ; les vallées en croix qui les séparent sont à acheter, le col central est protégé.' : 'Le sommet central est protégé. Les autres secteurs appartiennent aux rivaux.') + '</p>';
+    h += '<h4>Concessions</h4><p class="fine">Vous ne pouvez construire que sur vos terrains (traits orange sur la carte). ' + (SS.BIG ? 'Chaque compagnie possède sa propre montagne ; les massifs se rejoignent par des cols. Les deux bandes qui vous séparent de vos voisins sont à acheter, le col central est protégé.' : 'Le sommet central est protégé. Les autres secteurs appartiennent aux rivaux.') + '</p>';
     for (const zn of AE.ZONES) {
       if (!zn.price && zn.id !== 'start') continue;
       const own = G.ae.owned.indexOf(zn.id) >= 0;

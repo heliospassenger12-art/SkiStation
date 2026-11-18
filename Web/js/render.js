@@ -199,7 +199,7 @@
   // --- caméra ---
   Cam.apply = function () {
     Cam.tx = SS.clamp(Cam.tx, -SS.HALF, SS.HALF); Cam.tz = SS.clamp(Cam.tz, -SS.HALF, SS.HALF);
-    Cam.pitch = SS.clamp(Cam.pitch, 0.18, 1.5); Cam.dist = SS.clamp(Cam.dist, 60, SS.BIG ? 20000 : 11000);
+    Cam.pitch = SS.clamp(Cam.pitch, 0.18, 1.5); Cam.dist = SS.clamp(Cam.dist, 60, SS.BIG ? 25000 : 11000);
     const ty = T.getH(Cam.tx, Cam.tz), cp = Math.cos(Cam.pitch), sp = Math.sin(Cam.pitch);
     let x = Cam.tx + Math.sin(Cam.yaw) * cp * Cam.dist, z = Cam.tz + Math.cos(Cam.yaw) * cp * Cam.dist, y = ty + sp * Cam.dist;
     const gh = T.getH(SS.clamp(x, -SS.HALF, SS.HALF), SS.clamp(z, -SS.HALF, SS.HALF)); if (y < gh + 12) y = gh + 12;
@@ -228,7 +228,7 @@
     const edge = Math.max(0, 1 - Math.abs(h - 17.8) / 1.1) + Math.max(0, 1 - Math.abs(h - 7.4) / 0.6);
     sky.set(w.sky).lerp(SUNSET, Math.min(0.55, edge * 0.55) * (w.light > 0.7 ? 1 : 0.3)); sky.lerp(SKY_N, 1 - day);
     scene.background.copy(sky); scene.fog.color.copy(sky);
-    const vis = w.snow > 25 ? 0.35 : w.snow > 0 ? 0.6 : 1; const fk = SS.BIG ? 1.6 : 1; scene.fog.near = 5000 * vis * fk; scene.fog.far = 24000 * vis * fk;
+    const vis = w.snow > 25 ? 0.35 : w.snow > 0 ? 0.6 : 1; const fk = SS.BIG ? 1.9 : 1; scene.fog.near = 5000 * vis * fk; scene.fog.far = 24000 * vis * fk;
     const ang = (h - 12.5) / 12 * Math.PI;
     sun.position.set(Math.sin(ang) * 0.8 + 0.25, Math.max(0.12, Math.cos(ang) * 0.9), 0.55).normalize();
     sun.intensity = 1.7 * day * w.light; sun.color.setHex(0xfff4e0).lerp(SUNSET, Math.min(0.7, edge * 0.7));
