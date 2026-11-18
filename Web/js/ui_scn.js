@@ -118,11 +118,12 @@
       if (!r.you) h += row('Forfait · satisfaction', eur(r.price) + ' · ' + Math.round(r.sat) + ' %');
       h += `<div class="cmeta">Niveau X Games ${Math.round(r.xg * 100)} % · cahier olympique ${Math.round(r.oly * 100)} %${r.bid ? ' · ' + (PH[r.bid] || r.bid) : ''}</div>${bar(r.oly, r.color)}</div>`;
     }
-    h += '<h4>Concessions</h4><p class="fine">Vous ne pouvez construire que sur vos terrains (traits orange sur la carte). ' + (SS.BIG ? 'Chaque compagnie possède sa propre montagne ; les massifs se rejoignent par des cols. Les deux bandes qui vous séparent de vos voisins sont à acheter, le col central est protégé.' : 'Le sommet central est protégé. Les autres secteurs appartiennent aux rivaux.') + '</p>';
+    h += '<h4>Concessions</h4><p class="fine">Vous ne pouvez construire que sur vos terrains (traits orange sur la carte). ' + (SS.BIG ? 'Chaque compagnie possède sa propre montagne ; quatre montagnes de liaison et un massif central relient les domaines. Les deux bandes vers vos voisins sont à acheter, le massif central aussi (le premier acheteur l\'emporte, Valfroide le convoite), son aiguille sommitale est protégée.' : 'Le sommet central est protégé. Les autres secteurs appartiennent aux rivaux.') + '</p>';
     for (const zn of AE.ZONES) {
       if (!zn.price && zn.id !== 'start') continue;
-      const own = G.ae.owned.indexOf(zn.id) >= 0;
-      h += `<div class="li"><b>${zn.name}</b><small>${own ? 'à vous' : eur(zn.price)}</small>${own ? '' : btn('Acheter — ' + eur(zn.price), 'aeBuy', zn.id, 'small')}</div>`;
+      if (zn.id === 'center' && !SS.BIG) continue;
+      const own = G.ae.owned.indexOf(zn.id) >= 0, taken = zn.id === 'center' && G.ae.centerOwner && !own ? AE.rivalOf(G.ae.centerOwner) : null;
+      h += `<div class="li"><b>${zn.name}</b><small>${own ? 'à vous' : taken ? 'à ' + esc(taken.name) : eur(zn.price)}</small>${own || taken ? '' : btn('Acheter — ' + eur(zn.price), 'aeBuy', zn.id, 'small')}</div>`;
     }
     h += '<h4>Nouvelles des rivaux</h4>' + (G.ae.news.length ? G.ae.news.slice(0, 15).map(n => `<div class="fine">J${n.d} · ${esc(n.msg)}</div>`).join('') : '<p class="fine">Rien pour l\'instant.</p>');
     return h;
