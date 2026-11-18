@@ -183,6 +183,36 @@
     return h;
   }
 
+  // érosion hydraulique (gouttes) : chaque goutte descend la pente, arrache de la matière quand elle accélère et la dépose quand elle ralentit
+  function hydraulic(H, drops, seed) {
+    const r = SS.rng(seed * 97 + 1), inertia = 0.35, cap = 5, dep = 0.3, ero = 0.22, evap = 0.025, grav = 9, minSlope = 0.012;
+    const W = []; { let t = 0; for (let a = -2; a <= 2; a++) for (let b = -2; b <= 2; b++) { const w = Math.max(0, 2.6 - Math.hypot(a, b)); if (w > 0) { W.push([a, b, w]); t += w; } } for (const w of W) w[2] /= t; }      // pinceau large : vallons, pas d'entailles
+    const hg = (x, z, o) => { const ix = x | 0, iz = z | 0, fx = x - ix, fz = z - iz, i = iz * N + ix, a = H[i], b = H[i + 1], c = H[i + N], d = H[i + N + 1];
+      o.gx = (b - a) * (1 - fz) + (d - c) * fz; o.gz = (c - a) * (1 - fx) + (d - b) * fx; o.h = a * (1 - fx) * (1 - fz) + b * fx * (1 - fz) + c * (1 - fx) * fz + d * fx * fz; return o; };
+    const o = {}, o2 = {};
+    for (let n = 0; n < drops; n++) {
+      let x = 3 + r() * (N - 7), z = 3 + r() * (N - 7);
+      if (H[(z | 0) * N + (x | 0)] < 1750) continue;                                  // l'eau naît sur les reliefs
+      let dx = 0, dz = 0, sp = 1, wat = 1, sed = 0;
+      for (let st = 0; st < 70; st++) {
+        hg(x, z, o); const ix = x | 0, iz = z | 0, fx = x - ix, fz = z - iz;
+        dx = dx * inertia - o.gx * (1 - inertia); dz = dz * inertia - o.gz * (1 - inertia);
+        const l = Math.hypot(dx, dz); if (l < 1e-6) break; dx /= l; dz /= l;
+        const nx = x + dx, nz = z + dz; if (nx < 3 || nz < 3 || nx > N - 4 || nz > N - 4) break;
+        const dh = hg(nx, nz, o2).h - o.h;
+        const c = Math.max(-dh, minSlope * CELL) * sp * wat * cap;
+        if (sed > c || dh > 0) {                                                       // dépôt (au plus de quoi combler le creux)
+          const amt = dh > 0 ? Math.min(dh, sed) : (sed - c) * dep; sed -= amt;
+          const i = iz * N + ix; H[i] += amt * (1 - fx) * (1 - fz); H[i + 1] += amt * fx * (1 - fz); H[i + N] += amt * (1 - fx) * fz; H[i + N + 1] += amt * fx * fz;
+        } else {                                                                       // arrachement, réparti sur un petit pinceau
+          const amt = Math.min((c - sed) * ero, -dh); sed += amt;
+          for (const w of W) { const j = (iz + w[1]) * N + ix + w[0]; H[j] -= amt * w[2]; }
+        }
+        sp = Math.sqrt(Math.max(0, sp * sp + dh * grav / CELL)); wat *= 1 - evap; x = nx; z = nz;
+      }
+    }
+  }
+
   function bigWorld(seed) {
     const Q = SS.QUAD, VZ = SS.BIG_VZ, FR = Q - 150, vr = SS.rng(seed * 17 + 3);
     noise = SS.makeNoise(seed * 3 + 1);
@@ -202,17 +232,38 @@
     const toWorld = (m, lx, lz) => { const px = lx * m.c + lz * m.s, pz = -lx * m.s + lz * m.c; return { x: m.cx + px * m.dir, z: m.cz + pz * m.dir }; };
     const lift = (d, k) => d >= k ? d : d <= -k ? 0 : (d + k) * (d + k) / (4 * k);
     const H = T.H, own = new Int8Array(N * N).fill(-1), lo = {};
-    // 1. socle continu (plateau de cols au centre, pente douce vers les bords) + montagnes posées dessus
+    // 1. un seul relief continu : tous les reliefs de toutes les montagnes sont fondus ensemble (pas de cadre ni de bord découpé),
+    //    sur un terrain fortement déformé pour casser les formes rondes ; seules les cuvettes des villages restent ouvertes
+    const P = [];
+    M.forEach((m, k) => { for (const p of m.peaks) {
+      const w = toWorld(m, p.x, p.z), vx = (p.s * m.c + p.c * m.s) * m.dir, vz = (-p.s * m.s + p.c * m.c) * m.dir, ang = Math.atan2(vx, vz);
+      const q = Object.assign({}, p, { x: w.x, z: w.z, c: Math.cos(ang), s: Math.sin(ang), k }); q.reach = (q.R * Math.max(1, q.asp) + q.rt) * 1.4 + 900; P.push(q);
+    } });
+    const vills = M.slice(0, 4).map(m => { const v = toWorld(m, 0, VZ); return { x: v.x, z: v.z, ux: m.dir * m.s, uz: m.dir * m.c }; });
+    const K = 85;
     for (let iz = 0; iz < N; iz++) for (let ix = 0; ix < N; ix++) {
       const x = -HALF + ix * CELL, z = -HALF + iz * CELL, r = Math.hypot(x, z), i = iz * N + ix;
-      const base = 1600 + 650 * SS.smooth(HALF * 0.95, HALF * 0.22, r) + noise.fbm(x * 0.0004 + 3, z * 0.0004 - 8, 3) * 160 * SS.smooth(HALF, HALF * 0.45, r) + noise.fbm(x * 0.0012, z * 0.0012, 2) * 25 + (noise.ridged(x * 0.0016 + 21, z * 0.0016 - 5, 3) - 0.45) * 70 * SS.smooth(HALF * 0.75, HALF * 0.3, r);      // ondulations : le centre n'est jamais plat
-      let up = 0;
-      for (let k = 0; k < M.length; k++) {
-        const m = M[k]; toLocal(m, x, z, lo); const e = Math.max(Math.abs(lo.x), Math.abs(lo.z)) / (m.fr || FR); if (e >= 1) continue;
-        const u = (1 - SS.smooth(0.88, 1, e)) * lift(massifH(m, k, lo.x, lo.z) - base, 60); if (u > up) { up = u; own[i] = k; }
+      const base = 1600 + 650 * SS.smooth(HALF * 0.95, HALF * 0.22, r) + noise.fbm(x * 0.0004 + 3, z * 0.0004 - 8, 3) * 160 * SS.smooth(HALF, HALF * 0.45, r) + noise.fbm(x * 0.0012, z * 0.0012, 2) * 25 + (noise.ridged(x * 0.0016 + 21, z * 0.0016 - 5, 3) - 0.45) * 70 * SS.smooth(HALF * 0.75, HALF * 0.3, r);
+      const wx = x + 750 * noise.fbm(x * 0.00016 + 7, z * 0.00016 - 3, 3) + 260 * noise.fbm(x * 0.0007 - 2, z * 0.0007 + 9, 3);
+      const wz = z + 750 * noise.fbm(x * 0.00016 - 11, z * 0.00016 + 5, 3) + 260 * noise.fbm(x * 0.0007 + 4, z * 0.0007 - 6, 3);
+      let sum = 0, best = 0, bk = -1, rs = 0;
+      for (const p of P) {
+        if (Math.abs(wx - p.x) > p.reach || Math.abs(wz - p.z) > p.reach) continue;
+        const v = peakAt(p, wx, wz) - FLOOR; if (v <= 0) continue;
+        const e = Math.exp(Math.min(60, v / K)); sum += e; rs += e * M[p.k].st.rough; if (v > best) { best = v; bk = p.k; }
       }
-      H[i] = base + up;
+      let rel = sum > 0 ? K * Math.log(sum) : 0;
+      // cuvettes ouvertes autour des villages, et la carte retombe vers ses bords
+      for (const v of vills) { const dx = x - v.x, dz = z - v.z, along = dx * v.ux + dz * v.uz, side = dx * v.uz - dz * v.ux; rel *= SS.smooth(450, 3300, Math.hypot(side * 0.75, along) + 150 * noise.fbm(x * 0.001, z * 0.001, 2)); }
+      rel *= 1 - SS.smooth(0.8, 0.98, Math.pow(Math.pow(Math.abs(x) / HALF, 4) + Math.pow(Math.abs(z) / HALF, 4), 0.25) + 0.05 * noise.fbm(x * 0.0004 - 4, z * 0.0004 + 6, 2));   // bords arrondis et irréguliers
+      // arêtes et ravines à toutes les échelles, plus marquées en altitude ; rugosité propre à chaque montagne
+      const hi = SS.smooth(150, 1100, rel), rough = sum > 0 ? rs / sum : 0.8;      // rugosité fondue entre montagnes voisines : pas de couture
+      rel *= 0.82 + 0.36 * noise.ridged(wx * 0.00045 + 17, wz * 0.00045 - 3, 4);
+      rel += rough * hi * ((noise.ridged(wx * 0.0011 + 5, wz * 0.0011, 3) - 0.5) * 120 + (noise.ridged(wx * 0.0026 - 1, wz * 0.0026 + 3, 3) - 0.5) * 26);
+      H[i] = base + lift(FLOOR + rel - base, 60); own[i] = bk;
     }
+    // 1 bis. ruissellement : des gouttes d'eau creusent talwegs et vallons, déposent au pied des pentes — relief naturel et continu
+    hydraulic(H, Math.round(N * N * 0.45), seed); smoothOnce(H, 0.25);
     // 2. érosion : les pentes ne dépassent pas le talus de leur altitude
     const it = T.ITER; T.ITER = 100; erode(H); T.ITER = it; smoothOnce(H, 0.2);
     // 3. replats : épaulements sur les arêtes, puis replats à flanc et fonds de cirque, à des altitudes variées
@@ -269,8 +320,20 @@
             H[iz * N + ix] += s.a * Math.exp(-q) * rug;
           }
       }
-      let top = 0; for (let i = 0; i < H.length; i++) if (own[i] === k && H[i] > top) top = H[i];
-      if (m.style !== 'butte' && (top < st.top || top > st.top + 250)) { const f = (Math.min(Math.max(top, st.top), st.top + 250) - 2400) / Math.max(1, top - 2400); for (let i = 0; i < H.length; i++) if (own[i] === k && H[i] > 2400) H[i] = 2400 + (H[i] - 2400) * f; }
+    });
+    // recalage des sommets : un facteur par montagne, lissé sur ~500 m pour ne laisser aucune marche entre deux montagnes
+    const tops = M.map(() => 0); for (let i = 0; i < H.length; i++) if (own[i] >= 0 && H[i] > tops[own[i]]) tops[own[i]] = H[i];
+    const fk = M.map((m, k) => { const st = m.st, top = tops[k]; return m.style === 'butte' || (top >= st.top && top <= st.top + 250) ? 1 : (Math.min(Math.max(top, st.top), st.top + 250) - 2400) / Math.max(1, top - 2400); });
+    let F = new Float32Array(N * N); for (let i = 0; i < F.length; i++) F[i] = own[i] >= 0 ? fk[own[i]] : 1;
+    for (let pass = 0; pass < 2; pass++) for (const horiz of [true, false]) {          // flou en boîte séparable, rayon 12 mailles
+      const G = new Float32Array(N * N), rad = 12;
+      for (let a = 0; a < N; a++) { let acc = 0, cnt = 0; const at = b => horiz ? a * N + b : b * N + a;
+        for (let b = 0; b < rad; b++) { acc += F[at(b)]; cnt++; }
+        for (let b = 0; b < N; b++) { if (b + rad < N) { acc += F[at(b + rad)]; cnt++; } if (b - rad - 1 >= 0) { acc -= F[at(b - rad - 1)]; cnt--; } G[at(b)] = acc / cnt; } }
+      F = G;
+    }
+    for (let i = 0; i < H.length; i++) if (H[i] > 2400) H[i] = 2400 + (H[i] - 2400) * F[i];
+    M.forEach((m, k) => {
       const pk = toWorld(m, m.p0.x, m.p0.z); m.peak = { x: pk.x, z: pk.z };
       m.top = 0; for (let i = 0; i < H.length; i++) if (own[i] === k && H[i] > m.top) m.top = H[i]; m.top = Math.round(m.top);
     });
