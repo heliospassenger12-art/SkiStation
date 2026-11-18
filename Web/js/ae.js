@@ -17,13 +17,16 @@
     { id: 'ext-w', name: 'Extension Ouest', a0: -80, a1: -50, price: 100000 },
     { id: 'r1', name: 'Secteur Est', a0: 80, a1: 150 },
     { id: 'r2', name: 'Secteur Nord', a0: 150, a1: 210 },
-    { id: 'r3', name: 'Secteur Ouest', a0: -150, a1: -80 }
+    { id: 'r3', name: 'Secteur Ouest', a0: -150, a1: -80 },
+    { id: 'center', name: 'Massif central', a0: 999, a1: 999, price: 300000 }      // grande carte seulement
   ];
   let PROTECT_R = 650;                             // sommet protégé : aucune construction
-  const SMALL = { start: ['Votre concession', -50, 50], 'ext-e': ['Extension Est', 50, 80], 'ext-w': ['Extension Ouest', -80, -50], r1: ['Secteur Est', 80, 150], r2: ['Secteur Nord', 150, 210], r3: ['Secteur Ouest', -150, -80] };
-  // grande carte : une montagne par compagnie (vous au sud-ouest), deux bandes d'extension entre voisins, col central protégé
-  const BIG = { start: 'Votre massif (sud-ouest)', 'ext-e': 'Liaison Sud (vers Valfroide)', 'ext-w': 'Liaison Ouest (vers Les Rochettes)', r1: 'Massif sud-est', r2: 'Massif nord-est', r3: 'Massif nord-ouest' };
-  const B = 1000;                                  // demi-largeur des vallées en croix (extensions) et du col central
+  const SMALL = { start: ['Votre concession', -50, 50], 'ext-e': ['Extension Est', 50, 80], 'ext-w': ['Extension Ouest', -80, -50], r1: ['Secteur Est', 80, 150], r2: ['Secteur Nord', 150, 210], r3: ['Secteur Ouest', -150, -80], center: ['Massif central', 999, 999] };
+  // grande carte : une montagne par compagnie (vous au sud-ouest), deux bandes d'extension entre voisins, massif central à acheter
+  const BIG = { start: 'Votre massif (sud-ouest)', 'ext-e': 'Liaison Sud (vers Valfroide)', 'ext-w': 'Liaison Ouest (vers Les Rochettes)', r1: 'Massif sud-est', r2: 'Massif nord-est', r3: 'Massif nord-ouest', center: 'Massif central (sommet protégé)' };
+  const CENTER_R = 3300, NEEDLE_R = 450;           // grande carte : massif central à acheter (le premier qui l'achète), aiguille sommitale protégée
+  AE.CENTER_R = CENTER_R;
+  const B = 1000;                                  // demi-largeur des vallées en croix (extensions)
   AE.layout = function () {
     PROTECT_R = AE.PROTECT_R = SS.BIG ? B : 650;
     for (const zn of ZONES) { if (SS.BIG) zn.name = BIG[zn.id]; else { const z = SMALL[zn.id]; zn.name = z[0]; zn.a0 = z[1]; zn.a1 = z[2]; } }
@@ -32,8 +35,9 @@
   const angOf = (x, z) => { let a = Math.atan2(x, z) / DEG; if (a < -150) a += 360; return a; };   // -150..210
   AE.zoneAt = function (x, z) {
     if (SS.BIG) {
-      const ax = Math.abs(x), az = Math.abs(z);
-      if (ax < B && az < B) return 'protected';
+      const ax = Math.abs(x), az = Math.abs(z), rr = Math.hypot(x, z);
+      if (rr < NEEDLE_R) return 'protected';
+      if (rr < CENTER_R) return 'center';
       if (x <= -B && z >= B) return 'start';
       if (ax < B && z >= B) return 'ext-e';
       if (x <= -B && az < B) return 'ext-w';
@@ -54,6 +58,7 @@
   // sommet vers lequel une compagnie construit ses remontées
   AE.peakOf = function (r) {
     if (!SS.BIG || !T.MASSIFS) return { x: 0, z: 0 };
+    if (SS.G.ae.centerOwner === r.id && T.MASSIFS[4] && Math.random() < 0.35) { const c = T.MASSIFS[4].peak; return { x: c.x * 0.6, z: c.z * 0.6 }; }     // il équipe aussi le massif central
     const m = T.MASSIFS[{ r1: 1, r2: 2, r3: 3 }[r.zone] || 0]; return m.peak || { x: m.cx, z: m.cz };
   };
   AE.on = () => !!(SS.G && SS.G.ae);
@@ -64,7 +69,8 @@
     for (const p of pts) {
       if (AE.canBuild(p.x, p.z)) continue;
       const id = AE.zoneAt(p.x, p.z);
-      if (id === 'protected') return SS.BIG ? 'Col central protégé : aucune construction au carrefour des deux vallées.' : 'Sommet protégé : aucune construction au-dessus de la ligne de crête centrale.';
+      if (id === 'center' && G.ae.centerOwner && G.ae.centerOwner !== 'player') { const o = G.ae.rivals.find(r => r.id === G.ae.centerOwner); return 'Hors de votre concession : le massif central appartient à ' + (o ? o.name : 'un rival') + '.'; }
+      if (id === 'protected') return SS.BIG ? 'Sommet du massif central protégé : aucune construction sur l\'aiguille.' : 'Sommet protégé : aucune construction au-dessus de la ligne de crête centrale.';
       const zn = ZONES.find(z => z.id === id), r = G.ae.rivals.find(r => r.zone === id);
       if (r) return 'Hors de votre concession : ce secteur appartient à ' + r.name + '.';
       return 'Hors de votre concession : achetez « ' + zn.name + ' » (' + SS.eur(zn.price) + ') dans le panneau Alpine Empires.';
@@ -89,8 +95,9 @@
   }
   AE.buyZone = function (id) {
     G = SS.G; const zn = ZONES.find(z => z.id === id); if (!zn || !zn.price || G.ae.owned.indexOf(id) >= 0) return 'Indisponible.';
+    if (id === 'center' && (!SS.BIG || G.ae.centerOwner)) return 'Le massif central a déjà été acheté.';
     if (!SS.spend(zn.price, 'Construction')) return 'Fonds insuffisants.';
-    G.ae.owned.push(id); SS.emit('world'); return null;
+    G.ae.owned.push(id); if (id === 'center') G.ae.centerOwner = 'player'; SS.emit('world'); return null;
   };
 
   // ---------- compagnies rivales ----------
@@ -136,7 +143,7 @@
   const runtime = r => rt[r.id] || (rt[r.id] = { lifts: [], pistes: [], blds: [] });
 
   // ---------- construction réelle (géométrie du noyau, sans toucher aux listes du joueur) ----------
-  function inWedge(r, x, z) { return AE.zoneAt(x, z) === r.zone; }
+  function inWedge(r, x, z) { const id = AE.zoneAt(x, z); return id === r.zone || (id === 'center' && G.ae.centerOwner === r.id); }
   function liftObj(r, data, an) {
     const l = SS.commitLift(an, { id: data.id, type: data.type, name: data.name, open: true, cond: 1, cost: an.cost, owner: r.id });
     l.owner = r.id; l.night = false; return l;
@@ -374,6 +381,8 @@
     const room = () => r.money - reserve, can = c => room() >= c;
     // trésorerie excédentaire : dividendes versés aux actionnaires (garde les comptes lisibles)
     if (r.money > 6000000) { const div = (r.money - 6000000) * 0.04; r.money -= div; r.exp += div; }
+    // grande carte : le bâtisseur rachète le massif central si personne ne l'a fait (de quoi agrandir son domaine)
+    if (SS.BIG && !G.ae.centerOwner && r.persona === 'bat' && t >= 180 && can(420000)) { r.money -= 300000; r.exp += 300000; G.ae.centerOwner = r.id; news(r, 'achète le massif central !', null, true); }
     // recherche (palier technologique) : grimpe avec le temps et l'argent
     const wantTier = Math.min(6, Math.floor(1 + t / (r.persona === 'lux' ? 26 : 32)));
     if (r.tier < wantTier && can(120000 * (r.tier + 1))) { const c = 120000 * (r.tier + 1); r.money -= c; r.exp += c; r.tier++; }
@@ -521,13 +530,15 @@
       c.strokeStyle = '#e6edf6'; c.lineWidth = Math.max(1, (p.width - 3) * k); path(p.pts);
     }
     const lw = SS.BIG ? 24 : 6; c.setLineDash([lw * 5 * k, lw * 3.7 * k]); c.lineWidth = Math.max(1.5, lw * k);
-    if (SS.BIG) {                                   // frontières : deux vallées en croix et col central
+    if (SS.BIG) {                                   // frontières : bandes d'extension et massif central
       const H = SS.HALF, own = id => G.ae.owned.indexOf(id) >= 0, seg = (x0, z0, x1, z1, o) => { c.strokeStyle = o ? 'rgba(255,178,56,0.85)' : 'rgba(90,100,120,0.55)'; c.beginPath(); c.moveTo(X(x0), Z(z0)); c.lineTo(X(x1), Z(z1)); c.stroke(); };
-      seg(-B, B, -B, H, own('start') || own('ext-e')); seg(B, B, B, H, own('ext-e'));
-      seg(-H, B, -B, B, own('start') || own('ext-w')); seg(-H, -B, -B, -B, own('ext-w'));
-      seg(-B, B, B, B, own('ext-e')); seg(-B, -B, -B, B, own('ext-w'));
-      seg(B, -B, B, B, false); seg(-B, -B, B, -B, false); seg(B, -B, H, -B, false); seg(-B, -H, -B, -B, false);
-      c.strokeStyle = 'rgba(200,60,60,0.6)'; c.strokeRect(X(-B), Z(-B), 2 * B * k, 2 * B * k); c.setLineDash([]);
+      const c0 = Math.sqrt(CENTER_R * CENTER_R - B * B);              // les frontières partent du massif central
+      seg(-B, c0, -B, H, own('start') || own('ext-e')); seg(B, c0, B, H, own('ext-e'));
+      seg(-H, B, -c0, B, own('start') || own('ext-w')); seg(-H, -B, -c0, -B, own('ext-w'));
+      seg(c0, B, H, B, false); seg(c0, -B, H, -B, false); seg(-B, -H, -B, -c0, false); seg(B, -H, B, -c0, false);
+      const co = G.ae.centerOwner, cr = co && co !== 'player' ? G.ae.rivals.find(r => r.id === co) : null;
+      c.strokeStyle = co === 'player' ? 'rgba(255,178,56,0.85)' : cr ? cr.color : 'rgba(90,100,120,0.55)'; c.beginPath(); c.arc(X(0), Z(0), CENTER_R * k, 0, 7); c.stroke();
+      c.strokeStyle = 'rgba(200,60,60,0.6)'; c.beginPath(); c.arc(X(0), Z(0), NEEDLE_R * k, 0, 7); c.stroke(); c.setLineDash([]);
       return;
     }
     for (const zn of ZONES) for (const a of [zn.a0]) {

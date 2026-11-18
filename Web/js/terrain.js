@@ -105,7 +105,37 @@
     alpine: { name: 'Haute montagne et glaciers', top: 4400, body: 2450, subs: [3, 4], sides: [1, 2], backs: [1, 2], fronts: [1, 1], g: [1.2, 1.6], flat: 0.3, scale: 0.95, plateaus: 7, pr: [220, 420], rough: 1.3, spikes: 5, spikeH: 650 },
     hills: { name: 'Moyenne montagne boisée', top: 3350, body: 2250, subs: [3, 4], sides: [3, 4], backs: [2, 2], fronts: [2, 2], g: [0.9, 1.2], flat: 0.5, scale: 0.9, plateaus: 10, pr: [220, 400], rough: 0.8, spikes: 2, spikeH: 180 }
   };
+  // reliefs sans village, entre les stations : de quoi relier les domaines et bâtir de grandes stations
+  T.BIG_STYLES.central = { name: 'Massif central', top: 3650, body: 2600, g: [0.85, 1.1], flat: 0.5, scale: 1, plateaus: 12, pr: [260, 520], rough: 1, spikes: 3, spikeH: 420 };
+  T.BIG_STYLES.col = { name: 'Montagne de liaison', top: 3050, body: 2300, g: [0.8, 1.05], flat: 0.7, scale: 1, plateaus: 5, pr: [240, 440], rough: 0.8, spikes: 1, spikeH: 200 };
+  T.BIG_STYLES.butte = { name: 'Col vallonné', top: 2700, body: 2300, g: [0.9, 1.2], flat: 0.3, scale: 1, plateaus: 1, pr: [200, 320], rough: 0.7, spikes: 0, spikeH: 0 };
   const FLOOR = 1600;
+  // cols entre le massif central et les montagnes de liaison : jamais plats, et chacun différent
+  function makeButte(m, st, r) {
+    const R = (a, b) => a + (b - a) * r(), b0 = m.b0;
+    m.st = st; m.styleName = { bosses: 'Col des bosses', crete: 'Col de la petite crête', mamelons: 'Col des mamelons', combe: 'Col de la combe' }[m.kind]; m.peaks = []; m.p0 = { x: 0, z: 0 };
+    const add = (x, z, dh, rad, g, rt, ang, asp) => m.peaks.push({ x, z, h: b0 + dh, fb: b0 - 120, R: rad, g, rt: rt || 0, c: Math.cos(ang), s: Math.sin(ang), asp, tilt: 0.06 });
+    if (m.kind === 'bosses') for (let i = 0, n = 7 + Math.floor(r() * 4); i < n; i++) { const a = r() * 6.28, d = R(0, 1200); add(Math.sin(a) * d, Math.cos(a) * d, R(90, 210), R(260, 460), R(0.9, 1.2), 0, r() * 3, R(1, 1.5)); }
+    else if (m.kind === 'crete') { const a = r() * 3.14; add(0, 0, R(300, 400), R(850, 1050), 1.1, 0, a, R(2.6, 3.2)); for (const sg of [-1, 1]) add(Math.sin(a) * 900 * sg + R(-200, 200), Math.cos(a) * 900 * sg, R(160, 260), R(400, 600), 1.0, 0, a + 1.4, 1.3); }
+    else if (m.kind === 'mamelons') for (let i = 0, n = 2 + Math.floor(r() * 2); i < n; i++) { const a = i * 6.28 / n + r(), d = R(500, 900); add(Math.sin(a) * d, Math.cos(a) * d, R(260, 420), R(700, 1000), R(1.0, 1.3), i === 0 ? R(180, 260) : 0, r() * 3, R(1, 1.4)); }
+    else for (let i = 0; i < 5; i++) { const a = i * 1.257 + R(-0.25, 0.25), d = R(550, 750); add(Math.sin(a) * d, Math.cos(a) * d, R(150, 300), R(450, 620), R(1.0, 1.3), 0, a, R(1.3, 1.8)); }
+  }
+  function makeLink(m, st, r) {                     // massif central (arêtes vers les quatre stations) ou montagne de liaison (à cheval sur une frontière)
+    const R = (a, b) => a + (b - a) * r(), top = st.top + 80, fr = m.fr;
+    m.st = st; m.styleName = st.name; m.peaks = [];
+    const add = (x, z, h, rad, g, flat, ang, asp, fb) => m.peaks.push({ x, z, h, fb: fb || FLOOR, R: rad, g, rt: flat ? R(280, 480) : 0, c: Math.cos(ang), s: Math.sin(ang), asp, tilt: R(0.05, 0.08) });
+    m.p0 = { x: R(-300, 300), z: R(-300, 300) };
+    add(0, 0, st.body, fr * 0.95, 0.85, false, m.axis || 0, m.axis !== undefined ? 1.5 : 1.1);
+    if (m.axis === undefined) {
+      add(m.p0.x, m.p0.z, top, R(3000, 3500), R(st.g[0], st.g[1]), false, 0, 1, st.body - 200);
+      for (let i = 0; i < 4; i++) { const a = Math.PI / 4 + i * Math.PI / 2 + R(-0.25, 0.25), d = R(1700, 2500); add(Math.sin(a) * d, Math.cos(a) * d, top * R(0.76, 0.86), R(2000, 2600), R(st.g[0], st.g[1]), r() < 0.3, a, R(1.4, 1.9), st.body - 250); }
+      for (let i = 0; i < 3; i++) { const a = r() * 6.28, d = R(1200, 2600); add(Math.sin(a) * d, Math.cos(a) * d, R(2700, 3050), R(1500, 2000), R(st.g[0], st.g[1]), r() < st.flat, R(-1, 1), R(1.1, 1.5), st.body - 300); }
+    } else {
+      const ux = Math.sin(m.axis), uz = Math.cos(m.axis);
+      add(m.p0.x, m.p0.z, top, R(2200, 2700), R(st.g[0], st.g[1]), r() < 0.3, m.axis, 1.6, st.body - 200);
+      for (const sg of [-1, 1]) { const d = R(1300, 1900); add(ux * d * sg + R(-300, 300), uz * d * sg + R(-300, 300), R(2650, 2950), R(1500, 1900), R(st.g[0], st.g[1]), r() < st.flat, m.axis, R(1.1, 1.5), st.body - 250); }
+    }
+  }
   // Une montagne = plusieurs reliefs : le sommet principal et ses sous-sommets allongés (des arêtes, chacune avec ses versants),
   // des montagnes moyennes devant (on monte jusque vers 2 500 m, sommet plat = plateau, puis ça redescend vers un col),
   // sur les côtés et à l'arrière. Entre eux se creusent cols et combes.
@@ -145,7 +175,7 @@
     if (sum > 0) h = FLOOR + 70 * Math.log(sum);                                     // raccords doux entre reliefs : cols arrondis
     // enveloppe : la montagne retombe vers le socle avant la limite de son quart ; embouchure ouverte devant le village
     const VZ = SS.BIG_VZ, FR = SS.QUAD - 150;
-    const env = (1 - SS.smooth(0.66, 1.0, Math.hypot(x / FR, Math.min(0, z) / FR) + 0.06 * noise.fbm(x * 0.0005 + k, z * 0.0005, 2)))
+    const env = m.fr ? 1 - SS.smooth(0.45, 1.0, (m.axis === undefined ? Math.hypot(x, z) : Math.hypot(x * Math.cos(m.axis) - z * Math.sin(m.axis), (x * Math.sin(m.axis) + z * Math.cos(m.axis)) / 1.45)) / m.fr + 0.12 * noise.fbm(x * 0.0005 + k, z * 0.0005, 2)) : (1 - SS.smooth(0.66, 1.0, Math.hypot(x / FR, Math.min(0, z) / FR) + 0.06 * noise.fbm(x * 0.0005 + k, z * 0.0005, 2)))
       * SS.smooth(450, 3300, Math.hypot(x * 0.75, z - VZ) + 150 * noise.fbm(x * 0.001, z * 0.001 + k, 2));      // cuvette ouverte autour du village
     h = FLOOR + (h - FLOOR) * env;
     const hi = SS.smooth(1800, 2700, h);
@@ -159,6 +189,15 @@
     const M = T.MASSIFS = [{ cx: -Q, cz: Q, dir: 1 }, { cx: Q, cz: Q, dir: 1 }, { cx: Q, cz: -Q, dir: -1 }, { cx: -Q, cz: -Q, dir: -1 }];
     const styles = ['player', 'vast', 'alpine', 'hills'];              // vous ; Valfroide ; Pic-Royal ; Les Rochettes
     M.forEach((m, k) => { m.th = k ? (vr() - 0.5) * 0.3 : 0; m.c = Math.cos(m.th); m.s = Math.sin(m.th); m.style = styles[k]; makeMassif(m, T.BIG_STYLES[styles[k]], SS.rng(seed * 31 + k * 977 + 5)); });
+    // entre les stations : un massif central et quatre montagnes de liaison à cheval sur les frontières
+    const AX = Q * 1.25, links = [{ cx: 0, cz: 0, fr: 4300 }, { cx: 0, cz: AX, fr: 3000, axis: Math.PI / 2, name: 'sud' }, { cx: AX, cz: 0, fr: 3000, axis: 0, name: 'est' }, { cx: 0, cz: -AX, fr: 3000, axis: Math.PI / 2, name: 'nord' }, { cx: -AX, cz: 0, fr: 3000, axis: 0, name: 'ouest' }];
+    links.forEach((m, j) => { m.dir = 1; m.th = 0; m.c = 1; m.s = 0; m.link = true; m.style = m.axis === undefined ? 'central' : 'col'; makeLink(m, T.BIG_STYLES[m.style], SS.rng(seed * 53 + j * 389 + 9)); if (m.name) m.styleName += ' ' + m.name; M.push(m); });
+    const br = SS.rng(seed * 61 + 13), kinds = ['bosses', 'crete', 'mamelons', 'combe'].sort(() => br() - 0.5);
+    [[0, 1], [1, 0], [0, -1], [-1, 0]].forEach((d, j) => {
+      const rr = Q * 0.74 + (br() - 0.5) * 500, cx = d[0] * rr + d[1] * (br() - 0.5) * 600, cz = d[1] * rr + d[0] * (br() - 0.5) * 600;
+      const m = { cx, cz, fr: 1900, dir: 1, th: 0, c: 1, s: 0, link: true, style: 'butte', kind: kinds[j], b0: 1600 + 650 * SS.smooth(HALF * 0.95, HALF * 0.22, Math.hypot(cx, cz)) };
+      makeButte(m, T.BIG_STYLES.butte, SS.rng(seed * 71 + j * 211 + 3)); M.push(m);
+    });
     const toLocal = (m, x, z, o) => { const px = (x - m.cx) * m.dir, pz = (z - m.cz) * m.dir; o.x = px * m.c - pz * m.s; o.z = px * m.s + pz * m.c; return o; };
     const toWorld = (m, lx, lz) => { const px = lx * m.c + lz * m.s, pz = -lx * m.s + lz * m.c; return { x: m.cx + px * m.dir, z: m.cz + pz * m.dir }; };
     const lift = (d, k) => d >= k ? d : d <= -k ? 0 : (d + k) * (d + k) / (4 * k);
@@ -166,10 +205,10 @@
     // 1. socle continu (plateau de cols au centre, pente douce vers les bords) + montagnes posées dessus
     for (let iz = 0; iz < N; iz++) for (let ix = 0; ix < N; ix++) {
       const x = -HALF + ix * CELL, z = -HALF + iz * CELL, r = Math.hypot(x, z), i = iz * N + ix;
-      const base = 1600 + 650 * SS.smooth(HALF * 0.95, HALF * 0.22, r) + noise.fbm(x * 0.0004 + 3, z * 0.0004 - 8, 3) * 160 * SS.smooth(HALF, HALF * 0.45, r) + noise.fbm(x * 0.0012, z * 0.0012, 2) * 25;
+      const base = 1600 + 650 * SS.smooth(HALF * 0.95, HALF * 0.22, r) + noise.fbm(x * 0.0004 + 3, z * 0.0004 - 8, 3) * 160 * SS.smooth(HALF, HALF * 0.45, r) + noise.fbm(x * 0.0012, z * 0.0012, 2) * 25 + (noise.ridged(x * 0.0016 + 21, z * 0.0016 - 5, 3) - 0.45) * 70 * SS.smooth(HALF * 0.75, HALF * 0.3, r);      // ondulations : le centre n'est jamais plat
       let up = 0;
-      for (let k = 0; k < 4; k++) {
-        const m = M[k]; toLocal(m, x, z, lo); const e = Math.max(Math.abs(lo.x), Math.abs(lo.z)) / FR; if (e >= 1) continue;
+      for (let k = 0; k < M.length; k++) {
+        const m = M[k]; toLocal(m, x, z, lo); const e = Math.max(Math.abs(lo.x), Math.abs(lo.z)) / (m.fr || FR); if (e >= 1) continue;
         const u = (1 - SS.smooth(0.88, 1, e)) * lift(massifH(m, k, lo.x, lo.z) - base, 60); if (u > up) { up = u; own[i] = k; }
       }
       H[i] = base + up;
@@ -179,7 +218,7 @@
     // 3. replats : épaulements sur les arêtes, puis replats à flanc et fonds de cirque, à des altitudes variées
     const hAt = (x, z) => { const gx = SS.clamp((x + HALF) / CELL, 0, N - 1.001), gz = SS.clamp((z + HALF) / CELL, 0, N - 1.001), ix = gx | 0, iz = gz | 0, fx = gx - ix, fz = gz - iz, i = iz * N + ix; return (H[i] * (1 - fx) + H[i + 1] * fx) * (1 - fz) + (H[i + N] * (1 - fx) + H[i + N + 1] * fx) * fz; };
     const ownAt = (x, z) => own[SS.clamp(Math.round((z + HALF) / CELL), 0, N - 1) * N + SS.clamp(Math.round((x + HALF) / CELL), 0, N - 1)];
-    T.villages = M.map(m => { const v = toWorld(m, 0, VZ); return { x: v.x, z: v.z, ux: m.dir * m.s, uz: m.dir * m.c }; });
+    T.villages = M.slice(0, 4).map(m => { const v = toWorld(m, 0, VZ); return { x: v.x, z: v.z, ux: m.dir * m.s, uz: m.dir * m.c }; });
     T.plateaus = [];
     const pv = SS.rng(seed * 7 + 41);
     M.forEach((m, k) => {
@@ -191,10 +230,10 @@
           let lx, lz;
           if (j < m.peaks.length - 1 && tries < 60) {                     // épaulement entre deux reliefs : on en repart vers plusieurs versants
             const p1 = m.peaks[0], p2 = m.peaks[j + 1], t = 0.35 + 0.4 * pv(); lx = p1.x + (p2.x - p1.x) * t; lz = p1.z + (p2.z - p1.z) * t;
-          } else { const a = pv() * Math.PI * 2, d = 500 + pv() * 3800; lx = m.p0.x + Math.sin(a) * d; lz = m.p0.z + Math.cos(a) * d; }
-          if (Math.max(Math.abs(lx), Math.abs(lz)) > FR * 0.86) continue;
+          } else { const a = pv() * Math.PI * 2, d = 500 + pv() * Math.min(3800, (m.fr || FR) * 0.75); lx = m.p0.x + Math.sin(a) * d; lz = m.p0.z + Math.cos(a) * d; }
+          if (Math.max(Math.abs(lx), Math.abs(lz)) > (m.fr || FR) * 0.86) continue;
           const w = toWorld(m, lx, lz); if (!T.inside(w.x, w.z, 600) || ownAt(w.x, w.z) !== k) continue;
-          if (Math.hypot(w.x - vil.x, w.z - vil.z) < 1300) continue;
+          if (T.villages.some(v => Math.hypot(w.x - v.x, w.z - v.z) < 1300)) continue;
           const h = hAt(w.x, w.z); if (Math.abs(h - band) > 170) continue;
           const gx = (hAt(w.x + 40, w.z) - hAt(w.x - 40, w.z)) / 80, gz = (hAt(w.x, w.z + 40) - hAt(w.x, w.z - 40)) / 80, g = Math.hypot(gx, gz);
           if (g < 0.1 || g > 0.85) continue;
@@ -231,7 +270,7 @@
           }
       }
       let top = 0; for (let i = 0; i < H.length; i++) if (own[i] === k && H[i] > top) top = H[i];
-      if (top < st.top || top > st.top + 250) { const f = (Math.min(Math.max(top, st.top), st.top + 250) - 2400) / Math.max(1, top - 2400); for (let i = 0; i < H.length; i++) if (own[i] === k && H[i] > 2400) H[i] = 2400 + (H[i] - 2400) * f; }
+      if (m.style !== 'butte' && (top < st.top || top > st.top + 250)) { const f = (Math.min(Math.max(top, st.top), st.top + 250) - 2400) / Math.max(1, top - 2400); for (let i = 0; i < H.length; i++) if (own[i] === k && H[i] > 2400) H[i] = 2400 + (H[i] - 2400) * f; }
       const pk = toWorld(m, m.p0.x, m.p0.z); m.peak = { x: pk.x, z: pk.z };
       m.top = 0; for (let i = 0; i < H.length; i++) if (own[i] === k && H[i] > m.top) m.top = H[i]; m.top = Math.round(m.top);
     });
