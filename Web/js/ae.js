@@ -21,8 +21,8 @@
   ];
   let PROTECT_R = 650;                             // sommet protégé : aucune construction
   const SMALL = { start: ['Votre concession', -50, 50], 'ext-e': ['Extension Est', 50, 80], 'ext-w': ['Extension Ouest', -80, -50], r1: ['Secteur Est', 80, 150], r2: ['Secteur Nord', 150, 210], r3: ['Secteur Ouest', -150, -80] };
-  // grande carte : un massif par compagnie (vous au sud-ouest), deux vallées en croix, col central protégé
-  const BIG = { start: 'Votre massif (sud-ouest)', 'ext-e': 'Vallée du Sud (vers Valfroide)', 'ext-w': 'Vallée de l\'Ouest (vers Les Rochettes)', r1: 'Massif sud-est', r2: 'Massif nord-est', r3: 'Massif nord-ouest' };
+  // grande carte : une montagne par compagnie (vous au sud-ouest), deux bandes d'extension entre voisins, col central protégé
+  const BIG = { start: 'Votre massif (sud-ouest)', 'ext-e': 'Liaison Sud (vers Valfroide)', 'ext-w': 'Liaison Ouest (vers Les Rochettes)', r1: 'Massif sud-est', r2: 'Massif nord-est', r3: 'Massif nord-ouest' };
   const B = 1000;                                  // demi-largeur des vallées en croix (extensions) et du col central
   AE.layout = function () {
     PROTECT_R = AE.PROTECT_R = SS.BIG ? B : 650;
@@ -43,6 +43,13 @@
     }
     if (Math.hypot(x, z) < PROTECT_R) return 'protected';
     const a = angOf(x, z); for (const zn of ZONES) if (a >= zn.a0 && a < zn.a1) return zn.id; return 'r2';
+  };
+  // type de montagne d'une compagnie (grande carte) : nom et point culminant
+  AE.mountainOf = function (zone) {
+    if (!SS.BIG || !T.MASSIFS) return null;
+    const m = T.MASSIFS[{ r1: 1, r2: 2, r3: 3 }[zone] || 0];
+    if (!m.top) { let t = 0; for (let dz = -3200; dz <= 3200; dz += 80) for (let dx = -3200; dx <= 3200; dx += 80) t = Math.max(t, T.getH(m.cx + dx, m.cz + dz)); m.top = Math.round(t); }
+    return m.styleName + ' · ' + SS.num(m.top) + ' m';
   };
   // sommet vers lequel une compagnie construit ses remontées
   AE.peakOf = function (r) {
@@ -381,7 +388,7 @@
     }
     // candidature olympique (mêmes conditions que le joueur)
     if (!r.bid || (r.bid.phase === 'refused' && G.elapsed >= r.bid.retry)) {
-      if (r.tier >= 5 && critShare(s, 'xgames') === 1 && s.h_worldcup >= 1 && r.fame >= 75 && r.prestige >= 60 && r.money > 900000 && !AE.editionHolder()) {
+      if (r.tier >= 5 && critShare(s, 'xgames') === 1 && (!SS.BIG || critShare(s, 'olympics') >= 0.92) && s.h_worldcup >= 1 && r.fame >= 75 && r.prestige >= 60 && r.money > 900000 && !AE.editionHolder()) {
         r.money -= SS.Scn.BID_COST; r.exp += SS.Scn.BID_COST; r.bid = { phase: 'eval', due: G.elapsed + SS.Scn.EVAL_DAYS, tries: ((r.bid && r.bid.tries) || 0) + 1 };
         news(r, 'dépose sa candidature aux Jeux Olympiques !', null, true);
       }
@@ -533,8 +540,8 @@
   // ---------- classement ----------
   AE.standings = function () {
     G = SS.G; const s = SS.stats(), rows = [];
-    rows.push({ id: 'player', name: G.name, color: '#ffb238', you: true, money: G.money, fame: G.fame, prestige: G.prestige, visitors: G.history.length ? G.history[G.history.length - 1].v : 0, km: s.km, lifts: G.lifts.length, hosted: Object.values(G.eventsHosted).reduce((a, b) => a + b, 0), xg: SS.Scn.critShare('xgames'), oly: SS.Scn.critShare('olympics'), dossier: SS.Scn.dossierScore(), bid: G.bid ? G.bid.phase : null });
-    for (const r of G.ae.rivals) { const rs = AE.statsOf(r); rows.push({ id: r.id, name: r.name, color: r.color, ally: r.ally, motto: PERSONA[r.persona] && RIVALS.find(x => x.id === r.id).motto, money: r.money, fame: r.fame, prestige: r.prestige, visitors: r.visitors, km: rs.km, lifts: rs.lifts, hosted: rs.eventsHosted, xg: critShare(rs, 'xgames'), oly: critShare(rs, 'olympics'), dossier: AE.dossierOf(r), bid: r.bid ? r.bid.phase : null, price: r.price, sat: r.sat }); }
+    rows.push({ id: 'player', name: G.name, color: '#ffb238', you: true, mountain: AE.mountainOf('start'), money: G.money, fame: G.fame, prestige: G.prestige, visitors: G.history.length ? G.history[G.history.length - 1].v : 0, km: s.km, lifts: G.lifts.length, hosted: Object.values(G.eventsHosted).reduce((a, b) => a + b, 0), xg: SS.Scn.critShare('xgames'), oly: SS.Scn.critShare('olympics'), dossier: SS.Scn.dossierScore(), bid: G.bid ? G.bid.phase : null });
+    for (const r of G.ae.rivals) { const rs = AE.statsOf(r); rows.push({ id: r.id, name: r.name, color: r.color, ally: r.ally, motto: PERSONA[r.persona] && RIVALS.find(x => x.id === r.id).motto, mountain: AE.mountainOf(r.zone), money: r.money, fame: r.fame, prestige: r.prestige, visitors: r.visitors, km: rs.km, lifts: rs.lifts, hosted: rs.eventsHosted, xg: critShare(rs, 'xgames'), oly: critShare(rs, 'olympics'), dossier: AE.dossierOf(r), bid: r.bid ? r.bid.phase : null, price: r.price, sat: r.sat }); }
     return rows;
   };
 })();

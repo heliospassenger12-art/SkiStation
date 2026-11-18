@@ -19,11 +19,42 @@
     [-0.46, -0.30, 2850, 0.15], [0.02, -0.32, 2900, 0.14], [0.44, -0.30, 2880, 0.15],
     [-0.40, -0.58, 3150, 0.15], [0.06, -0.60, 3200, 0.15], [0.52, -0.56, 3120, 0.15], [0.34, -0.40, 3250, 0.14], [-0.32, -0.46, 3050, 0.14], [0.0, -0.84, 2950, 0.15]
   ];
+  // Caractère d'un massif : dômes, aiguilles, replats, altitude du corps et du sommet, relief des crêtes.
+  // La carte classique utilise toujours le style d'origine ; la grande carte d'Alpine Empires donne à chaque rival sa propre montagne.
+  const CLASSIC = { id: 'classic', domes: DOMES, spikes: SPIKES, plateaus: PLATEAUS, body: 3300, top: 4200, ridge: 1 };
+  let ST = CLASSIC;
+  T.STYLES = {
+    // Grand domaine : larges croupes, nombreux alpages et replats, sommets modérés — beaucoup de bleues et de rouges
+    vast(r) {
+      const domes = [[0.02, -0.3, 0.85, 0.66]];
+      for (let i = 0; i < 11; i++) domes.push([-0.75 + 1.5 * r(), -0.85 + 0.95 * r(), 0.55 + 0.25 * r(), 0.38 + 0.17 * r()]);
+      const plateaus = [];
+      for (let i = 0; i < 14; i++) { const z = -0.8 + 1.05 * r(); plateaus.push([-0.65 + 1.3 * r(), z, 2050 + (0.25 - z) * 900 + r() * 120, 0.18 + 0.05 * r()]); }
+      return { id: 'vast', name: 'Grand domaine aux larges alpages', domes, spikes: [[-0.3 + 0.2 * r(), -0.45, 420, 0.08], [0.35 + 0.2 * r(), -0.5, 360, 0.08]], plateaus, body: 2950, top: 3650, ridge: 0.6 };
+    },
+    // Haute montagne : un géant central, glaciers perchés, faces raides et aiguilles
+    alpine(r) {
+      const domes = [[0.0, -0.36, 1.15, 0.52]];
+      for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2 + r(); domes.push([Math.sin(a) * 0.5, -0.36 + Math.cos(a) * 0.4, 0.6 + 0.2 * r(), 0.28 + 0.06 * r()]); }
+      const spikes = [[0.02, -0.38, 1150, 0.1]];
+      for (let i = 0; i < 4; i++) spikes.push([-0.6 + 1.2 * r(), -0.75 + 0.5 * r(), 600 + 250 * r(), 0.065 + 0.02 * r()]);
+      const plateaus = [[-0.4, -0.55, 3350, 0.14], [0.42, -0.5, 3300, 0.14], [0.05, -0.8, 3250, 0.15], [-0.45, 0.05, 2350, 0.15], [0.45, 0.05, 2300, 0.15], [0.0, 0.2, 2050, 0.16], [-0.3, -0.25, 2800, 0.13], [0.3, -0.22, 2850, 0.13]];
+      return { id: 'alpine', name: 'Haute montagne et glaciers', domes, spikes, plateaus, body: 3550, top: 4480, ridge: 1.25 };
+    },
+    // Moyenne montagne : multitude de petites bosses boisées, sommets arrondis, pentes douces
+    hills(r) {
+      const domes = [];
+      for (let i = 0; i < 15; i++) domes.push([-0.8 + 1.6 * r(), -0.9 + 1.05 * r(), 0.5 + 0.25 * r(), 0.22 + 0.08 * r()]);
+      const spikes = []; for (let i = 0; i < 5; i++) spikes.push([-0.7 + 1.4 * r(), -0.8 + 0.6 * r(), 200 + 120 * r(), 0.06]);
+      const plateaus = []; for (let i = 0; i < 9; i++) { const z = -0.75 + 0.95 * r(); plateaus.push([-0.65 + 1.3 * r(), z, 1950 + (0.2 - z) * 500 + r() * 100, 0.15 + 0.04 * r()]); }
+      return { id: 'hills', name: 'Moyenne montagne boisée', domes, spikes, plateaus, body: 2650, top: 3150, ridge: 0.8 };
+    }
+  };
   T.TALUS = [0.40, 0.48, 0.58, 0.88, 1.1];        // pente maximale selon l'altitude (bandes de 2 000, 2 500, 3 000, 3 500, 4 000 m)
   T.ITER = 140; T.BODY = 3300;
 
   function domeField(seed) {
-    const r = SS.rng(seed * 31 + 7), f = new Float32Array(N * N), dj = DOMES.map(d => [d[0] + (r() - 0.5) * 0.14, d[1] + (r() - 0.5) * 0.12, d[2] * (0.85 + r() * 0.3), d[3] * 1.18 * (0.9 + r() * 0.2)]);
+    const r = SS.rng(seed * 31 + 7), f = new Float32Array(N * N), dj = ST.domes.map(d => [d[0] + (r() - 0.5) * 0.14, d[1] + (r() - 0.5) * 0.12, d[2] * (0.85 + r() * 0.3), d[3] * 1.18 * (0.9 + r() * 0.2)]);
     for (let iz = 0; iz < N; iz++) for (let ix = 0; ix < N; ix++) {
       const nx = (-HALF + ix * CELL) / 4000, nz = (-HALF + iz * CELL) / 4000;          // coordonnées normalisées : ±1 = cadre de 8 km
       const wx = nx + 0.16 * noise.fbm(nx * 1.7 + 11, nz * 1.7 + 3, 3), wz = nz + 0.16 * noise.fbm(nx * 1.7 - 7, nz * 1.7 + 19, 3);
@@ -34,17 +65,18 @@
       const rid2 = noise.ridged((nx + 0.15 * noise.fbm(nx * 3 + 5, nz * 3, 2)) * 4.8 + 13, nz * 4.8 + 57, 4) - 0.45;    // éperons, combes et replats (1 à 2 km)
       const calm = SS.smooth(0.62, 0.28, nz);              // près du village le terrain reste doux : pistes vertes et bleues pour les débutants
       const fall = EXT ? 1 - SS.smooth(0.74, 1.12, edgeOf(nx, nz)) : 1;     // grande carte : le massif retombe vers les vallées
-      f[iz * N + ix] = (e * 2250 + (rid * 560 * (0.25 + Math.min(1, e)) + rid2 * 470 * Math.min(1, 0.25 + e * 1.1) + noise.fbm(nx * 8 + 3, nz * 8 + 77, 3) * 26 * (0.3 + Math.min(1, e)) + noise.fbm(nx * 3.4 + 90, nz * 3.4 + 12, 3) * 140) * apron * calm) * fall;
+      f[iz * N + ix] = (e * 2250 + (rid * 560 * ST.ridge * (0.25 + Math.min(1, e)) + rid2 * 470 * ST.ridge * Math.min(1, 0.25 + e * 1.1) + noise.fbm(nx * 8 + 3, nz * 8 + 77, 3) * 26 * (0.3 + Math.min(1, e)) + noise.fbm(nx * 3.4 + 90, nz * 3.4 + 12, 3) * 140) * apron * calm) * fall;
     }
     return f;
   }
-  function erode(h) {                                  // érosion thermique : aucune pente ne dépasse le talus de son altitude
+  function erode(h, cap) {                             // érosion thermique : aucune pente ne dépasse le talus de son altitude (cap : les sommets au-dessus restent intacts)
     const d = new Float32Array(N * N), nb = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, 1.414], [-1, 1, 1.414], [1, -1, 1.414], [-1, -1, 1.414]];
     const tal = a => { const t = (a - 1640) / 500; const i = SS.clamp(Math.floor(t), 0, 3), u = SS.clamp(t - i, 0, 1); return T.TALUS[i] + (T.TALUS[i + 1] - T.TALUS[i]) * u; };
     for (let it = 0; it < T.ITER; it++) {
       d.fill(0);
       for (let z = 1; z < N - 1; z++) for (let x = 1; x < N - 1; x++) {
         const i = z * N + x, hi = h[i], lim = tal(hi);
+        if (cap && hi > cap) continue;
         for (let k = 0; k < 8; k++) {
           const j = i + nb[k][1] * N + nb[k][0], ex = hi - h[j] - lim * CELL * nb[k][2];
           if (ex > 0) { const m = ex * 0.2; d[i] -= m; d[j] += m; }
@@ -70,10 +102,10 @@
     const off = (HALF - 4000) / CELL;
     const V = CV, f = domeField(seed);
     let mx = 0; for (let i = 0; i < f.length; i++) { f[i] = Math.max(0, f[i]); if (f[i] > mx) mx = f[i]; }
-    const body = T.BODY;                                 // altitude visée du massif avant les aiguilles
+    const body = ST === CLASSIC ? T.BODY : ST.body;      // altitude visée du massif avant les aiguilles
     for (let i = 0; i < H.length; i++) H[i] = f[i] * (body - 1640) / mx;
     const pr = SS.rng(seed * 13 + 5);
-    for (const pl of PLATEAUS) {                         // les plateaux sont creusés avant l'érosion : leurs accès deviennent des rampes douces
+    for (const pl of ST.plateaus) {                         // les plateaux sont creusés avant l'érosion : leurs accès deviennent des rampes douces
       const cx = ((pl[0] + (pr() - 0.5) * 0.12) * 4000 + HALF) / CELL, cz = ((pl[1] + (pr() - 0.5) * 0.12) * 4000 + HALF) / CELL, rad = pl[3] * 4000 / CELL, tgt = pl[2] - 1640;
       for (let iz = 0; iz < N; iz++) for (let ix = 0; ix < N; ix++) { const q = Math.hypot(ix - cx, iz - cz) / rad; if (q > 2.2) continue; const w = 1 - SS.smooth(0.55, 2.2, q); H[iz * N + ix] = SS.lerp(H[iz * N + ix], tgt + noise.fbm((ix - off) * 0.06, (iz - off) * 0.06, 2) * 40, w); }
     }
@@ -82,14 +114,15 @@
       const i = iz * N + ix, nx = (-HALF + ix * CELL) / 4000, nz = (-HALF + iz * CELL) / 4000;
       const zz = -HALF + iz * CELL;
       let h = 1640 + H[i] + SS.clamp((2760 - zz) * 0.07, 0, 130) * (1 - SS.smooth(1700, 2400, H[i] + 1640));      // vallée d'accès : monte doucement depuis le village
-      for (const sp of SPIKES) { const q = (nx - sp[0]) * (nx - sp[0]) + (nz - sp[1]) * (nz - sp[1]); const rug = 0.55 + 0.9 * (noise.ridged(nx * 26 + sp[0] * 9, nz * 26, 3) - 0.35); h += sp[2] * Math.exp(-q / (sp[3] * sp[3])) * SS.clamp(rug, 0.25, 1.2); }
+      for (const sp of ST.spikes) { const q = (nx - sp[0]) * (nx - sp[0]) + (nz - sp[1]) * (nz - sp[1]); const rug = 0.55 + 0.9 * (noise.ridged(nx * 26 + sp[0] * 9, nz * 26, 3) - 0.35); h += sp[2] * Math.exp(-q / (sp[3] * sp[3])) * SS.clamp(rug, 0.25, 1.2); }
       h += noise.fbm(nx * 18 + 5, nz * 18 + 9, 3) * 6 * (0.4 + SS.smooth(1700, 2800, h));      // bosses et ondulations locales
       if (EXT) h = 1560 + (h - 1560) * (1 - SS.smooth(0.8, 1.12, edgeOf(nx, nz)));   // socle qui rejoint les vallées
       H[i] = Math.max(EXT ? 1560 : 1640, h);
     }
-    // l'altitude maximale est recalée à 4 200 m par les aiguilles
+    // l'altitude maximale est recalée par les aiguilles (4 200 m pour le massif classique)
     let top = 0; for (let i = 0; i < H.length; i++) if (H[i] > top) top = H[i];
-    for (let i = 0; i < H.length; i++) if (H[i] > 3350) H[i] = 3350 + (H[i] - 3350) * (4200 - 3350) / Math.max(1, top - 3350);      // point culminant : 4 200 m
+    const thr = Math.min(3350, ST.top - 850);
+    for (let i = 0; i < H.length; i++) if (H[i] > thr) H[i] = thr + (H[i] - thr) * (ST.top - thr) / Math.max(1, top - thr);
     // replat du village et front de neige en pente douce
     for (let iz = 0; iz < N; iz++) for (let ix = 0; ix < N; ix++) {
       const x = -HALF + ix * CELL, z = -HALF + iz * CELL, d = Math.hypot((x - V.x) * 0.8, z - 2760), w = 1 - SS.smooth(330, 900, d);
@@ -97,7 +130,7 @@
     }
   }
 
-  // --- grande carte (Alpine Empires) : quatre massifs distincts, un par quart de carte, séparés par deux vallées en croix ---
+  // --- grande carte (Alpine Empires) : quatre montagnes différentes, une par quart de carte, reliées par un plateau de cols ---
   // Chaque massif est un relief complet (sa vallée d'accès, son village, ses replats, ses aiguilles), tourné vers l'extérieur :
   // les deux massifs du sud regardent le sud, ceux du nord le nord. Certains sont retournés en miroir pour varier les formes.
   function bigWorld(seed) {
@@ -110,27 +143,36 @@
     const toLocal = (m, x, z, o) => { const px = (x - m.cx) * m.dir, pz = (z - m.cz) * m.dir; o.x = (px * m.c - pz * m.s) * m.flip / m.sx; o.z = px * m.s + pz * m.c; return o; };
     const lo = {};
     N = cN; CELL = cC; HALF = cH; EXT = true;
-    const parts = M.map((m, k) => { const h = new Float32Array(cN * cN); classic(k ? seed * 7 + k * 101 : seed, h); return h; });
-    N = bigN; CELL = bigC; HALF = bigH; EXT = false;
+    const styles = [null, 'vast', 'alpine', 'hills'];             // vous : le relief choisi au menu ; Valfroide, Pic-Royal, Les Rochettes : chacun sa montagne
+    const parts = M.map((m, k) => {
+      const h = new Float32Array(cN * cN), sd = k ? seed * 7 + k * 101 : seed;
+      ST = styles[k] ? T.STYLES[styles[k]](SS.rng(sd * 5 + 11)) : CLASSIC; m.style = ST.id; m.styleName = ST.name || 'Massif classique';
+      classic(sd, h); return h;
+    });
+    ST = CLASSIC; N = bigN; CELL = bigC; HALF = bigH; EXT = false;
     noise = SS.makeNoise(seed * 3 + 1);
     const sample = (h, x, z) => {                       // hauteur bilinéaire d'un massif (coordonnées locales en m)
       const gx = SS.clamp((x + cH) / cC, 0, cN - 1.001), gz = SS.clamp((z + cH) / cC, 0, cN - 1.001);
       const ix = gx | 0, iz = gz | 0, fx = gx - ix, fz = gz - iz, i = iz * cN + ix;
       return (h[i] * (1 - fx) + h[i + 1] * fx) * (1 - fz) + (h[i + cN] * (1 - fx) + h[i + cN + 1] * fx) * fz;
     };
+    // socle continu : haut plateau de cols au centre, qui descend en pente douce vers les bords de la carte.
+    // Les massifs y sont posés : leurs flancs rejoignent les cols sans falaise, on peut relier les domaines entre eux.
+    const lift = (d, k) => d >= k ? d : d <= -k ? 0 : (d + k) * (d + k) / (4 * k);     // raccord doux massif / socle (exact loin du raccord)
     const H = T.H;
     for (let iz = 0; iz < N; iz++) for (let ix = 0; ix < N; ix++) {
-      const x = -HALF + ix * CELL, z = -HALF + iz * CELL;
-      const floor = 1560 + noise.fbm(x * 0.0007, z * 0.0007, 3) * 60;              // fonds de vallée entre les massifs
-      let h = floor;
+      const x = -HALF + ix * CELL, z = -HALF + iz * CELL, r = Math.hypot(x, z);
+      const base = 1600 + 900 * SS.smooth(8600, 1800, r) + noise.fbm(x * 0.00045 + 3, z * 0.00045 - 8, 3) * 160 * SS.smooth(8800, 4000, r) + noise.fbm(x * 0.0012, z * 0.0012, 2) * 25;
+      let up = 0;
       for (let k = 0; k < M.length; k++) {
         const m = M[k]; toLocal(m, x, z, lo);                                         // repère local : +z vers le village du massif
         const w = 1 - SS.smooth(0.9, 1.0, Math.max(Math.abs(lo.x), Math.abs(lo.z)) / cH); if (w <= 0) continue;
-        const hk = floor + w * (sample(parts[k], lo.x, lo.z) - floor);
-        if (hk > h) h = hk;
+        const u = w * lift(sample(parts[k], lo.x, lo.z) - base, 60); if (u > up) up = u;
       }
-      H[iz * N + ix] = h;
+      H[iz * N + ix] = base + up;
     }
+    // les flancs entre massifs et vallées s'adoucissent (aiguilles et hauts sommets préservés) : pas de falaise en limite de territoire
+    const it = T.ITER; T.ITER = 45; erode(H, 3000); T.ITER = it;
     smoothOnce(H, 0.25);
     T.villages = M.map(m => { const ux = m.dir * m.s, uz = m.dir * m.c; return { x: m.cx + ux * CV.z, z: m.cz + uz * CV.z, ux, uz }; });
     for (const v of T.villages) {                          // replats des villages (le joueur au sud-ouest, les rivaux ailleurs)
