@@ -1,0 +1,770 @@
+{
+  "pr": 1,
+  "base": "112285f89e44110da1fd9b3db5afa7d0f5f68712",
+  "head": "b7eb68b1f99d180e1e6e603b8a079dd0a83cbf3f",
+  "metadata": [
+    {
+      "path": "Assets/Docs/2.10_REAL_SKI_LOOP_FIX.txt.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_0.96_DOMAIN_VIVANT.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_0.97_SLOPES.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_0.99_CIRCULATION_MONTAGNE.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.00_INTEGRATION_ROUTE_MONTAGNE.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.01_BOUCLE_SKIEUR_REEL.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.03_RACCORDS_PISTES_REMONTES.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.04_PLATEAUX_CIRCULATION_NATURELLE.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.05_FONDATION_UNITY.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.09_SLOPE_TERRAIN.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.11_PISTE_TERRASSEMENT_INTELLIGENT.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.19_STRATEGIE_DAMAGE.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.20_FLOTTE_DAMEUSES_GARAGE.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.22_RESEAU_DAMAGE_SECTEURS.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.24_CIRCULATION_INTELLIGENTE_DAMEUSES.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.25_DAMAGE_NUIT_GARAGES_FLEXIBLES.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.26_TEMPS_AU_CHOIX_DU_JOUEUR.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.37_DOMAINE_VIVANT.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.38_METEO_NEIGE.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.39_PISTES_VIVANTES.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.40_PISTE_OPERATIONS.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.41_GARAGE_EQUIPES.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.42_SECTEURS_EXPLOITATION.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.43_OUVERTURE_DOMAINE.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.44_CONDITIONS_AVANCEES_OPTIONNELLES.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.45_SECURITE_PISTEURS.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.46_BALISAGE_SECURITE_PISTES.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.48_FLUX_CONGESTION.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.49_CAPACITE_GOULETS.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.50_SECTEURS_INTELLIGENTS.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.51_ZONES_PHYSIQUES.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.52_ZONES_FONCTIONNELLES.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.53_IDENTITE_SPECIALISATION_ZONES.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.54_REPUTATION_ATTRACTIVITE_ZONES.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.55_ECOLE_SKI_PIOUPIOU.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.56_MONITEURS_PROGRESSION.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.57_PROGRESSION_BADGES_SKIEURS.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.58_COURS_SUR_PISTES_GROUPES_REELS.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.59_PLAYABLE_FIRST.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.60.4_UNITY_RUNTIME_PASS4.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.60_FIRST_UNITY_COMPILATION_CLEANUP.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.61_FIRST_VISUAL_PASS.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.67_PREMIER_VRAI_MASSIF.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.68_MASSIF_ALPIN_PREMIER_PASSAGE_VISUEL.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.71_ALPINE_TERRAIN_FOUNDATION.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.72_MOUNTAIN_GENERATOR_V2.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_1.73_ALPINE_TERRAIN_INTELLIGENCE.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_2.57_VISUAL_SERVICES_PASS.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Docs/MASTER_2.58_VILLAGE_ATMOSPHERE.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabChecks307.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabChecks308.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabChecks309.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabChecks310.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabChecks311.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabChecks312.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabChecks313.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabChecks314.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabChecks315.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabChecks316.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabChecks317.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabChecks318.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabChecks319.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabChecks320.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabChecks321.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabChecks322.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabChecks324.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabChecks325.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabChecks326.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabHeight307.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabHeight308.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabHeight309.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabHeight310.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabHeight311.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabHeight312.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabHeight313.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabHeight314.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabHeight315.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabHeight316.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabHeight317.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabHeight318.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabHeight319.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabHeight320.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabHeight321.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabHeight322.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabHeight324.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabHeight325.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabHeight326.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabWindow307.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabWindow308.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabWindow309.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabWindow310.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabWindow311.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabWindow312.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabWindow313.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabWindow314.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabWindow315.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabWindow316.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabWindow317.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabWindow318.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabWindow319.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabWindow320.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabWindow321.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabWindow322.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabWindow324.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabWindow325.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/MountainLabWindow326.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Editor/SkiStationPreflight38.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/Scenes/SkiStation_Empty.unity.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Documentation/MASTER_0.73_MAINTENANCE.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Documentation/MASTER_0.74_MAINTENANCE_INTEGRATION.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Documentation/MASTER_0.75_LIFT_RESEARCH.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Documentation/MASTER_0.76_WIND_POLICY.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Documentation/MASTER_0.88_ACCESS_INTERSECTIONS.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Documentation/MASTER_0.90_ARRIVAL_CHAIN.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Documentation/MASTER_1.06_UNITY_FOUNDATION.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Documentation/MASTER_1.07_MOUNTAIN_FOUNDATION.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Documentation/MASTER_1.08_SLOPE_CONSTRUCTION.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Documentation/MASTER_1.10_TERRAIN_WORKS.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Documentation/MASTER_1.17_METEO_NEIGE.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Documentation/MASTER_1.29_VISITEURS_INTENTIONS_JOURNEE.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/MASTER_VERSION.txt.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Arcade/README_2_30.txt.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Arcade/README_2_31.txt.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Arcade/README_2_32.txt.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Arcade/README_2_33.txt.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Arcade/README_2_34.txt.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Arcade/README_2_35.txt.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Arcade/README_2_36.txt.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Arcade/README_2_37.txt.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Arcade/README_ARCADE_FOUNDATION.txt.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Arcade/README_ARCADE_TEST_2_25.txt.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Arcade/README_ARCADE_TEST_2_26.txt.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Arcade/README_ARCADE_TEST_2_27.txt.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Arcade/README_ARCADE_TEST_2_28.txt.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Arcade/README_ARCADE_TEST_2_29.txt.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Docs/MASTER_1.27_TEMPS_ARCHITECTURE.md.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Infrastructure/StationBuildingPedestrians249.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Infrastructure/StationFrontRoadVisual247.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Infrastructure/StationPedestrianAccess249.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/AlpineAtmosphere264.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/AlpineCliffVisual263.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/AlpineForestVisual262.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/AlpineMountainSurface261.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/AlpinePanoramaDepth279.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/AlpineVistaPolish287.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/AlpineWorldPolish286.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/BuildingBalconyLife298.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/BuildingFacadeLife297.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/BuildingGroundLife299.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/BuildingIdentityPolish294.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/BuildingRoofLife296.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/BuildingSnowIntegration295.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/CommercialCohesion300.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/CommercialWorldPolish288.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/DomainActivityPremium291.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/DomainCohesion285.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/DomainLifeMultiScale289.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/FrontDeNeigePremium282.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/LiftPremiumVisual283.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/ManagementCameraPresentation276.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/PisteDomainReadability284.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/PisteSnowFinish273.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/PremiumLightingSnow280.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/SkiDomainSafetyVisual272.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/SlopeSurfacePremium290.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/SnowAccumulationPolish274.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/StationAccommodation249.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/StationAccommodationBookings249.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/StationAtmosphereMotion281.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/StationEquipmentShop249.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/StationFrontSnowLandscape247.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/StationLifePolish268.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/StationLivedInPolish292.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/StationMicroDetails293.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/StationMountainBlend260.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/StationParkingVisual247.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/StationPlazaDetails247.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/StationPlazaPolish259.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/StationStructureCatalog249.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/StationTestEquipmentShop249.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/StationVillageAtmosphere258.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/StationVillageVisual247.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Playable/SkierMovementAudit249.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Playable/SkierVisibilityAudit248.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Services/StationServiceVisual253.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Services/StationServiceVisual257.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Services/StationServiceVisual265.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Services/StationServiceVisual275.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Services/StationServiceVisual278.cs.meta",
+      "status": "same_as_source"
+    },
+    {
+      "path": "Assets/SkiStation/Settings/SkiStationProjectConfig.asset.meta",
+      "status": "same_as_source"
+    }
+  ],
+  "summary": {
+    "same_as_source": 190
+  }
+}

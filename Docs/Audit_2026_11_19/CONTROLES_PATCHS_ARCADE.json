@@ -1,0 +1,82 @@
+{
+  "application": [
+    {
+      "name": "SkiStation-Unity-Arcade-Grand-Aigle.patch",
+      "check": 0,
+      "error": ""
+    },
+    {
+      "name": "SkiStation-Unity-Arcade-Sapins-Grand-Aigle.patch",
+      "check": 0,
+      "error": ""
+    },
+    {
+      "name": "SkiStation-Unity-Arcade-Cycle-Lumiere-Grand-Aigle.patch",
+      "check": 0,
+      "error": ""
+    },
+    {
+      "name": "SkiStation-Unity-Arcade-Meteo-Grand-Aigle.patch",
+      "check": 0,
+      "error": ""
+    },
+    {
+      "name": "Nocturne",
+      "args": [
+        "--check"
+      ],
+      "code": 0,
+      "stdout": "Base compatible. 2 fichier(s) \u00e0 appliquer.",
+      "stderr": ""
+    },
+    {
+      "name": "Nocturne",
+      "args": [],
+      "code": 0,
+      "stdout": "La Nocturne : 2 fichier(s) mis \u00e0 jour.",
+      "stderr": ""
+    },
+    {
+      "name": "Nocturne",
+      "args": [],
+      "code": 0,
+      "stdout": "La Nocturne : 0 fichier(s) mis \u00e0 jour.",
+      "stderr": ""
+    },
+    {
+      "name": "Nocturne",
+      "args": [
+        "--check"
+      ],
+      "code": 0,
+      "stdout": "Base compatible. 0 fichier(s) \u00e0 appliquer.",
+      "stderr": ""
+    }
+  ],
+  "weather_copies": [
+    {
+      "path": "Assets/SkiStation/Shaders/ArcadeAlpineSky257.shader",
+      "equal": true
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Arcade/ArcadeGrandAigleDaylight.cs",
+      "equal": true
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Arcade/ArcadeGrandAigleWeather.cs",
+      "equal": true
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Arcade/ArcadeGrandAigleWeather.cs.meta",
+      "equal": true
+    },
+    {
+      "path": "Assets/SkiStation/Resources/ArcadeA257/GrandAigleWeatherSnow.shader",
+      "equal": true
+    },
+    {
+      "path": "Assets/SkiStation/Resources/ArcadeA257/GrandAigleWeatherSnow.shader.meta",
+      "equal": true
+    }
+  ]
+}

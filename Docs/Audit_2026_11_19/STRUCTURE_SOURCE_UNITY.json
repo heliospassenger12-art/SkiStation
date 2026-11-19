@@ -1,0 +1,28 @@
+{
+  "inventory": {
+    "Assets": {
+      "files": 4828,
+      "bytes": 4342837854
+    },
+    "Packages": {
+      "files": 2,
+      "bytes": 13272
+    },
+    "ProjectSettings": {
+      "files": 24,
+      "bytes": 57265
+    }
+  },
+  "guid_count": 2509,
+  "invalid_guids": [
+    {
+      "path": "Assets/SkiStation/Scripts/Arcade/ArcadeSkiController.ContactReaction.cs.meta",
+      "guid": "bc075296a92b43e4b1a85fb355cc83b64"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Arcade/ArcadeCarvingVisual.SnowEffects.cs.meta",
+      "guid": "b0dc877d02f24ec6944f13213bd1ca674"
+    }
+  ],
+  "duplicate_guids": []
+}

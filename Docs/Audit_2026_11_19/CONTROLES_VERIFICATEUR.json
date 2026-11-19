@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "checks": [
+    "parent accepted",
+    "source unchanged after audit",
+    "changed source rejected",
+    "changed parent marker rejected",
+    "changed payload rejected",
+    "different editor rejected",
+    "mixed installation rejected",
+    "complete installation recognized",
+    "path traversal rejected"
+  ]
+}

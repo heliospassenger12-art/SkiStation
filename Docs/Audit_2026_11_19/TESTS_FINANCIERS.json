@@ -1,0 +1,18 @@
+{
+  "status": "PASS",
+  "assertions": 16,
+  "sdk": "8.0.428",
+  "runtime": "8.0.34",
+  "compiler": "Roslyn from the verified official .NET SDK",
+  "scope": "Existing Program.cs compiled with four native business classes. StationState and CustomerProfile use the data-only mirrors already supplied by the original test program.",
+  "sources": {
+    "Assets/SkiStation/Scripts/AlpineEmpires/AlpineTerritory.cs": "c858233c7dc5a2bd486de448d140c0b182abb3314368c22b5339480855f211b4",
+    "Assets/SkiStation/Scripts/Economy/FinanceLedger.cs": "6b3a62b7057f05b283395aff38d8dcff75e5d7307dd8be558634e2b0eab3ca36",
+    "Assets/SkiStation/Scripts/Economy/FinanceTransaction.cs": "64fc0997378d69d0941882bccee5bd4a666faacd8bc30ccdcb2307ac6920e17b"
+  },
+  "alpine_session_sha256": "f9b05857e027dc2e45019cd6dcdfbef20d7315a99092241f3f27f008bc9f7f79",
+  "unity_compilation": "NOT_RUN",
+  "play_mode": "NOT_RUN",
+  "network": "NOT_RUN",
+  "execution_note": "dotnet run is blocked by the named NuGet migration mutex in this sandbox. Direct invocation of the SDK Roslyn compiler and .NET runtime succeeded with local framework reference assemblies."
+}
