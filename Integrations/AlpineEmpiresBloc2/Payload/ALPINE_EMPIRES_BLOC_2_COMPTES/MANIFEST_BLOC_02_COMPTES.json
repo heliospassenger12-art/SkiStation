@@ -1,0 +1,78 @@
+{
+  "status": "PARTIEL",
+  "unity": "UNITY_TESTS_PENDING",
+  "next_block": "NO_GO",
+  "parent_archive": "SkiStation_ALPINE_EMPIRES_BLOC_02_SAUVEGARDE_MATERIELLE_PARTIEL.zip",
+  "parent_sha256": "5f3741b4712ee46f9575b8b57e749ca945cc80a65a74e52c17cd81fd1ad7a591",
+  "editor": "6000.3.7f1",
+  "urp": "17.3.0",
+  "files": [
+    {
+      "path": "Assets/SkiStation/Scripts/AlpineEmpires/AlpineManagementLand.cs",
+      "before": "9c95ee68395be5edcfe7ade4ba0a2d98d54eadfa35258801104186857efc349d",
+      "after": "6a1734d670366b8f6cd2d496770f00521dab2d5a546d8a910c1edda61b7e0c5b"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/AlpineEmpires/AlpinePreviewPage.cs",
+      "before": "5a44f327f3f46c37b3755c98b08bb7bdf46277f374e8f7d591f653eddbe139d7",
+      "after": "e24c1e1ab7de92153c8a0610a1129f83bef2b97e1a318c3f9128d8cea531b586"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/AlpineEmpires/AlpineSession.cs",
+      "before": "fba2255a79242448cf065c0985d727a707886e63452378b4d51fe507fe02d560",
+      "after": "f9b05857e027dc2e45019cd6dcdfbef20d7315a99092241f3f27f008bc9f7f79"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Core/SkiStationStartMenu249.cs",
+      "before": "76dc883d7f4d335f33038ae2f8b6640eacaaee4955a687693e7cbba2acd24760",
+      "after": "63b2a6381be2e6129a49d90c917f7444e756b287107df670012348d02bdf4c6a"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Economy/EconomyBalanceRuntime.cs",
+      "before": "9d8fa1ea9f4588d92d0fc40a973b69c29cb00f883054516b76a98de36cc6d7f9",
+      "after": "38c4f9e9d8c6e3fd8d1840fa99127b5ed75d3a6e70e64008dbcdf3cbca7d84d6"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Persistence261/AlpineMaterialCheckpoint261.cs",
+      "before": "6a8477a34ca89a9d0b29ffe44671bc83fa5ac6451440bc2297d9d616194c469e",
+      "after": "101430fef7d6f9523cf74ebc26610487b25dad90dfcdbffb277a90b455b5a480"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/VisitorServiceConsumptionRuntime.cs",
+      "before": "db2b15df8fe5455df3d322a15d921088cbfebabc0bab02a22b095cbad709513d",
+      "after": "d89f647cbe4226fb6478b6a4ec516768b26bf9c56905d78bbb9e61b3ff4054df"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Visuals/StationStructureStatusPanel249.cs",
+      "before": "96366cb04c04790bae21ca436b9a1de7b8b37f58de2a5f55887a34be67f3f0e2",
+      "after": "1d69856a4a1c03be8561bf5d0e6d4ba8c6f7771b1e0dd404941e5ccd0b899b48"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Playable/ConstructionSelectionRuntime.cs",
+      "before": "3b9f2f4134d07e7ce81434a8408559add170befea0b11494f7afea427e9fe2db",
+      "after": "d8af52f20a8a6c2712e6de90726f638359d4369c767204791dcf14fa282ce4dd"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Services/StationServiceConstructionRuntime.cs",
+      "before": "dac2483057286a3780bc0499f7b99df4bcca7156e2229d48b277f7955ebda568",
+      "after": "6504222fb3f2c90fc99f1870f76479d3a2a4d6a51a5361b9cd2c3baedd38f2bb"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Services/StationServiceRuntime.cs",
+      "before": "819e1d0ea82d811bca953cf02bad128a406d59d5d9d7d7344fe7f1fb9307bae5",
+      "after": "de228a3e7f611a18ecfd84fffdcf48051f95ce29e9f909f12fc36a80efa5d5f5"
+    },
+    {
+      "path": "Tools/AlpineEmpiresFinanceChecks/Checks.csproj",
+      "before": null,
+      "after": "5381b4afa2faae5dc18bc6ea55aad8224f8046e3721eb68771998ccaf209d600"
+    },
+    {
+      "path": "Tools/AlpineEmpiresFinanceChecks/Program.cs",
+      "before": null,
+      "after": "2d866b38da1c15d013d0f991138a196f55c7315997be8d77d3e097c15aa57fb8"
+    }
+  ],
+  "alpine_world_schema": 3,
+  "scope": "Restaurant allié, finances et reprise du domaine matériel"
+}

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Assets/SkiStation/Scripts/AlpineEmpires/AlpineSession.cs" />
+    <Compile Include="../../Assets/SkiStation/Scripts/AlpineEmpires/AlpineTerritory.cs" />
+    <Compile Include="../../Assets/SkiStation/Scripts/Economy/FinanceLedger.cs" />
+    <Compile Include="../../Assets/SkiStation/Scripts/Economy/FinanceTransaction.cs" />
+  </ItemGroup>
+</Project>
