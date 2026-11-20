@@ -1,0 +1,270 @@
+diff --git a/Assets/SkiStation/Scripts/TerrainGeneration/RealTerrainNature.cs b/Assets/SkiStation/Scripts/TerrainGeneration/RealTerrainNature.cs
+index a309e24..227b9ff 100644
+--- a/Assets/SkiStation/Scripts/TerrainGeneration/RealTerrainNature.cs
++++ b/Assets/SkiStation/Scripts/TerrainGeneration/RealTerrainNature.cs
+@@ -38,6 +38,8 @@ namespace SkiStation.TerrainGeneration
+             public Vector2 at;
+             public int kind;
+             public float yaw, height, width;
++            [NonSerialized] public int groundVersion = -1;
++            [NonSerialized] public float groundHeight;
+         }
+ 
+         sealed class Part
+@@ -82,6 +84,7 @@ namespace SkiStation.TerrainGeneration
+         bool useDistanceCulling;
+         float nextCheck;
+         int infrastructureHash;
++        int terrainHeightVersion = 1;
+         bool heightChanged;
+         internal int SurfaceCount { get; private set; }
+         internal int InstanceCount { get; private set; }
+@@ -239,6 +242,7 @@ namespace SkiStation.TerrainGeneration
+                 }
+             }
+             var appearance = world.Terrain.GetComponent<TerrainGeneratedAppearance>();
++            if (forestCover != null) appearance.EnableSeasonalSnow();
+             if (data.pureNaturePalette && palette != null && palette.rockAlbedo != null &&
+                 Visuals.VisualSafety.PipelineMatches(Visuals.VisualPipeline.Universal))
+             {
+@@ -254,7 +258,7 @@ namespace SkiStation.TerrainGeneration
+             }
+             else if (rockCover != null || forestCover != null) appearance.RefreshClimate();
+             Vector3? center = !string.IsNullOrEmpty(FocusWater) && TryGetWater(FocusWater,out var lake) ? lake : null;
+-            hydro.Bind(world,water,stream,presentation,center,isOrcieres);
++            hydro.Bind(world,water,stream,presentation,center,isOrcieres,useFrostMaterial: forestCover != null);
+             world.gameObject.AddComponent<WaterCrossingTool>();
+             TerrainCallbacks.heightmapChanged += OnHeightmapChanged;
+         }
+@@ -270,12 +274,12 @@ namespace SkiStation.TerrainGeneration
+                 diffuseRemapMax = new Color(.43f, .41f, .40f, 1f),
+                 smoothness = .16f
+             };
+-            var snow = ValAlpin.ValAlpinNatureSurface.CreateSoftSnow();
++            var snow = ValAlpin.ValAlpinNatureSurface.CreateSoftSnow(fineDetail: forestCover != null);
+             var set = ScriptableObject.CreateInstance<Visuals.TerrainVisualSet>();
+             set.pipeline = Visuals.VisualPipeline.Universal;
+             var layers = new List<Visuals.TerrainVisualLayer>
+             {
+-                new Visuals.TerrainVisualLayer { category = "SNOW", albedo = snow, tiling = new Vector2(55f,55f), smoothness = .07f },
++                new Visuals.TerrainVisualLayer { category = "SNOW", albedo = snow, tiling = Vector2.one * (forestCover != null ? 16f : 55f), smoothness = .07f },
+                 new Visuals.TerrainVisualLayer { category = "ROCK", terrainLayer = rock }
+             };
+             if (forestCover != null)
+@@ -499,7 +503,9 @@ namespace SkiStation.TerrainGeneration
+ 
+         void OnHeightmapChanged(Terrain terrain, RectInt region, bool synced)
+         {
+-            if (world != null && terrain == world.Terrain) heightChanged = true;
++            if (world == null || terrain != world.Terrain) return;
++            if (!heightChanged) terrainHeightVersion++;
++            heightChanged = true;
+         }
+ 
+         int CaptureCorridors()
+@@ -581,6 +587,16 @@ namespace SkiStation.TerrainGeneration
+                     if (ConstructionRules349.SegmentDistanceXZ(position,a,b) <= limit) { blocked = true; break; }
+                 }
+                 if (blocked) continue;
++                if (useDistanceCulling && item.kind != 3)
++                {
++                    if (item.groundVersion != terrainHeightVersion)
++                    {
++                        item.groundHeight = groundCollider.Raycast(new Ray(position + Vector3.up * 200f, Vector3.down),
++                            out var hit, 400f) ? hit.point.y : position.y;
++                        item.groundVersion = terrainHeightVersion;
++                    }
++                    position.y = item.groundHeight - Mathf.Clamp(item.height * .055f, .28f, .85f);
++                }
+                 if (item.kind == 3)
+                 {
+                     var downslope = Quaternion.Euler(0,item.yaw,0) * Vector3.back;
+diff --git a/Assets/SkiStation/Scripts/TerrainGeneration/RealTerrainWater.cs b/Assets/SkiStation/Scripts/TerrainGeneration/RealTerrainWater.cs
+index 18de390..9ec982b 100644
+--- a/Assets/SkiStation/Scripts/TerrainGeneration/RealTerrainWater.cs
++++ b/Assets/SkiStation/Scripts/TerrainGeneration/RealTerrainWater.cs
+@@ -17,6 +17,7 @@ namespace SkiStation.TerrainGeneration
+         TerrainGenerationWorld world;
+         Material lakeMaterial, streamMaterial;
+         Color lakeColor, streamColor;
++        Texture2D frost;
+         MountainActivityRuntime diving, swimming;
+         int refreshedDay = -1;
+         float nextWeatherCheck;
+@@ -36,9 +37,10 @@ namespace SkiStation.TerrainGeneration
+         internal string Activities => diving != null && diving.OpenForVisitors ? "Plongée sous glace ouverte aux Estaris"
+             : swimming != null && swimming.OpenForVisitors ? "Baignade ouverte aux Estaris" : "Activités aquatiques fermées aux Estaris";
+ 
+-        internal void Bind(TerrainGenerationWorld owner, Material lakes, Material streams, Transform presentation, Vector3? center, bool enableEstarisActivities)
++        internal void Bind(TerrainGenerationWorld owner, Material lakes, Material streams, Transform presentation, Vector3? center, bool enableEstarisActivities, bool useFrostMaterial = false)
+         {
+             world = owner;
++            if (useFrostMaterial) frost = CreateFrost();
+             lakeMaterial = lakes;
+             streamMaterial = streams;
+             lakeColor = lakes.GetColor("_BaseColor");
+@@ -129,11 +131,70 @@ namespace SkiStation.TerrainGeneration
+         static WaterSurfaceState Surface(bool frozen, bool snowy) =>
+             !frozen ? WaterSurfaceState.Open : snowy ? WaterSurfaceState.Snow : WaterSurfaceState.Ice;
+ 
+-        static void Apply(Material material, Color water, WaterSurfaceState state)
++        void Apply(Material material, Color water, WaterSurfaceState state)
+         {
+-            material.SetColor("_BaseColor", state == WaterSurfaceState.Open ? water
+-                : state == WaterSurfaceState.Ice ? new Color(.46f,.65f,.72f) : new Color(.82f,.87f,.91f));
+-            material.SetFloat("_Smoothness", state == WaterSurfaceState.Snow ? .13f : .65f);
++            bool open = state == WaterSurfaceState.Open;
++            bool snow = state == WaterSurfaceState.Snow;
++            if (frost == null)
++            {
++                material.SetColor("_BaseColor", open ? water
++                    : snow ? new Color(.82f,.87f,.91f) : new Color(.46f,.65f,.72f));
++                material.SetFloat("_Smoothness", snow ? .13f : .65f);
++                return;
++            }
++            material.SetTexture("_BaseMap", open ? null : frost);
++            material.SetTextureScale("_BaseMap", Vector2.one * .018f);
++            material.SetColor("_BaseColor", open ? water
++                : snow ? new Color(.91f,.94f,.96f) : new Color(.74f,.83f,.87f));
++            material.SetFloat("_Smoothness", open ? .65f : snow ? .07f : .19f);
++            if (open)
++            {
++                material.DisableKeyword("_ENVIRONMENTREFLECTIONS_OFF");
++                material.DisableKeyword("_SPECULARHIGHLIGHTS_OFF");
++            }
++            else
++            {
++                material.EnableKeyword("_ENVIRONMENTREFLECTIONS_OFF");
++                material.EnableKeyword("_SPECULARHIGHLIGHTS_OFF");
++            }
++        }
++
++        static Texture2D CreateFrost()
++        {
++            const int size = 192;
++            var result = new Texture2D(size, size, TextureFormat.RGB24, true)
++            {
++                name = "Givre du lac et des cours d’eau",
++                wrapMode = TextureWrapMode.Repeat,
++                filterMode = FilterMode.Trilinear
++            };
++            var pixels = new Color32[size*size];
++            for (int y=0; y<size; y++)
++            for (int x=0; x<size; x++)
++            {
++                float u = x/(float)size, v = y/(float)size;
++                float patches = .68f * TileNoise(u,v,5f,17f) + .24f * TileNoise(u,v,13f,39f)
++                    + .08f * TileNoise(u,v,44f,59f);
++                byte shade = (byte)(189f + 54f*patches);
++                pixels[y*size+x] = new Color32(shade, shade, shade, 255);
++            }
++            result.SetPixels32(pixels);
++            result.Apply(true,true);
++            return result;
++        }
++
++        static float TileNoise(float u, float v, float frequency, float seed)
++        {
++            float top = Mathf.Lerp(Mathf.PerlinNoise(u*frequency+seed, v*frequency+23f),
++                Mathf.PerlinNoise((u-1f)*frequency+seed, v*frequency+23f), u);
++            float bottom = Mathf.Lerp(Mathf.PerlinNoise(u*frequency+seed, (v-1f)*frequency+23f),
++                Mathf.PerlinNoise((u-1f)*frequency+seed, (v-1f)*frequency+23f), u);
++            return Mathf.Lerp(top,bottom,v);
++        }
++
++        void OnDestroy()
++        {
++            if (frost != null) Destroy(frost);
+         }
+ 
+         internal void AddSurface(Vector2[] points, int[] triangles, bool lake)
+diff --git a/Assets/SkiStation/Scripts/TerrainGeneration/TerrainGeneratedAppearance.cs b/Assets/SkiStation/Scripts/TerrainGeneration/TerrainGeneratedAppearance.cs
+index 0c1b83c..1c132ff 100644
+--- a/Assets/SkiStation/Scripts/TerrainGeneration/TerrainGeneratedAppearance.cs
++++ b/Assets/SkiStation/Scripts/TerrainGeneration/TerrainGeneratedAppearance.cs
+@@ -8,6 +8,9 @@ namespace SkiStation.TerrainGeneration
+     {
+         TerrainGenerationWorld world;string requested=VisualProfileRegistry.DefaultId;int revision=-1;
+         Material nativeMaterial,ownedMaterial,fallbackMaterial;TerrainLayer[] nativeLayers;
++        bool seasonalSnow, appliedWinter;
++        bool WinterSnow => seasonalSnow && RealTerrainWater.Season == AlpineSeason.Winter;
++        internal void EnableSeasonalSnow() => seasonalSnow = true;
+         readonly List<TerrainLayer> layers=new List<TerrainLayer>();readonly List<Texture2D> textures=new List<Texture2D>();
+         public string RequestedId=>requested;
+         public string ResolvedId=>VisualProfileRegistry.ResolveProfileOrFallback(requested).profileId;
+@@ -23,7 +26,7 @@ namespace SkiStation.TerrainGeneration
+         }
+         public void Select(string id){requested=VisualProfileRegistry.ValidId(id)?id:VisualProfileRegistry.DefaultId;Apply();}
+         public void RefreshClimate(){Apply();world?.Scenery?.RefreshClimate();}
+-        void Update(){if(world==null||!world.IsReady)return;if(revision!=VisualProfileRegistry.Revision)Apply();}
++        void Update(){if(world==null||!world.IsReady)return;if(revision!=VisualProfileRegistry.Revision || appliedWinter!=WinterSnow)Apply();}
+         void Apply()
+         {
+             if(world==null||!world.IsReady)return;revision=VisualProfileRegistry.Revision;var data=world.Terrain.terrainData;
+@@ -48,11 +51,15 @@ namespace SkiStation.TerrainGeneration
+                 if(!categories.Exists(c=>c.ToUpperInvariant()=="SNOW")){selected.Add(nativeLayers[0]);categories.Add("SNOW");}
+                 if(!categories.Exists(c=>c.ToUpperInvariant()=="ROCK")){selected.Add(nativeLayers[1]);categories.Add("ROCK");}
+             }
++            appliedWinter = WinterSnow;
+             var nature = world.GetComponent<RealTerrainNature>();
+             int resolution = nature != null
+                 ? Mathf.Max(128, nature.RockPaintResolution, nature.ForestPaintResolution) : 128;
+             int rockLayer = categories.IndexOf("ROCK");
+             int forestLayer = categories.IndexOf("WOODLAND");
++            int snowLayer = categories.IndexOf("SNOW");
++            if (appliedWinter && forestLayer >= 0)
++                selected[forestLayer].diffuseRemapMax = new Color(.73f, .80f, .82f, 1f);
+             if (data.alphamapResolution != resolution) data.alphamapResolution = resolution;
+             data.terrainLayers=selected.ToArray();var alphas=new float[resolution,resolution,selected.Count];var weights=new float[selected.Count];
+             var origin=world.Terrain.transform.position;
+@@ -63,10 +70,19 @@ namespace SkiStation.TerrainGeneration
+                 for(int i=0;i<weights.Length;i++){weights[i]=TerrainVisualBridge.Weight(categories[i],sample);sum+=weights[i];}
+                 if(sum<.00001f){int ground=categories.FindIndex(c=>c=="GROUND"||c=="ALPINE_GROUND");if(ground<0)ground=categories.FindIndex(c=>c=="ROCK");if(ground<0)ground=0;weights[ground]=1;sum=1;}
+                 float exposed = rockLayer >= 0 && nature != null ? nature.RockCoverage(x, z) : 0f;
+-                float forest = forestLayer >= 0 && nature != null ? nature.ForestCoverage(x, z) * .56f * (1f-exposed) : 0f;
++                float forest = forestLayer >= 0 && nature != null
++                    ? nature.ForestCoverage(x, z) * (appliedWinter ? .12f : .56f) * (1f-exposed) : 0f;
++                float remaining = 1f - exposed - forest;
++                float snow = weights[snowLayer] / sum * remaining;
++                // A winter snowpack covers the clearings and forest floor. The steepest cuts keep visible rock.
++                float minimumSnow = appliedWinter ? Mathf.Lerp(.94f, .37f, Mathf.InverseLerp(35f, 67f, sample.slope)) : 0f;
++                float snowFill = Mathf.Max(0f, minimumSnow - snow);
++                float scale = snowFill > 0f ? (1f - minimumSnow) / (1f - snow) : 1f;
+                 for(int i=0;i<weights.Length;i++)
+-                    alphas[z,x,i] = weights[i]/sum*(1f-exposed-forest) + (i==rockLayer ? exposed : 0f)
+-                        + (i==forestLayer ? forest : 0f);
++                {
++                    float weight = weights[i]/sum*remaining + (i==rockLayer ? exposed : 0f) + (i==forestLayer ? forest : 0f);
++                    alphas[z,x,i] = i == snowLayer ? snow + snowFill : weight * scale;
++                }
+             }
+             data.SetAlphamaps(0,0,alphas);
+         }
+diff --git a/Assets/SkiStation/Scripts/ValAlpin/ValAlpinNatureSurface.cs b/Assets/SkiStation/Scripts/ValAlpin/ValAlpinNatureSurface.cs
+index e3961d4..3f9684f 100644
+--- a/Assets/SkiStation/Scripts/ValAlpin/ValAlpinNatureSurface.cs
++++ b/Assets/SkiStation/Scripts/ValAlpin/ValAlpinNatureSurface.cs
+@@ -34,7 +34,7 @@ namespace SkiStation.ValAlpin
+ 
+         Texture2D SoftSnow() => snowSurface != null ? snowSurface : snowSurface = CreateSoftSnow();
+ 
+-        internal static Texture2D CreateSoftSnow()
++        internal static Texture2D CreateSoftSnow(bool fineDetail = false)
+         {
+             const int size = 256;
+             var snow = new Texture2D(size,size,TextureFormat.RGBA32,true)
+@@ -56,6 +56,14 @@ namespace SkiStation.ValAlpin
+                 float d=Mathf.PerlinNoise((u-1)*5+13,(v-1)*5+29);
+                 float n=Mathf.Lerp(Mathf.Lerp(a,b,u),Mathf.Lerp(c,d,u),v);
+                 float shade=.76f+n*.06f;
++                if (fineDetail)
++                {
++                    const float frequency = 48f;
++                    float g = Mathf.Lerp(
++                        Mathf.Lerp(Mathf.PerlinNoise(u*frequency+43,v*frequency+71),Mathf.PerlinNoise((u-1)*frequency+43,v*frequency+71),u),
++                        Mathf.Lerp(Mathf.PerlinNoise(u*frequency+43,(v-1)*frequency+71),Mathf.PerlinNoise((u-1)*frequency+43,(v-1)*frequency+71),u),v);
++                    shade += (g-.5f)*.065f;
++                }
+                 pixels[y*size+x]=new Color(shade,shade+.025f,shade+.045f,1);
+             }
+             snow.SetPixels(pixels); snow.Apply(true,true);
