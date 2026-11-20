@@ -1,0 +1,75 @@
+{
+  "scripts": [
+    {
+      "path": "Assets/SkiStation/Scripts/ValAlpin/ValAlpinTestScene.cs",
+      "before": "712E201AF6D31D3E8F27C48D4A977E9644B32397012596AB581431FAE0B721A2",
+      "after": "DFA6039DE7F9D8917F6AD9D67B89CCC22B8DAAF740653F2FBE262D367A956671"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/ValAlpin/ValAlpinScene.cs",
+      "before": "41073FE20414CB66A5FFCCF036217A8DBC54063D7718CEAC19A343A66EE2DAE3",
+      "after": "82691A9A8D9B2C81E7357F22247C40829438134DB93DF2207F0F7EF1404F3B60"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Infrastructure/StationRoadNetwork247.cs",
+      "before": "A824CD5909C978FCAE29C2D8D06867A5718341877BE5DF9D0DF8E10CF146B731",
+      "after": "C71C22259B9F9E50202D8717033B4D913F5E6353A642EA4987CF644F8190CB7C"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Persistence261/AlpineMaterialCheckpoint261.cs",
+      "before": "F37DC43E41CD571221D678E10EF3EF473E813D294BA8C111D6EA37454AE9BD17",
+      "after": "A7CE66A7764BC01A1C458580A26FCB501C852D59A7FF17BDE59FC9EA97AD6006"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Persistence261/ManagementDomainPersistence261.cs",
+      "before": "8036CCA21FCDFF016A0A345B40ABF379EAB3D664DC37ED8DB305F01187375161",
+      "after": "C2630763DFB6EC2737D3B3175ABF37C73127EEBC5580A7467AEABCACA48905AB"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/TerrainGeneration/RealTerrainNature.cs",
+      "before": "7B178086262F76F841E42C942818AF43FC19B47149CE83B316578F3D68F4B919",
+      "after": "9509D5FFE2469A651A46078E7238E0161E191D51CEB6A916332B9EF13C3C7D91"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/TerrainGeneration/TerrainGeneratedAppearance.cs",
+      "before": "3F620D5FE96C961871A8989E33E111D05FA8EE86EB8F6D46D78CC39733E229F7",
+      "after": "190675CDBAB96F936333FEC05F4765618DC70A7AC1CFAEFDF04B1541551239C0"
+    }
+  ],
+  "requires": [
+    {
+      "path": "Assets/SkiStation/Resources/TerrainGeneration/France50/auron.bytes",
+      "sha256": "A1D850D5C0ECD745BDCBA540481D5C70F0FA987165E99E26A4A7EBFA75B90787"
+    },
+    {
+      "path": "Assets/SkiStation/Resources/TerrainGeneration/Nature/auron.json",
+      "sha256": "3887EDD44A679E6DD1AC37469727A29FE1BD1FB79A5B557B84E1EDC617212576"
+    },
+    {
+      "path": "Assets/SkiStation/Resources/TerrainGeneration/France50/les-trois-vallees-complet.bytes",
+      "sha256": "A02A2187B319C8796A3FD2B4A192B7D9E3AA51F5796BDC8E60E54318A49978A7"
+    },
+    {
+      "path": "Assets/SkiStation/Resources/TerrainGeneration/Nature/les-trois-vallees-complet.json",
+      "sha256": "BB0C1FD18619564E1575A79B49A207914F9FEEB31AB65A6113F6FF540CA65C24"
+    }
+  ],
+  "layers": [
+    {
+      "name": "les-trois-vallees-completVegetation.json",
+      "sha256": "E7FDBE5E543807C27CC11531CD1E8DD6867D3D1A04343BD63DB2A5ABA293A490"
+    },
+    {
+      "name": "les-trois-vallees-completVegetation.json.meta",
+      "sha256": "A67F86061BFF359A5C93339A4DAD20CF52F7935263339ED86AF0EBC0F5E570BA"
+    },
+    {
+      "name": "les-trois-vallees-completGeology.json",
+      "sha256": "93120F8F45DEA1893AD701D110339998226E2F093F71554537970B8C1A000233"
+    },
+    {
+      "name": "les-trois-vallees-completGeology.json.meta",
+      "sha256": "8B454BCB4C2444C4C8014F1E25C21346FEE85C88FE1DF51AB69B5D0D4BCE935C"
+    }
+  ]
+}
