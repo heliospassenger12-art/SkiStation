@@ -1,0 +1,563 @@
+diff --git a/Assets/SkiStation/Scripts/Core/DemoManagementMenu263.cs b/Assets/SkiStation/Scripts/Core/DemoManagementMenu263.cs
+index 7860992..b0db324 100644
+--- a/Assets/SkiStation/Scripts/Core/DemoManagementMenu263.cs
++++ b/Assets/SkiStation/Scripts/Core/DemoManagementMenu263.cs
+@@ -32,7 +32,7 @@ namespace SkiStation
+             float width=Mathf.Min(540,Screen.width-24),height=Mathf.Min(450,Screen.height-24);
+             var box=new Rect((Screen.width-width)/2,(Screen.height-height)/2,width,height);GUI.Box(box,"PAUSE — "+DemoFlow263.ModeName(GameModeContext262.Mode));
+             GUILayout.BeginArea(new Rect(box.x+18,box.y+35,width-36,height-50));scroll=DemoPadUi263.BeginScrollView(scroll);
+-            GUILayout.Label("Votre station\nMolette : zoom vers le curseur. Molette maintenue : glisser. Maj + molette maintenue : tourner. Début : vue générale. Fin : front de neige.");
++            GUILayout.Label("Votre station\nMolette pour zoomer · Clic molette maintenu pour glisser · Maj + clic molette ou clic droit hors construction pour tourner.\nDébut pour la vue générale · Fin pour le front de neige.");
+             if(DemoPadUi263.Button("Reprendre",GUILayout.Height(36))){DemoModalSurface263.Post(()=>{Toggle();leaveConfirmation=false;});}
+             if(DemoPadUi263.Button("Options / confort",GUILayout.Height(36)))DemoRuntime263.OpenOptions();
+             if(GameModeContext262.ArcadeAllowed&&DemoPadUi263.Button("Rider dans ma station (facultatif)",GUILayout.Height(36))){DemoModalSurface263.Post(()=>{Toggle();leaveConfirmation=false;DemoManagementEntry263.EnterCurrentStation();});}
+diff --git a/Assets/SkiStation/Scripts/Demo263/DemoRuntime263.cs b/Assets/SkiStation/Scripts/Demo263/DemoRuntime263.cs
+index ab2164b..3a8b66a 100644
+--- a/Assets/SkiStation/Scripts/Demo263/DemoRuntime263.cs
++++ b/Assets/SkiStation/Scripts/Demo263/DemoRuntime263.cs
+@@ -82,7 +82,7 @@ namespace SkiStation.Arcade
+                 Toggle("Réduire les mouvements secondaires",p.reducedMotion,v=>p.reducedMotion=v);
+                 Select("Flou périphérique (si rendu compatible)",p.blur,new[]{"OFF","Faible","Standard"},v=>p.blur=v);
+                 Select("Transition vers le rider",(int)p.transition,new[]{"Normale","Rapide","Minimale"},v=>p.transition=(DemoTransition263)v);
+-                GUILayout.Label("Gestion : déplacement, rotation molette et zoom.",text);
++                GUILayout.Label("Caméra Gestion · Réglez le déplacement, la rotation et le zoom.",text);
+                 Slider("Rotation Gestion",p.managementRotation,.25f,2,v=>p.managementRotation=v);Slider("Déplacement Gestion",p.managementPan,.25f,2,v=>p.managementPan=v);Slider("Zoom Gestion",p.managementZoom,.5f,2,v=>p.managementZoom=v);
+             }
+             if(tab==1)
+diff --git a/Assets/SkiStation/Scripts/Demo263/ManagementOnboarding263.cs b/Assets/SkiStation/Scripts/Demo263/ManagementOnboarding263.cs
+index 62527fd..4470dc8 100644
+--- a/Assets/SkiStation/Scripts/Demo263/ManagementOnboarding263.cs
++++ b/Assets/SkiStation/Scripts/Demo263/ManagementOnboarding263.cs
+@@ -26,7 +26,7 @@ namespace SkiStation
+                 float distance=view.transform.position.y;
+                 if(Mathf.Abs(Input.GetAxisRaw("Horizontal"))>.1f||Mathf.Abs(Input.GetAxisRaw("Vertical"))>.1f)panIntentUntil=Time.unscaledTime+.25f;
+                 if(Mathf.Abs(Input.mouseScrollDelta.y)>.01f)zoomIntentUntil=Time.unscaledTime+.25f;
+-                if(Input.GetMouseButton(2))rotateIntentUntil=Time.unscaledTime+.25f;
++                if(Input.GetMouseButton(2)||Input.GetMouseButton(1)||Input.GetKey(KeyCode.Q)||Input.GetKey(KeyCode.E))rotateIntentUntil=Time.unscaledTime+.25f;
+                 if(!ConstructionInput349.PointerBlocked)
+                 {
+                     if(Time.unscaledTime<panIntentUntil&&Vector3.Distance(lastPosition,view.transform.position)>.03f)Mark(ManagementLearned263.Pan);
+@@ -68,7 +68,7 @@ namespace SkiStation
+             if(adviceUntil>0&&Time.unscaledTime>=adviceUntil){advice="";quietUntil=Time.unscaledTime+40;adviceUntil=0;return;}
+             if(adviceUntil>0||presentations>=2)return;
+             presentations++;adviceUntil=Time.unscaledTime+12;
+-            advice=stage==0?"Caméra : flèches / WASD pour déplacer, molette pour zoomer. Maintenez le bouton central et bougez horizontalement / verticalement pour tourner autour du massif à 360°."
++            advice=stage==0?"Caméra · Flèches pour se déplacer, molette pour zoomer, clic molette maintenu pour glisser. Tournez avec Maj + clic molette ou avec le clic droit hors construction."
+                 :stage==1?"Objectif facultatif : créez votre premier accès au ski. Remontée → téléski classique ou télésiège 2 places → gare aval → gare amont → récapitulatif."
+                 :stage==2?"Piste : tracez depuis le haut, ajoutez vos points puis validez. Vert facile, bleu intermédiaire, rouge difficile, noir expert : la pente et le relief déterminent la difficulté conseillée."
+                 :stage==3?graphHint
+diff --git a/Assets/SkiStation/Scripts/Management/Recommendations388/PlayableCameraController.Recommendation388.cs b/Assets/SkiStation/Scripts/Management/Recommendations388/PlayableCameraController.Recommendation388.cs
+index 67d57f6..409dbcc 100644
+--- a/Assets/SkiStation/Scripts/Management/Recommendations388/PlayableCameraController.Recommendation388.cs
++++ b/Assets/SkiStation/Scripts/Management/Recommendations388/PlayableCameraController.Recommendation388.cs
+@@ -32,11 +32,10 @@ namespace SkiStation
+             recommendationDuration388=Mathf.Clamp(Vector3.Distance(recommendationStart388,recommendationEnd388)/2500f,.3f,1.1f);
+             recommendationFocus388=true;
+         }
+-        bool StepRecommendationFocus388()
++        bool StepRecommendationFocus388(bool manualNavigation)
+         {
+             if(!recommendationFocus388)return false;
+-            if(Input.GetMouseButton(2)||Input.GetKey(KeyCode.Q)||Input.GetKey(KeyCode.E)||Mathf.Abs(Input.mouseScrollDelta.y)>.01f||
+-                Mathf.Abs(Input.GetAxisRaw("Horizontal"))>.01f||Mathf.Abs(Input.GetAxisRaw("Vertical"))>.01f)
++            if(manualNavigation)
+             {recommendationFocus388=false;return false;}
+             recommendationElapsed388+=Time.unscaledDeltaTime;
+             float t=Mathf.SmoothStep(0,1,Mathf.Clamp01(recommendationElapsed388/recommendationDuration388));
+diff --git a/Assets/SkiStation/Scripts/Playable/PlayableCameraController.ValAlpin.cs b/Assets/SkiStation/Scripts/Playable/PlayableCameraController.ValAlpin.cs
+index 32aa3e5..e2c7752 100644
+--- a/Assets/SkiStation/Scripts/Playable/PlayableCameraController.ValAlpin.cs
++++ b/Assets/SkiStation/Scripts/Playable/PlayableCameraController.ValAlpin.cs
+@@ -17,7 +17,7 @@ namespace SkiStation
+             Vector3 target=world.FrontDeNeige.position+new Vector3(0,0,20);
+             target.y=world.ClampedHeight(target.x,target.z);
+             targetCamera.fieldOfView=60;targetCamera.farClipPlane=Mathf.Max(18000f, OrbitLimit * 1.8f);
+-            FocusClose(target+Vector3.up*80,new Vector3(-100,100,-650));
++            FocusClose(target+Vector3.up*25,new Vector3(-75,285,-630));
+         }
+         public static Vector2 ResolveValAlpinPan(bool left,bool right,bool up,bool down)
+         {
+@@ -28,7 +28,7 @@ namespace SkiStation
+         {
+             return ResolveValAlpinPan(Input.GetKey(KeyCode.LeftArrow)||Input.GetKey(KeyCode.A),
+                 Input.GetKey(KeyCode.RightArrow)||Input.GetKey(KeyCode.D),
+-                Input.GetKey(KeyCode.UpArrow)||Input.GetKey(KeyCode.W)||Input.GetKey(KeyCode.Z),
++                Input.GetKey(KeyCode.UpArrow)||Input.GetKey(KeyCode.W),
+                 Input.GetKey(KeyCode.DownArrow)||Input.GetKey(KeyCode.S));
+         }
+     }
+diff --git a/Assets/SkiStation/Scripts/Playable/PlayableCameraController.cs b/Assets/SkiStation/Scripts/Playable/PlayableCameraController.cs
+index a6d040e..facd80f 100644
+--- a/Assets/SkiStation/Scripts/Playable/PlayableCameraController.cs
++++ b/Assets/SkiStation/Scripts/Playable/PlayableCameraController.cs
+@@ -3,7 +3,7 @@ using UnityEngine;
+ namespace SkiStation
+ {
+     /// <summary>Gestion uniquement : zoom sur le point vise, deplacement horizontal et recentrage.</summary>
+-    [DisallowMultipleComponent]
++    [DisallowMultipleComponent, DefaultExecutionOrder(-20)]
+     public sealed partial class PlayableCameraController : MonoBehaviour
+     {
+         [SerializeField] private Camera targetCamera;
+@@ -18,7 +18,20 @@ namespace SkiStation
+         [SerializeField] private float maximumDistance = 18000f;
+         private Vector3 focus, panVelocity;
+         private Vector2 previousMouse;
+-        private int mouseGesture;
++        private enum MouseGesture { None, Pan, OrbitMiddle, OrbitRight }
++
++        private struct NavigationFrame
++        {
++            public Vector2 pointer, move;
++            public float wheel, yaw;
++            public MouseGesture pressed;
++            public bool held, blocked, fast;
++        }
++
++        private MouseGesture mouseGesture;
++        private Plane dragPlane;
++        private bool keyOrbit, followTerrain;
++        private float terrainOffset;
+         private float zoomRemaining;
+         private Vector3 zoomAnchor;
+ 
+@@ -76,23 +89,33 @@ namespace SkiStation
+         public void ZoomBy(float steps)
+         {
+             recommendationFocus388 = false;
++            QueueZoom(steps, focus);
++        }
++
++        private void QueueZoom(float steps, Vector3 point)
++        {
+             if (targetCamera == null) return;
+-            zoomAnchor = focus;
+-            zoomRemaining += steps * Arcade.DemoSettings263.Data.managementZoom;
++            zoomAnchor = point;
++            panVelocity = Vector3.zero;
++            followTerrain = false;
++            zoomRemaining = Mathf.Clamp(zoomRemaining + steps * Arcade.DemoSettings263.Data.managementZoom, -12f, 12f);
+         }
+ 
+-        private void StepZoom(float dt)
++        private void StepZoom(float dt, bool reducedMotion)
+         {
+-            if (Mathf.Abs(zoomRemaining) < .001f) return;
+-            float step = zoomRemaining * (1f - Mathf.Exp(-24f * dt));
+-            zoomRemaining -= step;
+             var cam = targetCamera.transform;
+-            Vector3 offset = cam.position - focus;
+-            if (offset.sqrMagnitude < .01f) return;
+-            float ratio = Mathf.Clamp(offset.magnitude * Mathf.Pow(1f - zoomFractionPerNotch, step),
+-                minimumDistance, OrbitLimit) / offset.magnitude;
++            float distance = Vector3.Distance(cam.position, focus);
++            if (distance < .1f) { zoomRemaining = 0f; return; }
++            float step = reducedMotion || Mathf.Abs(zoomRemaining) < .003f
++                ? zoomRemaining : zoomRemaining * (1f - Mathf.Exp(-24f * dt));
++            zoomRemaining -= step;
++            float limit = OrbitLimit;
++            float next = Mathf.Clamp(distance * Mathf.Pow(1f - zoomFractionPerNotch, step), minimumDistance, limit);
++            if (next == minimumDistance || next == limit) zoomRemaining = 0f;
++            float ratio = next / distance;
+             cam.position = zoomAnchor + (cam.position - zoomAnchor) * ratio;
+             focus = zoomAnchor + (focus - zoomAnchor) * ratio;
++            Translate(ClampToMap(focus) - focus);
+         }
+ 
+         public void FocusArrivals()
+@@ -160,13 +183,19 @@ namespace SkiStation
+ 
+             ResetMotion();
+             focus = center;
+-            Vector3 currentOffset = targetCamera.transform.position - center;
+-            Vector3 direction = currentOffset.sqrMagnitude > .01f
+-                ? currentOffset.normalized
+-                : new Vector3(0f, .55f, -1f).normalized;
+-
+-            float distance = Mathf.Clamp(Mathf.Max(55f, radius * 2.8f + 35f), minimumDistance, Mathf.Min(maximumDistance, 1500f));
+-            targetCamera.transform.position = center + direction * distance;
++            Vector3 heading = Vector3.ProjectOnPlane(targetCamera.transform.forward, Vector3.up);
++            float yaw = heading.sqrMagnitude > .001f ? Mathf.Atan2(heading.x, heading.z) * Mathf.Rad2Deg : 0f;
++            float pitch = Mathf.Clamp(Mathf.Asin(-targetCamera.transform.forward.y) * Mathf.Rad2Deg, 29f, 68f);
++            float distance = Mathf.Clamp(radius * 2.8f + 35f, Mathf.Max(55f, minimumDistance), OrbitLimit);
++            for (;;)
++            {
++                Vector3 eye = center + Quaternion.Euler(pitch, yaw, 0f) * Vector3.back * distance;
++                targetCamera.transform.position = eye;
++                if (pitch >= maximumOrbitPitch ||
++                    !ManagementSurface.TryRaycast349(new Ray(eye, (center - eye).normalized), out var hit) ||
++                    Vector3.Distance(eye, hit) + 12f >= distance) break;
++                pitch = Mathf.Min(maximumOrbitPitch, pitch + 10f);
++            }
+             KeepAboveGround();
+             targetCamera.transform.LookAt(focus);
+         }
+@@ -175,11 +204,10 @@ namespace SkiStation
+         {
+             if (targetCamera == null) return;
+             var cam = targetCamera.transform;
+-            if (ManagementSurface.TryGet(cam.position, out var ground) && cam.position.y < ground.y + 4f)
+-            {
+-                cam.position = new Vector3(cam.position.x, ground.y + 4f, cam.position.z);
+-                if ((cam.position - focus).sqrMagnitude > .01f) cam.LookAt(focus);
+-            }
++            float clearance = Mathf.Clamp(Vector3.Distance(cam.position, focus) * .012f, 5f, 24f);
++            if (!TryElevation(cam.position, out float ground) || cam.position.y >= ground + clearance) return;
++            cam.position = new Vector3(cam.position.x, ground + clearance, cam.position.z);
++            if ((cam.position - focus).sqrMagnitude > .01f) cam.LookAt(focus);
+         }
+ 
+         public void Overview()
+@@ -193,12 +221,21 @@ namespace SkiStation
+                 Terrain terrain = world.Terrain;
+                 Vector3 size = terrain.terrainData.size;
+                 focus = terrain.transform.position + size * .5f;
+-                float fov = targetCamera.fieldOfView * .5f * Mathf.Deg2Rad;
+-                float halfAngle = Mathf.Min(fov, Mathf.Atan(Mathf.Tan(fov) * targetCamera.aspect));
+-                float distance = size.magnitude * .54f / Mathf.Sin(halfAngle);
++                Quaternion view = Quaternion.Euler(72f, 0f, 0f);
++                Quaternion toView = Quaternion.Inverse(view);
++                float vertical = Mathf.Tan(targetCamera.fieldOfView * .5f * Mathf.Deg2Rad) * .87f;
++                float horizontal = vertical * targetCamera.aspect;
++                float distance = minimumDistance;
++                for (int i = 0; i < 8; i++)
++                {
++                    var corner = new Vector3((i & 1) == 0 ? -size.x : size.x,
++                        (i & 2) == 0 ? -size.y : size.y, (i & 4) == 0 ? -size.z : size.z) * .5f;
++                    Vector3 projected = toView * corner;
++                    float required = Mathf.Max(Mathf.Abs(projected.x) / horizontal, Mathf.Abs(projected.y) / vertical);
++                    distance = Mathf.Max(distance, required - projected.z);
++                }
+                 targetCamera.farClipPlane = Mathf.Max(18000f, distance + size.magnitude);
+-                targetCamera.transform.position = focus + new Vector3(-.35f, .8f, -1f).normalized * distance;
+-                targetCamera.transform.LookAt(focus);
++                targetCamera.transform.SetPositionAndRotation(focus + view * Vector3.back * distance, view);
+                 ResetMotion();
+                 KeepAboveGround();
+                 return;
+@@ -217,24 +254,126 @@ namespace SkiStation
+         private void ResetMotion()
+         {
+             panVelocity = Vector3.zero;
+-            mouseGesture = 0;
++            mouseGesture = MouseGesture.None;
++            keyOrbit = false;
++            followTerrain = false;
+             zoomRemaining = 0f;
+         }
+ 
+-        private void Pan(Vector3 delta)
++        private void OnDisable()
++        {
++            ResetMotion();
++            recommendationFocus388 = false;
++        }
++
++        private Vector3 ClampToMap(Vector3 point)
++        {
++            var world = TerrainGeneration.TerrainGenerationWorld.Current;
++            if (world == null) return point;
++            var recipe = world.Recipe;
++            point.x = Mathf.Clamp(point.x, recipe.originX, recipe.originX + recipe.sizeX);
++            point.z = Mathf.Clamp(point.z, recipe.originZ, recipe.originZ + recipe.sizeZ);
++            return point;
++        }
++
++        private void Translate(Vector3 delta)
++        {
++            focus += delta;
++            targetCamera.transform.position += delta;
++        }
++
++        private static bool TryElevation(Vector3 position, out float height)
+         {
+-            if (delta.sqrMagnitude < .000001f) return;
+-            Vector3 next = focus + delta;
+             var world = TerrainGeneration.TerrainGenerationWorld.Current;
+             if (world != null)
+             {
+-                var r = world.Recipe;
+-                next.x = Mathf.Clamp(next.x, r.originX, r.originX + r.sizeX);
+-                next.z = Mathf.Clamp(next.z, r.originZ, r.originZ + r.sizeZ);
+-                next.y = focus.y + world.ClampedHeight(next.x, next.z) - world.ClampedHeight(focus.x, focus.z);
++                height = 0f;
++                if (!world.Contains(position.x, position.z)) return false;
++                height = world.ClampedHeight(position.x, position.z);
++                return true;
+             }
+-            targetCamera.transform.position += next - focus;
+-            focus = next;
++            bool found = ManagementSurface.TryGet(position, out var ground);
++            height = ground.y;
++            return found;
++        }
++
++        private void StartFollowingTerrain()
++        {
++            followTerrain = TryElevation(focus, out float ground);
++            terrainOffset = focus.y - ground;
++        }
++
++        private void StepTerrainHeight(float dt)
++        {
++            if (!followTerrain || !TryElevation(focus, out float ground)) return;
++            float delta = ground + terrainOffset - focus.y;
++            Translate(Vector3.up * (Mathf.Abs(delta) < .05f ? delta : delta * (1f - Mathf.Exp(-6f * dt))));
++        }
++
++        private void StepKeyboardPan(Vector2 keys, bool fast, bool reducedMotion, float sensitivity, float dt)
++        {
++            var cam = targetCamera.transform;
++            float distance = Vector3.Distance(cam.position, focus);
++            float speed = panSpeed * Mathf.Clamp(distance / 350f, .045f, 34f)
++                * sensitivity * (fast ? 2.4f : 1f);
++            Vector3 forward = Vector3.Cross(cam.right, Vector3.up).normalized;
++            Vector3 desired = (forward * keys.y + cam.right * keys.x) * speed;
++            float response = keys == Vector2.zero ? 25f : 18f;
++            panVelocity = reducedMotion ? desired : Vector3.Lerp(panVelocity, desired, 1f - Mathf.Exp(-response * dt));
++            if (panVelocity.sqrMagnitude < .01f) { panVelocity = Vector3.zero; return; }
++            if (!followTerrain) StartFollowingTerrain();
++            Translate(ClampToMap(focus + panVelocity * dt) - focus);
++        }
++
++        private Vector3 GroundAtPointer(Vector2 pointer)
++        {
++            return ManagementSurface.TryRaycast349(targetCamera.ScreenPointToRay(pointer), out var hit) ? hit : focus;
++        }
++
++        private void EstablishOrbitPivot()
++        {
++            var ray = targetCamera.ViewportPointToRay(new Vector3(.5f, .5f));
++            if (ManagementSurface.TryRaycast349(ray, out var hit)
++                && Vector3.Distance(targetCamera.transform.position, hit) <= OrbitLimit)
++                focus = hit;
++            followTerrain = false;
++            zoomRemaining = 0f;
++        }
++
++        private void StartMouseGesture(MouseGesture gesture, Vector2 pointer)
++        {
++            mouseGesture = gesture;
++            previousMouse = pointer;
++            panVelocity = Vector3.zero;
++            zoomRemaining = 0f;
++            keyOrbit = false;
++            if (gesture == MouseGesture.Pan)
++            {
++                dragPlane = new Plane(Vector3.up, GroundAtPointer(pointer));
++                StartFollowingTerrain();
++            }
++            else EstablishOrbitPivot();
++        }
++
++        private void DragMap(Vector2 pointer)
++        {
++            var cam = targetCamera.transform;
++            var before = targetCamera.ScreenPointToRay(previousMouse);
++            var after = targetCamera.ScreenPointToRay(pointer);
++            float distance = Vector3.Distance(cam.position, focus);
++            Vector3 delta;
++            if (dragPlane.Raycast(before, out float a) && dragPlane.Raycast(after, out float b)
++                && Mathf.Max(a, b) < distance * 5f)
++                delta = before.GetPoint(a) - after.GetPoint(b);
++            else
++            {
++                float unitsPerPixel = 2f * distance * Mathf.Tan(targetCamera.fieldOfView * Mathf.Deg2Rad * .5f)
++                    / Mathf.Max(1f, targetCamera.pixelHeight);
++                Vector2 motion = previousMouse - pointer;
++                delta = (cam.right * motion.x + Vector3.Cross(cam.right, Vector3.up).normalized * motion.y) * unitsPerPixel;
++            }
++            delta.y = 0f;
++            Translate(ClampToMap(focus + delta) - focus);
+         }
+ 
+         private void Orbit(float yaw, float pitchDelta)
+@@ -246,81 +385,90 @@ namespace SkiStation
+             float pitch = Mathf.Atan2(offset.y, horizontal) * Mathf.Rad2Deg;
+             float heading = Mathf.Atan2(-offset.x, -offset.z) * Mathf.Rad2Deg;
+             pitch = Mathf.Clamp(pitch + pitchDelta, minimumOrbitPitch, maximumOrbitPitch);
+-            cam.position = focus + Quaternion.Euler(pitch, heading + yaw, 0) * Vector3.back * offset.magnitude;
++            cam.position = focus + Quaternion.Euler(pitch, heading + yaw, 0f) * Vector3.back * offset.magnitude;
+             cam.LookAt(focus);
+         }
+ 
+-        private void Update()
++        private void Navigate(NavigationFrame frame, float dt)
+         {
+-            if (ConstructionInput349.ModalOpen || !Application.isFocused)
++            var settings = Arcade.DemoSettings263.Data;
++            if (!frame.held) mouseGesture = MouseGesture.None;
++            if (mouseGesture == MouseGesture.None && frame.pressed != MouseGesture.None && !frame.blocked)
++                StartMouseGesture(frame.pressed, frame.pointer);
++            if (mouseGesture == MouseGesture.Pan)
++                DragMap(frame.pointer);
++            else if (mouseGesture != MouseGesture.None)
+             {
+-                ResetMotion();
+-                return;
++                Vector2 drag = (frame.pointer - previousMouse) * (720f / Mathf.Max(1f, targetCamera.pixelHeight));
++                Orbit(drag.x * middleMouseYawSpeed * settings.managementRotation,
++                    -drag.y * middleMousePitchSpeed * settings.managementRotation);
+             }
+-            if (!initialized) { Initialize(); if (!initialized) return; }
+-            if (targetCamera == null) return;
+-            if (SlopeConstructionMode.Instance != null && SlopeConstructionMode.Instance.IsDraggingFlexiblePoint)
++            else
++            {
++                if (frame.yaw != 0f && !keyOrbit) EstablishOrbitPivot();
++                keyOrbit = frame.yaw != 0f;
++                Orbit(frame.yaw * rotationSpeed * dt * settings.managementRotation, 0f);
++                if (!frame.blocked && Mathf.Abs(frame.wheel) > .01f)
++                    QueueZoom(frame.wheel, GroundAtPointer(frame.pointer));
++                if (Mathf.Abs(zoomRemaining) >= .001f) StepZoom(dt, settings.reducedMotion);
++                else
++                {
++                    StepKeyboardPan(frame.move, frame.fast, settings.reducedMotion, settings.managementPan, dt);
++                    StepTerrainHeight(dt);
++                }
++            }
++            previousMouse = frame.pointer;
++            KeepAboveGround();
++        }
++
++        private bool CanStartRightOrbit()
++        {
++            return !ConstructionInput349.AnyToolActive && QuickDomainInspectionRuntime367.I?.HasSelection != true;
++        }
++
++        private void Update()
++        {
++            if (Arcade.ArcadeSceneIsolation.IsActive || Arcade.ArcadeSkiSession.ActiveSession != null ||
++                ConstructionInput349.ModalOpen || !Application.isFocused ||
++                SlopeConstructionMode.Instance != null && SlopeConstructionMode.Instance.IsDraggingFlexiblePoint)
+             {
+                 ResetMotion();
+                 return;
+             }
++            if (!initialized) Initialize();
++            if (!initialized || targetCamera == null) return;
+             if (Input.GetKeyDown(KeyCode.Home)) { Overview(); return; }
+             if (Input.GetKeyDown(KeyCode.End)) { FocusEntrance(); return; }
+-            if (Input.GetKeyDown(KeyCode.PageUp)) ZoomBy(1f);
+-            if (Input.GetKeyDown(KeyCode.PageDown)) ZoomBy(-1f);
+-            if (StepRecommendationFocus388()) { ResetMotion(); return; }
++            bool closer = Input.GetKeyDown(KeyCode.PageUp);
++            bool farther = Input.GetKeyDown(KeyCode.PageDown);
++            if (closer || farther) ZoomBy(closer ? 1f : -1f);
+ 
+-            var settings = Arcade.DemoSettings263.Data;
+-            var cam = targetCamera.transform;
+-            float dt = Mathf.Min(Time.unscaledDeltaTime, .05f);
+-            float distance = Vector3.Distance(cam.position, focus);
+-            Vector3 forward = Vector3.ProjectOnPlane(cam.forward, Vector3.up).normalized;
+-            Vector3 right = Vector3.ProjectOnPlane(cam.right, Vector3.up).normalized;
+-            Vector2 keys = ReadValAlpinPan();
+             bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+-            float speed = panSpeed * Mathf.Clamp(distance / 350f, .22f, 32f) * settings.managementPan;
+-            Vector3 desired = (forward * keys.y + right * keys.x) * speed * (shift ? 2.25f : 1f);
+-            bool blocked = ConstructionInput349.PointerBlocked || NetworkRecommendationPreviewRuntime388.PointerOverPanel388;
+-            Vector2 mouse = Input.mousePosition;
+-            if (!Input.GetMouseButton(2)) mouseGesture = 0;
+-            if (Input.GetMouseButtonDown(2) && !blocked)
+-            {
+-                previousMouse = mouse;
+-                mouseGesture = shift ? 2 : 1;
+-                panVelocity = Vector3.zero;
+-                zoomRemaining = 0f;
+-            }
+-            if (mouseGesture == 0)
+-            {
+-                panVelocity = Vector3.Lerp(panVelocity, desired, 1f - Mathf.Exp(-16f * dt));
+-                Pan(panVelocity * dt);
+-            }
+-
+-            float yaw = ((Input.GetKey(KeyCode.E) ? 1f : 0f) - (Input.GetKey(KeyCode.Q) ? 1f : 0f))
+-                * rotationSpeed * dt * settings.managementRotation;
+-            if (mouseGesture == 1)
++            Vector2 pointer = Input.mousePosition;
++            bool blocked = !targetCamera.pixelRect.Contains(pointer) || ConstructionInput349.PointerBlocked
++                || NetworkRecommendationPreviewRuntime388.PointerOverPanel388;
++            MouseGesture pressed = MouseGesture.None;
++            if (!blocked)
+             {
+-                Plane plane = new Plane(Vector3.up, focus);
+-                Ray before = targetCamera.ScreenPointToRay(previousMouse);
+-                Ray after = targetCamera.ScreenPointToRay(mouse);
+-                if (plane.Raycast(before, out float a) && plane.Raycast(after, out float b))
+-                    Pan(Vector3.ClampMagnitude(before.GetPoint(a) - after.GetPoint(b), distance * .20f));
++                if (Input.GetMouseButtonDown(2)) pressed = shift ? MouseGesture.OrbitMiddle : MouseGesture.Pan;
++                else if (Input.GetMouseButtonDown(1) && CanStartRightOrbit()) pressed = MouseGesture.OrbitRight;
+             }
+-            Vector2 drag = mouse - previousMouse;
+-            float pitch = mouseGesture == 2 ? -drag.y * middleMousePitchSpeed * settings.managementRotation : 0f;
+-            if (mouseGesture == 2) yaw += drag.x * middleMouseYawSpeed * settings.managementRotation;
+-            Orbit(yaw, pitch);
+-            previousMouse = mouse;
+-
+-            float wheel = Input.mouseScrollDelta.y;
+-            if (Mathf.Abs(wheel) > .01f && !blocked && mouseGesture == 0)
++            var frame = new NavigationFrame
+             {
+-                Ray ray = targetCamera.ScreenPointToRay(mouse);
+-                zoomAnchor = wheel > 0f && ManagementSurface.TryRaycast349(ray, out var ground) ? ground : focus;
+-                zoomRemaining = Mathf.Clamp(zoomRemaining + wheel * settings.managementZoom, -12f, 12f);
+-            }
+-            StepZoom(dt);
+-            KeepAboveGround();
++                pointer = pointer,
++                move = ReadValAlpinPan(),
++                wheel = Input.mouseScrollDelta.y,
++                yaw = (Input.GetKey(KeyCode.E) ? 1f : 0f) - (Input.GetKey(KeyCode.Q) ? 1f : 0f),
++                pressed = pressed,
++                held = Input.GetMouseButton(mouseGesture == MouseGesture.OrbitRight ? 1 : 2),
++                blocked = blocked,
++                fast = shift
++            };
++            bool manualNavigation = closer || farther || frame.move != Vector2.zero || frame.yaw != 0f
++                || pressed != MouseGesture.None || !blocked && Mathf.Abs(frame.wheel) > .01f;
++            if (StepRecommendationFocus388(manualNavigation)) { ResetMotion(); return; }
++            Navigate(frame, Mathf.Min(Time.unscaledDeltaTime, .05f));
+         }
++
+     }
+ }
+\ No newline at end of file
+diff --git a/Assets/SkiStation/Scripts/Playable/PlayableGameHUD.cs b/Assets/SkiStation/Scripts/Playable/PlayableGameHUD.cs
+index f68998d..9e9f090 100644
+--- a/Assets/SkiStation/Scripts/Playable/PlayableGameHUD.cs
++++ b/Assets/SkiStation/Scripts/Playable/PlayableGameHUD.cs
+@@ -823,7 +823,7 @@ namespace SkiStation
+         private void DrawHelp()
+         {
+             GUILayout.Label("COMMANDES", titleStyle);
+-            GUILayout.Label("Flèches : déplacement · Molette : zoom vers le curseur · Molette maintenue : glisser · Maj + molette maintenue : tourner",smallStyle);
++            GUILayout.Label("Flèches pour se déplacer · Molette pour zoomer · Clic molette maintenu pour glisser · Maj + clic molette ou clic droit hors construction pour tourner",smallStyle);
+             GUILayout.Label("Origine : vue generale | Fin : front de neige", smallStyle);
+             GUILayout.Label("B piste  |  L remontee  |  H village  |  M carte  |  Espace pause  |  1/2/3 vitesse", smallStyle);
+             GUILayout.Label("Clic : fiche structure | Suppr : confirmation | F6 : liste des structures", smallStyle);
+diff --git a/Assets/SkiStation/Scripts/TerrainGeneration/ValAlpinTestScene.Diagnostics.cs b/Assets/SkiStation/Scripts/TerrainGeneration/ValAlpinTestScene.Diagnostics.cs
+index fecb99a..2bd34eb 100644
+--- a/Assets/SkiStation/Scripts/TerrainGeneration/ValAlpinTestScene.Diagnostics.cs
++++ b/Assets/SkiStation/Scripts/TerrainGeneration/ValAlpinTestScene.Diagnostics.cs
+@@ -200,7 +200,7 @@ namespace SkiStation.ValAlpin
+             if (DemoManagementMenu263.Paused263) return "Caméra : menu pause ouvert.";
+             if (SkiStation.Arcade.DemoRuntime263.OptionsOpen) return "Caméra : options ouvertes.";
+             if (SkiStation.Arcade.RiderHub262.IsOpen) return "Caméra : fiche rider ouverte.";
+-            return "Caméra : commandes disponibles · cliquer dans Game pour le focus clavier · flèches : déplacement, molette maintenue : rotation.";
++            return "Cliquez dans Game pour activer les commandes · Flèches pour se déplacer · Clic molette maintenu pour glisser · Maj + clic molette maintenu pour tourner.";
+         }
+ 
+         // Native validators only. No infrastructure is built, no terrain edit, payment,
+diff --git a/Assets/SkiStation/Scripts/ValAlpin/ValAlpinTestScene.cs b/Assets/SkiStation/Scripts/ValAlpin/ValAlpinTestScene.cs
+index 4b99cd2..f153b33 100644
+--- a/Assets/SkiStation/Scripts/ValAlpin/ValAlpinTestScene.cs
++++ b/Assets/SkiStation/Scripts/ValAlpin/ValAlpinTestScene.cs
+@@ -231,7 +231,7 @@ namespace SkiStation.ValAlpin
+             if(GUILayout.Button(observeVisitors?"Arrêter le suivi des visiteurs":"Suivre les visiteurs dans la Console"))pending="visitor-observation";
+             if(!string.IsNullOrEmpty(visitorAccessDiagnostics))GUILayout.Label(visitorAccessDiagnostics);
+             if(!string.IsNullOrEmpty(constructionDiagnostics))GUILayout.Label(constructionDiagnostics);
+-            GUILayout.Label("Flèches : déplacer. Molette : zoom. Bouton central : glisser. Maj + bouton central : orbite. Début : vue générale. Fin : front de neige.");
++            GUILayout.Label("Flèches pour se déplacer · Molette pour zoomer · Clic molette maintenu pour glisser.\nMaj + clic molette ou clic droit hors construction pour tourner · Début pour la vue générale · Fin pour le front de neige.");
+             if(GUILayout.Button("Front de neige"))pending="front";
+             if(GUILayout.Button("Vue générale"))pending="all";
+             if(GUILayout.Button("Haute montagne"))pending="high";
