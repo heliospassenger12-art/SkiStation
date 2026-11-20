@@ -1,0 +1,336 @@
+diff --git a/Assets/SkiStation/Scripts/TerrainGeneration/RealTerrainNature.cs b/Assets/SkiStation/Scripts/TerrainGeneration/RealTerrainNature.cs
+index 8e107a4..6fe2df5 100644
+--- a/Assets/SkiStation/Scripts/TerrainGeneration/RealTerrainNature.cs
++++ b/Assets/SkiStation/Scripts/TerrainGeneration/RealTerrainNature.cs
+@@ -17,6 +17,7 @@ namespace SkiStation.TerrainGeneration
+             public string domain;
+             public float west, south, size, sizeX, sizeZ;
+             public string focusWater;
++            public bool pureNaturePalette;
+             public Surface[] waters, streams;
+             public string rockMask;
+             public int rockAreas, rockResolution;
+@@ -69,6 +70,8 @@ namespace SkiStation.TerrainGeneration
+         TerrainGenerationWorld world;
+         Map data;
+         Model[] models;
++        Model[][] variants;
++        Visuals.VisualProfile terrainProfile;
+         Transform presentation;
+         TerrainCollider groundCollider;
+         byte[] rockCover;
+@@ -90,6 +93,14 @@ namespace SkiStation.TerrainGeneration
+                 Debug.LogWarning("Décor géographique ignoré : emprise incompatible avec le relief actif.", world);
+                 return;
+             }
++            var vegetationAsset = Resources.Load<TextAsset>(resource + "Vegetation");
++            var vegetation = vegetationAsset != null ? JsonUtility.FromJson<Map>(vegetationAsset.text) : null;
++            if (Matches(world, vegetation))
++            {
++                map.pureNaturePalette = vegetation.pureNaturePalette;
++                map.trees = MergePlacements(map.trees, vegetation.trees);
++                map.rocks = MergePlacements(map.rocks, vegetation.rocks);
++            }
+             var geologyAsset = Resources.Load<TextAsset>(resource + "Geology");
+             var geology = geologyAsset != null ? JsonUtility.FromJson<Map>(geologyAsset.text) : null;
+             if (Matches(world, geology))
+@@ -97,9 +108,7 @@ namespace SkiStation.TerrainGeneration
+                 map.rockMask = geology.rockMask;
+                 map.rockResolution = geology.rockResolution;
+                 map.rockAreas = geology.rockAreas;
+-                var rocks = new List<Placement>(map.rocks);
+-                rocks.AddRange(geology.rocks);
+-                map.rocks = rocks.ToArray();
++                map.rocks = MergePlacements(map.rocks, geology.rocks);
+             }
+ 
+             var controller = world.gameObject.AddComponent<RealTerrainNature>();
+@@ -111,6 +120,16 @@ namespace SkiStation.TerrainGeneration
+             }
+         }
+ 
++        static Placement[] MergePlacements(Placement[] current, Placement[] extra)
++        {
++            if (current == null || current.Length == 0) return extra ?? Array.Empty<Placement>();
++            if (extra == null || extra.Length == 0) return current;
++            var all = new Placement[current.Length + extra.Length];
++            current.CopyTo(all, 0);
++            extra.CopyTo(all, current.Length);
++            return all;
++        }
++
+         static bool Matches(TerrainGenerationWorld world, Map map)
+         {
+             var terrain = world.Recipe;
+@@ -149,7 +168,7 @@ namespace SkiStation.TerrainGeneration
+             presentation.SetParent(world.Terrain.transform, false);
+             var palette = data.trees.Length == 0 && data.rocks.Length == 0 ? null
+                 : Resources.Load<ValAlpin.ValAlpinNatureAssets>("VisualProfiles/ValAlpinNature");
+-            var lit = palette != null ? palette.litShader : Shader.Find("Universal Render Pipeline/Lit");
++            var lit = palette != null && palette.litShader != null ? palette.litShader : Shader.Find("Universal Render Pipeline/Lit");
+             var water = Material(lit, "Lacs et retenues", new Color(.075f, .31f, .43f), .63f);
+             var stream = Material(lit, "Cours d’eau", new Color(.20f, .46f, .54f), .48f);
+             var hydro = world.gameObject.AddComponent<RealTerrainWater>();
+@@ -164,13 +183,29 @@ namespace SkiStation.TerrainGeneration
+                 var pine = Tree(lit, false);
+                 var deciduous = Tree(lit, true);
+                 var fallbackRock = Rock(lit);
+-                models = new[]
++                if (data.pureNaturePalette)
++                {
++                    variants = new[]
++                    {
++                        ModelsFor(palette?.trees, pine, lit, 2, 6, 8),
++                        new[] { deciduous },
++                        ModelsFor(palette?.boulders, fallbackRock, lit, 0, 1, 2),
++                        ModelsFor(palette?.cliffs, fallbackRock, lit, 0, 2, 3, 4),
++                        ModelsFor(palette?.trees, pine, lit, 12, 14, 16),
++                        ModelsFor(palette?.trees, pine, lit, 1, 3, 5)
++                    };
++                    models = Array.ConvertAll(variants, group => group[0]);
++                }
++                else
+                 {
+-                    ModelFor(palette != null ? palette.trees[6] : null, pine, lit),
+-                    deciduous,
+-                    ModelFor(palette != null ? palette.boulders[0] : null, fallbackRock, lit),
+-                    ModelFor(palette != null ? palette.cliffs[2] : null, fallbackRock, lit)
+-                };
++                    models = new[]
++                    {
++                        ModelFor(PrefabAt(palette?.trees, 6), pine, lit),
++                        deciduous,
++                        ModelFor(PrefabAt(palette?.boulders, 0), fallbackRock, lit),
++                        ModelFor(PrefabAt(palette?.cliffs, 2), fallbackRock, lit)
++                    };
++                }
+                 infrastructureHash = CaptureCorridors();
+                 RefreshInstances();
+             }
+@@ -182,15 +217,59 @@ namespace SkiStation.TerrainGeneration
+                     rockCover = mask;
+                     RockPaintResolution = data.rockResolution;
+                     SurfaceCount += data.rockAreas;
+-                    world.Terrain.GetComponent<TerrainGeneratedAppearance>().RefreshClimate();
+                 }
+             }
++            var appearance = world.Terrain.GetComponent<TerrainGeneratedAppearance>();
++            if (data.pureNaturePalette && palette != null && palette.rockAlbedo != null &&
++                Visuals.VisualSafety.PipelineMatches(Visuals.VisualPipeline.Universal))
++            {
++                RegisterTerrainProfile(palette);
++                string profile = Visuals.DomainVisualPreferences.Get(world.domainId, terrainProfile.profileId);
++                appearance.Select(profile);
++                if (profile == terrainProfile.profileId && RenderSettings.sun != null)
++                {
++                    RenderSettings.sun.color = new Color(1f, .96f, .91f);
++                    RenderSettings.sun.intensity = .85f;
++                    RenderSettings.sun.transform.rotation = Quaternion.Euler(36f, -53f, 0f);
++                }
++            }
++            else if (rockCover != null) appearance.RefreshClimate();
+             Vector3? center = !string.IsNullOrEmpty(FocusWater) && TryGetWater(FocusWater,out var lake) ? lake : null;
+             hydro.Bind(world,water,stream,presentation,center,isOrcieres);
+             world.gameObject.AddComponent<WaterCrossingTool>();
+             TerrainCallbacks.heightmapChanged += OnHeightmapChanged;
+         }
+ 
++        void RegisterTerrainProfile(ValAlpin.ValAlpinNatureAssets palette)
++        {
++            var rock = new TerrainLayer
++            {
++                diffuseTexture = palette.rockAlbedo,
++                normalMapTexture = palette.rockNormal,
++                tileSize = new Vector2(26f, 26f),
++                normalScale = .85f,
++                diffuseRemapMax = new Color(.43f, .41f, .40f, 1f),
++                smoothness = .16f
++            };
++            var snow = ValAlpin.ValAlpinNatureSurface.CreateSoftSnow();
++            var set = ScriptableObject.CreateInstance<Visuals.TerrainVisualSet>();
++            set.pipeline = Visuals.VisualPipeline.Universal;
++            set.layers = new[]
++            {
++                new Visuals.TerrainVisualLayer { category = "SNOW", albedo = snow, tiling = new Vector2(55f,55f), smoothness = .07f },
++                new Visuals.TerrainVisualLayer { category = "ROCK", terrainLayer = rock }
++            };
++            terrainProfile = ScriptableObject.CreateInstance<Visuals.VisualProfile>();
++            terrainProfile.profileId = "AURON_PURE_NATURE";
++            terrainProfile.inheritNativeRendering = false;
++            terrainProfile.terrain = set;
++            Visuals.VisualProfileRegistry.Register(terrainProfile);
++            owned.Add(rock);
++            owned.Add(snow);
++            owned.Add(set);
++            owned.Add(terrainProfile);
++        }
++
+         Material Material(Shader shader, string name, Color color, float smoothness)
+         {
+             var material = new Material(shader) {name = name, enableInstancing = true};
+@@ -205,9 +284,13 @@ namespace SkiStation.TerrainGeneration
+             if (materialCopies.TryGetValue(source, out var result)) return result;
+             string shader = source.shader.name;
+             bool leaves = shader.Contains("Leaves", StringComparison.Ordinal);
+-            Color tint = leaves ? new Color(.46f, .59f, .51f) : new Color(.72f, .74f, .76f);
++            Color tint = data.pureNaturePalette
++                ? (leaves ? new Color(.69f, .78f, .71f) : new Color(.76f, .75f, .72f))
++                : (leaves ? new Color(.46f, .59f, .51f) : new Color(.72f, .74f, .76f));
+             result = Material(lit, source.name + " · relief", tint, .09f);
+-            foreach (string property in new[] { "_BaseMap", "_MainTex", "_Albedo" })
++            string[] albedo = data.pureNaturePalette ? new[] { "_Diffuse", "_BaseMap", "_MainTex", "_Albedo" }
++                : new[] { "_BaseMap", "_MainTex", "_Albedo" };
++            foreach (string property in albedo)
+             {
+                 if (!source.HasProperty(property) || source.GetTexture(property) == null) continue;
+                 result.SetTexture("_BaseMap", source.GetTexture(property));
+@@ -221,10 +304,27 @@ namespace SkiStation.TerrainGeneration
+                 result.EnableKeyword("_ALPHATEST_ON");
+                 result.renderQueue = (int)RenderQueue.AlphaTest;
+             }
++            if (data.pureNaturePalette)
++            {
++                foreach (string property in new[] { "_Normal", "_BumpMap" })
++                {
++                    if (!source.HasProperty(property) || source.GetTexture(property) == null) continue;
++                    result.SetTexture("_BumpMap", source.GetTexture(property));
++                    result.SetFloat("_BumpScale", leaves ? .6f : .9f);
++                    result.EnableKeyword("_NORMALMAP");
++                    break;
++                }
++            }
+             materialCopies.Add(source, result);
+             return result;
+         }
+ 
++        static GameObject PrefabAt(GameObject[] entries, int index) =>
++            entries != null && index >= 0 && index < entries.Length ? entries[index] : null;
++
++        Model[] ModelsFor(GameObject[] prefabs, Model fallback, Shader lit, params int[] indices) =>
++            Array.ConvertAll(indices, index => ModelFor(PrefabAt(prefabs, index), fallback, lit));
++
+         Model ModelFor(GameObject prefab, Model fallback, Shader lit)
+         {
+             if (prefab == null) return fallback;
+@@ -250,7 +350,7 @@ namespace SkiStation.TerrainGeneration
+                 }
+                 parts.Add(new Part {mesh = mesh, materials = Array.ConvertAll(materials, m => Adapt(m, lit)), matrix = matrix});
+             }
+-            if (parts.Count == 0 || bounds.size.y <= 0) return fallback;
++            if (parts.Count == 0 || bounds.size.x <= 0 || bounds.size.y <= 0 || bounds.size.z <= 0) return fallback;
+             Matrix4x4 normalize = Matrix4x4.Scale(new Vector3(1f / bounds.size.x, 1f / bounds.size.y, 1f / bounds.size.z)) *
+                 Matrix4x4.Translate(-new Vector3(bounds.center.x, bounds.min.y, bounds.center.z));
+             foreach (var part in parts) part.matrix = normalize * part.matrix;
+@@ -390,6 +490,12 @@ namespace SkiStation.TerrainGeneration
+                 corridors.Add((lift.Top, lift.Top, 23));
+                 for (int i = 1; i < lift.Route.Count; i++) corridors.Add((lift.Route[i-1], lift.Route[i], 7));
+             }
++            foreach (var bridge in FindObjectsByType<WaterCrossing>(FindObjectsSortMode.InstanceID))
++            {
++                if (bridge.gameObject.scene != scene) continue;
++                hash = HashCode.Combine(hash, bridge.GetInstanceID(), bridge.StartBank, bridge.EndBank);
++                corridors.Add((bridge.StartBank, bridge.EndBank, bridge.HalfWidth + 3f));
++            }
+             var road = StationRoadNetwork247.I;
+             if (road != null && road.gameObject.scene == scene && road.IsReady)
+             {
+@@ -429,9 +535,10 @@ namespace SkiStation.TerrainGeneration
+         {
+             foreach (var item in placements)
+             {
++                if (item.kind < 0 || item.kind >= models.Length) continue;
+                 Vector3 position = Ground(item.at);
+                 float width = item.width > 0 ? item.width : item.height * (item.kind == 0 ? .46f : .62f);
+-                float depth = item.kind == 3 ? Mathf.Min(14, width * .55f) : width;
++                float depth = item.kind == 3 ? (data.pureNaturePalette ? width * .69f : Mathf.Min(14, width * .55f)) : width;
+                 bool blocked = false;
+                 foreach (var (a,b,radius) in corridors)
+                 {
+@@ -445,12 +552,15 @@ namespace SkiStation.TerrainGeneration
+                 {
+                     var downslope = Quaternion.Euler(0,item.yaw,0) * Vector3.back;
+                     var toe = item.at + new Vector2(downslope.x,downslope.z) * (depth * .32f);
+-                    position.y = Mathf.Min(position.y, Ground(toe).y) - 1f;
++                    position.y = Mathf.Min(position.y, Ground(toe).y) - (data.pureNaturePalette ? item.height * .21f : 1f);
+                 }
+-                var key = (Mathf.FloorToInt(item.at.x/TileSize), Mathf.FloorToInt(item.at.y/TileSize), item.kind);
++                var choices = variants?[item.kind];
++                int variant = choices == null ? 0 : Mathf.FloorToInt(Mathf.Abs(item.yaw * 11f)) % choices.Length;
++                var key = (Mathf.FloorToInt(item.at.x/TileSize), Mathf.FloorToInt(item.at.y/TileSize), item.kind*8+variant);
+                 if (!batches.TryGetValue(key, out var batch))
+                 {
+-                    batch = new Batch {model = models[item.kind], bounds = new Bounds(position, Vector3.zero)};
++                    batch = new Batch {model = choices == null ? models[item.kind] : choices[variant],
++                        bounds = new Bounds(position, Vector3.zero)};
+                     batches.Add(key,batch);
+                 }
+                 float radiusBounds = Mathf.Max(width, depth);
+@@ -517,6 +627,7 @@ namespace SkiStation.TerrainGeneration
+         void OnDestroy()
+         {
+             TerrainCallbacks.heightmapChanged -= OnHeightmapChanged;
++            if (terrainProfile != null) Visuals.VisualProfileRegistry.Unregister(terrainProfile);
+             if (presentation != null) Destroy(presentation.gameObject);
+             foreach (var item in owned) if (item != null) Destroy(item);
+         }
+diff --git a/Assets/SkiStation/Scripts/TerrainGeneration/WaterCrossing.cs b/Assets/SkiStation/Scripts/TerrainGeneration/WaterCrossing.cs
+index fd810d7..d5aa31c 100644
+--- a/Assets/SkiStation/Scripts/TerrainGeneration/WaterCrossing.cs
++++ b/Assets/SkiStation/Scripts/TerrainGeneration/WaterCrossing.cs
+@@ -12,6 +12,9 @@ namespace SkiStation.TerrainGeneration
+         Collider[] decking;
+         Material ownedMaterial;
+         internal const float SkiWidth=18f, BikeWidth=4f;
++        internal Vector3 StartBank => start;
++        internal Vector3 EndBank => end;
++        internal float HalfWidth => width * .5f;
+ 
+         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+         static void Reset() => active.Clear();
+diff --git a/Assets/SkiStation/Scripts/ValAlpin/ValAlpinNatureSurface.cs b/Assets/SkiStation/Scripts/ValAlpin/ValAlpinNatureSurface.cs
+index 7097629..e3961d4 100644
+--- a/Assets/SkiStation/Scripts/ValAlpin/ValAlpinNatureSurface.cs
++++ b/Assets/SkiStation/Scripts/ValAlpin/ValAlpinNatureSurface.cs
+@@ -32,11 +32,12 @@ namespace SkiStation.ValAlpin
+             return matteMask;
+         }
+ 
+-        Texture2D SoftSnow()
++        Texture2D SoftSnow() => snowSurface != null ? snowSurface : snowSurface = CreateSoftSnow();
++
++        internal static Texture2D CreateSoftSnow()
+         {
+-            if (snowSurface != null) return snowSurface;
+             const int size = 256;
+-            snowSurface = new Texture2D(size,size,TextureFormat.RGBA32,true)
++            var snow = new Texture2D(size,size,TextureFormat.RGBA32,true)
+             {
+                 name = "ValAlpin neige douce",
+                 hideFlags = HideFlags.HideAndDontSave,
+@@ -57,8 +58,8 @@ namespace SkiStation.ValAlpin
+                 float shade=.76f+n*.06f;
+                 pixels[y*size+x]=new Color(shade,shade+.025f,shade+.045f,1);
+             }
+-            snowSurface.SetPixels(pixels); snowSurface.Apply(true,true);
+-            return snowSurface;
++            snow.SetPixels(pixels); snow.Apply(true,true);
++            return snow;
+         }
+ 
+         public void Apply(TerrainGenerationWorld world)
+diff --git a/Assets/SkiStation/Scripts/VisualProfiles/DomainVisualPreferences.cs b/Assets/SkiStation/Scripts/VisualProfiles/DomainVisualPreferences.cs
+index 21d0dd5..2e2977b 100644
+--- a/Assets/SkiStation/Scripts/VisualProfiles/DomainVisualPreferences.cs
++++ b/Assets/SkiStation/Scripts/VisualProfiles/DomainVisualPreferences.cs
+@@ -31,8 +31,9 @@ namespace SkiStation.Visuals
+             catch(Exception ex){protectedData=true;Notice="Préférences visuelles indisponibles : rendu SkiStation conservé.";Debug.LogWarning(Notice+" "+ex.Message);}
+         }
+         static bool ValidDomain(string id)=>!string.IsNullOrWhiteSpace(id)&&id.Length<=240&&id.IndexOf('\0')<0;
+-        public static string Get(string domainId)
+-        {Load();return data.entries.Find(e=>e.domainId==domainId)?.visualProfileId??VisualProfileRegistry.DefaultId;}
++        public static string Get(string domainId) => Get(domainId, VisualProfileRegistry.DefaultId);
++        internal static string Get(string domainId, string fallback)
++        {Load();return data.entries.Find(e=>e.domainId==domainId)?.visualProfileId??fallback;}
+         public static bool Set(string domainId,string profileId)
+         {
+             Load();if(protectedData||!ValidDomain(domainId)||!VisualProfileRegistry.ValidId(profileId))return false;

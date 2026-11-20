@@ -1,0 +1,52 @@
+{
+  "scripts": [
+    {
+      "path": "Assets/SkiStation/Scripts/TerrainGeneration/RealTerrainNature.cs",
+      "before": "BEECBB4AABFF5C7D39A79D14AFD693F641B1429D729D80F0357B067ECCC97724",
+      "after": "7B178086262F76F841E42C942818AF43FC19B47149CE83B316578F3D68F4B919"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/TerrainGeneration/WaterCrossing.cs",
+      "before": "828B9E6D05223B57EBBE4D08B2D8A2A1241E6F9B8065471E066CCA80E7E45752",
+      "after": "920DD118772C8E7FA678EB3AC68740850DF63CCA549F03F1DB14D6560C7F715C"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/ValAlpin/ValAlpinNatureSurface.cs",
+      "before": "D9B523B496ED0072CB1EB41782CF9161B23831AD6E7E6C423FA50B70F376DFFF",
+      "after": "B721C6C958E27BFA7D7ACA5D5A9F4B831D75D2E01B9FD4F8E9A3A68435211625"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/VisualProfiles/DomainVisualPreferences.cs",
+      "before": "AF259D101BA8177EDA060F4EF94C20B8EA077F2C96F418F486CEAD2B23B7D224",
+      "after": "A797FC7F3D864D56FF244568ECF2755E2354568D52A4E478546903A451A55F64"
+    }
+  ],
+  "requires": [
+    {
+      "path": "Assets/SkiStation/Resources/TerrainGeneration/France50/auron.bytes",
+      "sha256": "A1D850D5C0ECD745BDCBA540481D5C70F0FA987165E99E26A4A7EBFA75B90787"
+    },
+    {
+      "path": "Assets/SkiStation/Resources/TerrainGeneration/Nature/auron.json",
+      "sha256": "3887EDD44A679E6DD1AC37469727A29FE1BD1FB79A5B557B84E1EDC617212576"
+    }
+  ],
+  "layers": [
+    {
+      "name": "auronVegetation.json",
+      "sha256": "E435BA6C680CE78CD559867B250EDAC94DEA345C7D0A1C26D5E9FDF4E0233748"
+    },
+    {
+      "name": "auronVegetation.json.meta",
+      "sha256": "FE92FDF1EC898BF306EDB6B6E66A3F33E7EFC4C2327AB11AA02FBA3FC5240618"
+    },
+    {
+      "name": "auronGeology.json",
+      "sha256": "9429DA47E0AEFC039A3C32AF874A1E87A446D87403D79E98CC1E2C6D2A8DE5BF"
+    },
+    {
+      "name": "auronGeology.json.meta",
+      "sha256": "61CC0ED59B3DCCB54AC847AD82C7243E4C431A79CFB7825BB0DABB8E0612DE6F"
+    }
+  ]
+}

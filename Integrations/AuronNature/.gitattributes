@@ -1,0 +1,2 @@
+*.patch -text whitespace=-blank-at-eol
+*.json.meta whitespace=-blank-at-eol
