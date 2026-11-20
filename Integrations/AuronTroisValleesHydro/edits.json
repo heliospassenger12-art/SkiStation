@@ -1,0 +1,104 @@
+{
+  "TerrainGeneration/RealTerrainNature.cs": [
+    {
+      "a": "public float west, south, size;",
+      "b": "public float west, south, size, sizeX, sizeZ;\n            public string focusWater;"
+    },
+    {
+      "a": "Mathf.Approximately(map.size, terrain.sizeX) && Mathf.Approximately(map.size, terrain.sizeZ);",
+      "b": "Mathf.Approximately(map.sizeX > 0 ? map.sizeX : map.size, terrain.sizeX) &&\n                Mathf.Approximately(map.sizeZ > 0 ? map.sizeZ : map.size, terrain.sizeZ);"
+    },
+    {
+      "a": "        internal bool TryGetWater(string name, out Vector3 center)",
+      "b": "        internal string FocusWater => data.focusWater;\n        internal bool HasRockSource => data.rockAreas > 0;\n\n        internal bool TryGetWater(string name, out Vector3 center)"
+    },
+    {
+      "a": "            data = map;\n            groundCollider",
+      "b": "            data = map;\n            bool isOrcieres = world.domainId == ValAlpin.ValAlpinScene.OrcieresDomainId;\n            if (isOrcieres && string.IsNullOrEmpty(data.focusWater)) data.focusWater = \"Grand Lac des Estaris\";\n            groundCollider"
+    },
+    {
+      "a": "new GameObject(\"Décor géographique — Orcières\")",
+      "b": "new GameObject(\"Décor géographique — \" + (isOrcieres ? \"Orcières\" : ValAlpin.ValAlpinScene.MapName))"
+    },
+    {
+      "a": "            var palette = Resources.Load<ValAlpin.ValAlpinNatureAssets>(\"VisualProfiles/ValAlpinNature\");\n            var lit = palette != null ? palette.litShader : Shader.Find(\"Universal Render Pipeline/Lit\");",
+      "b": "            var palette = data.trees.Length == 0 && data.rocks.Length == 0 ? null\n                : Resources.Load<ValAlpin.ValAlpinNatureAssets>(\"VisualProfiles/ValAlpinNature\");\n            var lit = palette != null ? palette.litShader : Shader.Find(\"Universal Render Pipeline/Lit\");"
+    },
+    {
+      "a": "            var pine = Tree(lit, false);\n            var deciduous = Tree(lit, true);\n            var fallbackRock = Rock(lit);\n            models = new[]\n            {\n                ModelFor(palette != null ? palette.trees[6] : null, pine, lit),\n                deciduous,\n                ModelFor(palette != null ? palette.boulders[0] : null, fallbackRock, lit),\n                ModelFor(palette != null ? palette.cliffs[2] : null, fallbackRock, lit)\n            };\n            infrastructureHash = CaptureCorridors();\n            RefreshInstances();",
+      "b": "            models = Array.Empty<Model>();\n            if (data.trees.Length != 0 || data.rocks.Length != 0)\n            {\n                var pine = Tree(lit, false);\n                var deciduous = Tree(lit, true);\n                var fallbackRock = Rock(lit);\n                models = new[]\n                {\n                    ModelFor(palette != null ? palette.trees[6] : null, pine, lit),\n                    deciduous,\n                    ModelFor(palette != null ? palette.boulders[0] : null, fallbackRock, lit),\n                    ModelFor(palette != null ? palette.cliffs[2] : null, fallbackRock, lit)\n                };\n                infrastructureHash = CaptureCorridors();\n                RefreshInstances();\n            }"
+    },
+    {
+      "a": "            Vector3? center = TryGetWater(\"Grand Lac des Estaris\",out var lake) ? lake : null;\n            hydro.Bind(world,water,stream,presentation,center);",
+      "b": "            Vector3? center = !string.IsNullOrEmpty(FocusWater) && TryGetWater(FocusWater,out var lake) ? lake : null;\n            hydro.Bind(world,water,stream,presentation,center,isOrcieres);"
+    },
+    {
+      "a": "                int hash = CaptureCorridors();\n                if (hash != infrastructureHash || heightChanged) RefreshInstances();\n                infrastructureHash = hash;",
+      "b": "                if (models.Length != 0)\n                {\n                    int hash = CaptureCorridors();\n                    if (hash != infrastructureHash || heightChanged) RefreshInstances();\n                    infrastructureHash = hash;\n                }"
+    }
+  ],
+  "TerrainGeneration/RealTerrainWater.cs": [
+    {
+      "a": "        float nextWeatherCheck;",
+      "b": "        float nextWeatherCheck;\n        float lakeCooling;"
+    },
+    {
+      "a": "internal static bool SeasonalDomain => ValAlpin.ValAlpinScene.ActiveMapId == ValAlpin.ValAlpinScene.OrcieresDomainId;",
+      "b": "internal static bool SeasonalDomain => ValAlpin.ValAlpinScene.IsActive && Current != null;"
+    },
+    {
+      "a": "        internal string Activities => diving != null",
+      "b": "        internal bool HasActivities => diving != null && swimming != null;\n        internal string Activities => diving != null"
+    },
+    {
+      "a": "Transform presentation, Vector3? center)",
+      "b": "Transform presentation, Vector3? center, bool enableEstarisActivities)"
+    },
+    {
+      "a": "            if (center.HasValue && TryBank(center.Value, out var bank))",
+      "b": "            if (center.HasValue && !enableEstarisActivities)\n                lakeCooling = Mathf.Clamp((center.Value.y - world.FrontDeNeige.position.y) * .006f,-4f,5f);\n            if (enableEstarisActivities && center.HasValue && TryBank(center.Value, out var bank))"
+    },
+    {
+      "a": "int freezeDays = 0, snowDays = 0;\n            float degreeDays = 0;",
+      "b": "int freezeDays = 0, lakeFreezeDays = 0, snowDays = 0;\n            float degreeDays = 0, lakeDegreeDays = 0;"
+    },
+    {
+      "a": "                if (temp < -1f) freezeDays++;",
+      "b": "                if (temp < -1f) freezeDays++;\n                float lakeTemp = temp - lakeCooling;\n                if (lakeTemp < -1f) lakeFreezeDays++;\n                lakeDegreeDays += Mathf.Max(0,-lakeTemp) - Mathf.Max(0,lakeTemp)*1.5f;"
+    },
+    {
+      "a": "Lakes = Surface(mayFreeze && freezeDays >= 4 && degreeDays >= 13, snowDays >= 2);",
+      "b": "Lakes = Surface(mayFreeze && lakeFreezeDays >= 4 && lakeDegreeDays >= 13, snowDays >= 2);"
+    }
+  ],
+  "ValAlpin/ValAlpinScene.cs": [
+    {
+      "a": "public string id, name, sector, resource;",
+      "b": "public string id, name, sector, resource, nature;"
+    }
+  ],
+  "ValAlpin/ValAlpinTestScene.cs": [
+    {
+      "a": "            else if (World.domainId == ValAlpinScene.OrcieresDomainId)\n                RealTerrainNature.TryInstall(World, \"TerrainGeneration/Nature/Orcieres\");",
+      "b": "            else\n            {\n                string nature = World.domainId == ValAlpinScene.OrcieresDomainId\n                    ? \"TerrainGeneration/Nature/Orcieres\" : ValAlpinScene.FindMap(World.domainId)?.nature;\n                if (!string.IsNullOrEmpty(nature)) RealTerrainNature.TryInstall(World,nature);\n            }"
+    }
+  ],
+  "Playable/ReliefViewModesRuntime.cs": [
+    {
+      "a": "if (showNature) boxHeight += hydro != null ? 66f : 26f;",
+      "b": "if (showNature) boxHeight += hydro == null ? 26f : hydro.HasActivities ? 66f : 46f;"
+    },
+    {
+      "a": "                if (GUILayout.Button(\"Lac des Estaris\", GUILayout.Height(23f)) &&\n                    nature.TryGetWater(\"Grand Lac des Estaris\", out var lake))",
+      "b": "                if (!string.IsNullOrEmpty(nature.FocusWater) && GUILayout.Button(nature.FocusWater, GUILayout.Height(23f)) &&\n                    nature.TryGetWater(nature.FocusWater, out var lake))"
+    },
+    {
+      "a": "                if (GUILayout.Button(\"© OpenStreetMap · IGN\", GUILayout.Height(23f)))\n                    Application.OpenURL(\"https://www.openstreetmap.org/copyright\");",
+      "b": "                if (nature.HasRockSource && GUILayout.Button(\"© OpenStreetMap · IGN\", GUILayout.Height(23f)))\n                    Application.OpenURL(\"https://www.openstreetmap.org/copyright\");\n                if (!nature.HasRockSource && GUILayout.Button(\"© IGN · BD TOPO\", GUILayout.Height(23f)))\n                    Application.OpenURL(\"https://www.data.gouv.fr/datasets/bd-topo-r\");"
+    },
+    {
+      "a": "                    GUILayout.Label(hydro.Activities);",
+      "b": "                    if (hydro.HasActivities) GUILayout.Label(hydro.Activities);"
+    }
+  ]
+}

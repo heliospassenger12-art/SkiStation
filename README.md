@@ -9,6 +9,8 @@ Le dépôt regroupe le prototype web et la reprise du projet Unity. Leurs versio
 | Alpine Empires Unity | Bloc 2 partiel. Archive Avant Première retrouvée et compatibilité du correctif Comptes alliés vérifiée. Recette Unity attendue, passage au Bloc 3 fermé. | [Audit et prochaine action](Docs/Audit_2026_11_19/REPRISE.md) · [Kit Comptes alliés](Integrations/AlpineEmpiresBloc2/README.md) |
 | Intégrations Gestion et Arcade | Trois PR de reprise ouvertes. Métadonnées Gestion et applications de patchs Arcade contrôlées sur l'archive retrouvée. | [Examen des trois PR](Docs/Audit_2026_11_19/REVUE_PR.md) |
 
+Orcières Merlette dispose d’un kit Avant Première pour l’eau saisonnière, les activités des Estaris et les franchissements. [Kit Orcières et tests Unity](Integrations/OrcieresEauSaisons/README.md). Le même système est disponible pour [Auron et la carte fusionnée des Trois Vallées](Integrations/AuronTroisValleesHydro/HYDROGRAPHIE.md).
+
 Le kit Bloc 2 est conservé dans `Integrations/AlpineEmpiresBloc2`, avec ses sources et son installateur d'origine. Son contrôle de filiation cible le projet Avant Première contenant le complément Sauvegarde matérielle. L'arborescence Unity historique à la racine doit suivre le plan de rapprochement avant d'accueillir ces changements.
 
 Les 16 assertions métier du kit Comptes alliés ont été compilées et exécutées hors Unity. La compilation Unity, les scènes en Play Mode, les sauvegardes réelles et le réseau restent à valider. Le [rapport d'audit](Docs/Audit_2026_11_19/REPRISE.md) précise la provenance des sources et le périmètre de chaque contrôle.

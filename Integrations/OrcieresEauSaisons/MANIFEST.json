@@ -1,0 +1,181 @@
+{
+  "require": [
+    {
+      "path": "Assets/SkiStation/Resources/TerrainGeneration/ValAlpin/ORCIERES_MERLETTE.bytes",
+      "sha256": "BF34DBFBEE9C776CD4F6D475AC92E52B3772778C6B57691E074AA9B44F33222E"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/ValAlpin/ValAlpinTestScene.cs",
+      "marker": "TerrainGeneration/Nature/Orcieres"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/ManagementDomainSource261.cs",
+      "marker": "ManagementDomainSource261"
+    }
+  ],
+  "files": [
+    {
+      "path": "Assets/SkiStation/Scripts/Activities/MountainActivityDefinition.cs",
+      "text": true,
+      "sha256": "3F8523CE4F079A167B4D796F3BB85607273E7A2335A307095BB4BB033B269E6B",
+      "previous": "D7713EFFC460162519DEC35572AAC36DA99D9E4C6A445C19498A7BE8F68F0B4A"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Altitude/AltitudeConstructionPolicy.cs",
+      "text": true,
+      "sha256": "A1BBEAD2EE3E87EA60FCD11BFA8FC62A199AE56551655A41C7E6592795D84487",
+      "previous": "C745466BA395E2931747729F30B4608D903EBF03A367BB469545B97E88870187"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Construction/ConstructionInput349.cs",
+      "text": true,
+      "sha256": "BBB7C484DA118F95728BB9FD670B4690C7ABDD5FA50C8CE34998423B3F38B9BD",
+      "previous": "AE2AE2D98551FADC945E7B84F88F0AE5A70D0865A1EC2156223CEE9E3CEDD7AC"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Construction/RecommendationConstructionValidation389.cs",
+      "text": true,
+      "sha256": "D6FCBDDA1E4A446C2C1B2CAB70E2248A2C17F3BD802BF32D9B9853698E79C51C",
+      "previous": "9A63BF604B86590DB663EF4BB16E672208F0961D55FDDEFEC2534D570576D741"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Infrastructure/StationRoadNetwork247.cs",
+      "text": true,
+      "sha256": "A824CD5909C978FCAE29C2D8D06867A5718341877BE5DF9D0DF8E10CF146B731",
+      "previous": "E478E80543DA9A305E5628B335EB30CBD4F49117028F73F1BC4C3D05C8AD7EDC"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Lifts/LiftConstructionPlanner.cs",
+      "text": true,
+      "sha256": "EC6C09C560B58C245971CEE9024558B057C1E21794AC7F50B57AE140A8FA4F9C",
+      "previous": "9D46CE4BDC38737554F8DBF4BD6479020594B6D2E072C5885FDE1402BFCE2DF0"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Persistence261/ManagementDomainPersistence261.cs",
+      "text": true,
+      "sha256": "8036CCA21FCDFF016A0A345B40ABF379EAB3D664DC37ED8DB305F01187375161",
+      "previous": "5E93D2BBD86F7A621E9DB8EADA61B9D5B4EDC6C94AEDB04FB0699D7EC0FE9E58"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/Persistence261/ManagementGeometryCodec261.cs",
+      "text": true,
+      "sha256": "CD7617940C8B047535FC4303A13DE13842DA56F0E97B2EE36F21816D80BF1A37",
+      "previous": "628CBF41D54F3B30221767358359FE88B15B7A0C3F5119E3D8288A3CCEBCB87B"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Management/VisitorServiceConsumptionRuntime.cs",
+      "text": true,
+      "sha256": "D871739FD7597C8B11A059EAE64519DFE6D7DA2A6FB8A9C83C9039AA274A6291",
+      "previous": "D89F647CBE4226FB6478B6A4EC516768B26BF9C56905D78BBB9E61B3FF4054DF"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Playable/ManagementSurface.cs",
+      "text": true,
+      "sha256": "E223B81272AFF345FDE5C08B7EF0F8A3B4AE3B9C4B0E86226E7F9F068C641900",
+      "previous": "722A179ADDA418F545BB9FF0E48CAB091D4BFA39284A030257D22F140F37097C"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Playable/PlayableGameHUD.cs",
+      "text": true,
+      "sha256": "40D24F077AE5C21AE7002F7C56F87103E2B53877C90B5A515F94D7A8D2FFFCF7",
+      "previous": "2D3C5879512D010D9A92110029160A3BBA3A91BD63440DEB8D6223B2E49558C7"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Playable/ReliefViewModesRuntime.cs",
+      "text": true,
+      "sha256": "FB0428D6C93BB3C38B0379571D2559D499D266A323BDBBB5957EAE046D61DB9C",
+      "previous": "26AE4E908D15052DF6F33FA262C7DED89633C61FCFEDFAB70767982471FB2C47"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Progression/SeasonCalendarRuntime361.cs",
+      "text": true,
+      "sha256": "5C45F0A5BF7124717E18E70EF72C5D5F7597468932CF8499E37FB3643AF35DC5",
+      "previous": "547A7819831AFD75138E047CB7DF105058D4622E4D98674E5EFFC01C1F387DE7"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Progression/SeasonWeatherRuntime363.cs",
+      "text": true,
+      "sha256": "BC3AF283441F889870EA602C00BD64B9497240CA48D36F2D7D5CA431BB3DB508",
+      "previous": "A6816E8C7772074279B49BD34A0A2885DCB0AADB420FECB7FFA5019A7978267F"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Skiers/VisitorSkiDescentPath393.cs",
+      "text": true,
+      "sha256": "AAAB0B25B857FACAA64C812D31B6FEDD0870F1CC0BE37CFABEFADE76647E938A",
+      "previous": "E3F5426D2E28F63516EC1628CA85636A62876942DAD02BA1AAF8A7147FAA97E4"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Slopes/SlopeConstructionMode.cs",
+      "text": true,
+      "sha256": "8A4F6DC7B12D50C8DEAA591EB9CCC4CB47C90010AA00A7D2D93D02349258597E",
+      "previous": "A9E600659B60BD244323CA083041DF499A4F89CD1048A1845F6A3640E1122246"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Slopes/SlopeConstructionMode.Flexible.cs",
+      "text": true,
+      "sha256": "368157F5B84382DAE4CEB4B7CB44596574E25084B2AF69EBA77DFC72B4841144",
+      "previous": "483B320FBB236DEE529D5D94B17C907DCF34E947100C59A19D34CDACC51DFF9D"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Slopes/SlopeConstructionMode.ValAlpin.cs",
+      "text": true,
+      "sha256": "CB6EFC94D2D930483B52F36BDDC4EF60F69B3835948BF555CFA359306617E15D",
+      "previous": "BE515353F79E193D0E8F0B6EA4145A5AE5BCBE6FFF2FEAC457552A1B147DF10B"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Slopes/SlopeMeshGenerator.cs",
+      "text": true,
+      "sha256": "292A868673F5E67E8BCC340D72D289D2921BAEACB7C7569BACBB7CCD9A0AE428",
+      "previous": "C47CE6D62EF85BE9B527BDA5B38A3F86F7D5023954F2AED8CDC37EC6A25A6919"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/Slopes/SlopeTerrainConformityRuntime.cs",
+      "text": true,
+      "sha256": "8F1E4CCFF7D0EA0A4000D3E81C46892C26C681FC4F5C1C67E96E00620FAE9487",
+      "previous": "95DDC32D49416542839AC54ED09B4D2B28F90424AF80E96CAB387E9120757FF4"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/TerrainGeneration/RealTerrainNature.cs",
+      "text": true,
+      "sha256": "D2DE6EE81558FABA170CC390DE47B3CDD0DA9703B2C91E2943447EAE726450B2",
+      "previous": "EDD9B49178E49355F97E565F400E48BD02F466AC701626C6C2A1C33A75C44B68"
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/TerrainGeneration/WaterCrossing.cs",
+      "text": true,
+      "sha256": "828B9E6D05223B57EBBE4D08B2D8A2A1241E6F9B8065471E066CCA80E7E45752",
+      "previous": ""
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/TerrainGeneration/WaterCrossing.cs.meta",
+      "text": true,
+      "sha256": "DBF061B0C3DFB25B35167E252464AC0BC91F32DBD51E6CC39B29D1BB621B0117",
+      "previous": ""
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/TerrainGeneration/RealTerrainWater.cs",
+      "text": true,
+      "sha256": "CEC48403BF7D56CE5E4020E2E46FF90627ABB1C83138DE19E3DE064EFAF82249",
+      "previous": ""
+    },
+    {
+      "path": "Assets/SkiStation/Scripts/TerrainGeneration/RealTerrainWater.cs.meta",
+      "text": true,
+      "sha256": "38B65EDA2D4DFDB4A9D088996E3D51083C8937AB998AFAFFD7D5C65C462A8582",
+      "previous": ""
+    },
+    {
+      "path": "Assets/SkiStation/Resources/TerrainGeneration/Nature/Orcieres.json",
+      "text": true,
+      "sha256": "69FD771CAB4808DE243A31245EDAC5A952B7903811DA6D849444E3332FAC7922",
+      "previous": "",
+      "compatible": "375094D17D9D82F906134BA6AC5290800148A52C819D8E645CDF7555FFCF3C46"
+    },
+    {
+      "path": "Assets/SkiStation/Resources/TerrainGeneration/Nature/Orcieres.json.meta",
+      "text": true,
+      "sha256": "A4987CDB1999AC928E0DAE9B4B0FDF07E047BF1BE7078194AF5223D9190A7ECA",
+      "previous": ""
+    }
+  ]
+}

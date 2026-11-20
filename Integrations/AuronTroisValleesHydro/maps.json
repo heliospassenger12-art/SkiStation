@@ -1,0 +1,28 @@
+{
+  "auron": {
+    "domain": "lab.gestion.fr.auron",
+    "title": "Auron",
+    "lon": 6.91093685,
+    "lat": 44.22957555,
+    "sourceWest": -4020,
+    "sourceSouth": -4200,
+    "west": -5040,
+    "south": -6080,
+    "sizeX": 8040,
+    "sizeZ": 8400,
+    "bbox": "6.858,44.190,6.964,44.269"
+  },
+  "les-trois-vallees-complet": {
+    "domain": "lab.gestion.fr.les-trois-vallees-complet",
+    "title": "Les Trois Vallées",
+    "lon": 6.57592635,
+    "lat": 45.32908225,
+    "sourceWest": -9780,
+    "sourceSouth": -15600,
+    "west": -10260,
+    "south": -14780,
+    "sizeX": 19560,
+    "sizeZ": 31200,
+    "bbox": "6.449,45.187,6.703,45.471"
+  }
+}
