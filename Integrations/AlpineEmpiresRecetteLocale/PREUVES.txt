@@ -1,0 +1,118 @@
+Recette Unity 6000.3.7f1 sur Windows, jeu local
+Les lignes ci-dessous sont extraites du dossier temporaire de recette. Les empreintes identifient les originaux.
+
+
+editmode.xml SHA-256 C0F2F53DDE4997CAAF8F11E1BB4019120BC514E75C90160B91E3150591E4BFD5
+Tests 154 · réussis 152 · échecs 2
+SkiStation.HybridMotionValidation.Tests.HybridAirIntegratedTests26315.HeldGrabsAndProfiles System.Exception : Bloc2 integrated check failed
+  ----> System.Exception : A2.63.1.5 bloc2: hold stays active but scoring remains capped
+SkiStation.HybridMotionValidation.Tests.IntegratedChecks.NativeLiftGeometryChecks System.InvalidOperationException : Integrated check failed: SkiStation.EditorTools.LiftGeometryTests391
+  ----> System.InvalidOperationException : Terrain plat non constructible
+
+editmode-corrige.xml SHA-256 380B642DCD9679329618D1D7DCC578AE2BD4FC4CAB0D8866BF462D43AB581EC8
+Tests 154 · réussis 154 · échecs 0
+
+unity-classique.log SHA-256 9E90BC83A9DDBED339AED677BC0160A764FE233976354CB9A607CB91D085ECBE
+1260:BLOC2 DROITS TRACÉS OK · OFF, concession propre, sortie de concession et largeur
+1292:BLOC3 IA AUTONOME B · restaurant réel · seul B débité de 75000 EUR
+1304:BLOC2 REPAS B avant=650000 après chantier=575000 après repas=575045 autres comptes inchangés
+1316:BLOC2 CHARGES B 295 EUR, solde 574750, débit unique
+1832:BLOC9 METEO OK · seed 842916 · hiver -3,78 °C été 17,99 °C · reprise et météo réelle
+1921:BLOC6 CLASSIQUE REPRISE ARCADE OK · retour Gestion, compte conservé
+
+unity-foncier-geometrie.log SHA-256 641BA86DC0691207B984FD86DB21E607C6C7BF9310F070BF73A67F8B488CCDBE
+460:RECETTE GEOMETRIE height=3,15 valid=False envelope=3 supports=3,15,8,6,6,10,3,15 Garde au sol véhicule insuffisante at (8.96, 3.71, 3.10)
+471:RECETTE GEOMETRIE height=3,6 valid=False envelope=3 supports=3,6,6,6,6,6,3,6 Garde au sol véhicule insuffisante at (291.04, 3.73, 3.10)
+482:RECETTE GEOMETRIE height=3,75 valid=True envelope=3 supports=3,75,6,6,6,6,3,75 
+493:RECETTE GEOMETRIE height=4 valid=True envelope=3 supports=4,6,6,6,6,4 
+504:RECETTE GEOMETRIE height=4,25 valid=True envelope=3 supports=4,25,6,6,6,6,4,25 
+515:BLOC5 AUTORITÉ LOCALE OK · arbitrage, visibilité, identité, prix et reprise
+
+unity-express.log SHA-256 1EC56B62AE222773DFDE6D31982B0C62CF0232C323B8A40EBC5F3E2C8C64FE5C
+1276:RECETTE EXPRESS OK · durée configurée 7 200 s · accès Arcade refusé · échéance forcée en essai · Gestion suspendue
+
+ValAlpin-trafic.log SHA-256 802ABC102571363BD7E907ECB11A0440177DC1C5B96FF6A67DFC985683E362C0
+40:[21:57:11.164] RESULT visitor=Audit trafic 1 queued=True boarded=True ridden=True arrived=True exiting=True departed=True
+41:[21:57:11.164] RESULT visitor=Audit trafic 2 queued=True boarded=True ridden=True arrived=True exiting=True departed=True
+42:[21:57:11.164] RESULT visitor=Audit trafic 3 queued=True boarded=True ridden=True arrived=True exiting=True departed=True
+43:[21:57:11.164] RESULT visitor=Audit trafic 4 queued=True boarded=True ridden=True arrived=True exiting=True departed=True
+44:[21:57:11.166] END pass=True drawRecorderLast=0 gpuRecorderLast=0
+
+Orcieres-trafic.log SHA-256 1FA35FF3CB46A4DFA149D387662207EE1584AFB447089D836A4E1C83FF8A46B7
+40:[21:57:38.375] RESULT visitor=Audit trafic 1 queued=True boarded=True ridden=True arrived=True exiting=True departed=True
+41:[21:57:38.376] RESULT visitor=Audit trafic 2 queued=True boarded=True ridden=True arrived=True exiting=True departed=True
+42:[21:57:38.376] RESULT visitor=Audit trafic 3 queued=True boarded=True ridden=True arrived=True exiting=True departed=True
+43:[21:57:38.376] RESULT visitor=Audit trafic 4 queued=True boarded=True ridden=True arrived=True exiting=True departed=True
+44:[21:57:38.377] END pass=True drawRecorderLast=0 gpuRecorderLast=0
+
+Auron-trafic.log SHA-256 A6ECEC4698F67685090FDE63A85DE71D5390B23189446D6ABFE218636A51809E
+38:[21:58:01.154] RESULT visitor=Audit trafic 1 queued=True boarded=True ridden=True arrived=True exiting=True departed=True
+39:[21:58:01.154] RESULT visitor=Audit trafic 2 queued=True boarded=True ridden=True arrived=True exiting=True departed=True
+40:[21:58:01.155] RESULT visitor=Audit trafic 3 queued=True boarded=True ridden=True arrived=True exiting=True departed=True
+41:[21:58:01.155] RESULT visitor=Audit trafic 4 queued=True boarded=True ridden=True arrived=True exiting=True departed=True
+42:[21:58:01.155] END pass=True drawRecorderLast=0 gpuRecorderLast=0
+
+ValAlpin-fermeture-trafic.log SHA-256 A73DDD88BE0C9D51F4A254F15586F78107DEA5053A3ECCB5705F521195B345D5
+20:[22:00:47.046] FERMETURE_OK onboard=4 excludedFromRouting=True
+41:[22:00:55.119] FAIL System.InvalidOperationException: Trajet fermé non vidé ou moteur encore actif.
+44:[22:00:55.121] RESULT visitor=Audit trafic 1 queued=True boarded=True ridden=True arrived=True exiting=True departed=True
+45:[22:00:55.121] RESULT visitor=Audit trafic 2 queued=True boarded=True ridden=True arrived=True exiting=True departed=True
+46:[22:00:55.121] RESULT visitor=Audit trafic 3 queued=True boarded=True ridden=True arrived=True exiting=True departed=True
+47:[22:00:55.121] RESULT visitor=Audit trafic 4 queued=True boarded=True ridden=True arrived=True exiting=True departed=True
+48:[22:00:55.122] END pass=False drawRecorderLast=0 gpuRecorderLast=0
+
+unity-build.log SHA-256 7A9888FBF5DFE6C4E38E55D4F208D625EC4B02F4FA448EAE5A33919752C141A2
+472:- Compatibility Mode is enabled in Project Settings, but this feature is deprecated from Unity 6.0, and the setting is hidden in Unity 6.3. To enable Compatibility Mode, go to Edit > Project Settings > Player and add URP_COMPATIBILITY_MODE to the Scripting Define Symbols.
+499:- Compatibility Mode is enabled in Project Settings, but this feature is deprecated from Unity 6.0, and the setting is hidden in Unity 6.3. To enable Compatibility Mode, go to Edit > Project Settings > Player and add URP_COMPATIBILITY_MODE to the Scripting Define Symbols.
+508:RECETTE BUILD Windows Failed · scènes=5 · durée=0,6 s · erreurs=2 · avertissements=0
+
+finance/resultats.txt SHA-256 21EBD89279690B92D4A8AAE07242F78608496EFC6713171E19BB1BEE82F7ADB5
+1:Comptes Alpine Empires : assertions réussies.
+2:Plafond confirmé dans le modèle : 10 000 mouvements acceptés, opération suivante refusée et aucun doublon après reprise.
+
+Empreintes des fichiers modifiés sur la référence locale
+Assets/SkiStation/Scripts/Lifts/LiftLineGeometry.cs 2D2D44446B3749BEA30AD682021B2887970D91CA74B1CA5D84A6A26970ECCB8D
+Assets/SkiStation/Scripts/Lifts/LiftVehicleRuntime.cs 88AD8CE07C079F143C22C2A58E5E291E7E30C1EB82848E1E3E6F01CD72D27547
+Assets/Editor/HybridAirChecks26315.cs ADEAD03823BCE040A2303F33B13972B27E0AE1F85B812E7E1DCB3B3CB5ACF678
+Assets/Editor/SkiStationArcadeFreestyleChecks254.cs E127221E8F72E26616415A54FA0AFAE499D07D8FC09B88F1CDA4330EF033E1F0
+ProjectSettings/ProjectSettings.asset 702D73DABA36A868649202B4ADCA6C47E474F0E4F7BBEC19F0CC858E29A59519
+
+final/editmode.xml SHA-256 3DE3C8924D37C37F2A6D012C79F04C4BDFA996BF6844A922B14ED3183F1D5675
+Tests 154 · réussis 154 · échecs 0
+
+final/ValAlpin-fermeture-native-trafic.log SHA-256 2AA1EC3571F5F750B95A8907AC22100AAA1A9624E00CB3CBC278CE7EC512D7B7
+20:[22:18:23.799] FERMETURE_OK onboard=4 excludedFromRouting=True
+41:[22:18:31.872] REOUVERTURE_OK allDeparted=True routingRestored=True
+42:[22:18:31.874] RESULT visitor=Audit trafic 1 queued=True boarded=True ridden=True arrived=True exiting=True departed=True
+43:[22:18:31.874] RESULT visitor=Audit trafic 2 queued=True boarded=True ridden=True arrived=True exiting=True departed=True
+44:[22:18:31.875] RESULT visitor=Audit trafic 3 queued=True boarded=True ridden=True arrived=True exiting=True departed=True
+45:[22:18:31.875] RESULT visitor=Audit trafic 4 queued=True boarded=True ridden=True arrived=True exiting=True departed=True
+46:[22:18:31.876] END pass=True drawRecorderLast=0 gpuRecorderLast=0
+
+unity-build-corrige.log SHA-256 D0FEDE0EC1474EE320A2F1D660DA0D3E2EC2B1C476F8A20845C38AA7E60D8DDF
+8556:Building Library\Bee\artifacts\WinPlayerBuildProgram\AsyncPluginsFromLinker failed with output:
+8596:RECETTE BUILD Windows Failed · scènes=5 · durée=854,3 s · erreurs=1 · avertissements=141
+
+final/unity-build.log SHA-256 DA081C8FB1DD92850094B1AA88A5826E6BD6482B153E1DEDCAE34296ECD23B80
+11219:Build Finished, Result: Success.
+11232:RECETTE BUILD Windows Succeeded · scènes=5 · durée=48,2 s · erreurs=0 · avertissements=141
+
+final/windows-demarrage.log SHA-256 BE54EA6DB2F7FC6BD1326B74521CA255F4CBF3D4B0C943CA0072E90D274BD9AB
+6:Initialize engine version: 6000.3.7f1 (696ec25a53d1)
+40:[SkiStation ARRIVEES] Hors horaires d'arrivee (07h-18h), heure : 6,000025
+63:[SkiStation ARRIVEES] Hors horaires d'arrivee (07h-18h), heure : 6,000025
+64:[SkiStation ARRIVEES] Hors horaires d'arrivee (07h-18h), heure : 6,000025
+65:[SkiStation ARRIVEES] Hors horaires d'arrivee (07h-18h), heure : 6,000025
+66:[SkiStation ARRIVEES] Hors horaires d'arrivee (07h-18h), heure : 6,000025
+67:[SkiStation ARRIVEES] Hors horaires d'arrivee (07h-18h), heure : 6,000025
+
+Build lancé SkiStationRecette.exe · 667648 octets · SHA-256 4BF762016829B0C975960CF300AAC5A5BB1F84D25745F2AA8F4A508F9AF5243F
+
+final/unity-classique.log SHA-256 9FC3529E84470B1D62DC070E308F8EBEAF809FE0AD224EDBD24B49C3C394D559
+1034:BLOC2 DROITS TRACÉS OK · OFF, concession propre, sortie de concession et largeur
+1066:BLOC3 IA AUTONOME B · restaurant réel · seul B débité de 75000 EUR
+1078:RECETTE T09 OK · terrain B découvert et constructible selon le contrôle générique · chantier A refusé · aucun débit ni bâtiment
+1091:BLOC2 REPAS B avant=650000 après chantier=575000 après repas=575045 autres comptes inchangés
+1103:BLOC2 CHARGES B 295 EUR, solde 574750, débit unique
+1815:BLOC9 METEO OK · seed 842916 · hiver -3,78 °C été 17,99 °C · reprise et météo réelle
+1904:BLOC6 CLASSIQUE REPRISE ARCADE OK · retour Gestion, compte conservé

@@ -1,0 +1,135 @@
+diff --git a/Assets/Editor/HybridAirChecks26315.cs b/Assets/Editor/HybridAirChecks26315.cs
+index ae99314..9ee5721 100644
+--- a/Assets/Editor/HybridAirChecks26315.cs
++++ b/Assets/Editor/HybridAirChecks26315.cs
+@@ -79,8 +79,11 @@ namespace SkiStation.HybridMotionValidation
+             c.enabled=false;Check(ArcadeHybridAirRules26315.GrabResponse(false,false,c,6)==6,"OFF preserves native pose response");
+             var ledger=new ArcadeFreestyleState();ledger.Begin(1,0);
+             for(int i=0;i<100;i++)ledger.SampleGrab(ArcadeGrab.Compact,.01f);
++            int shortHold=ledger.Preview(0,0,0).Points;
++            for(int i=0;i<600;i++)ledger.SampleGrab(ArcadeGrab.Compact,1f);
+             int capped=ledger.Preview(0,0,0).Points;
+-            for(int i=0;i<1000;i++)ledger.SampleGrab(ArcadeGrab.Compact,.01f);
++            Check(capped>shortHold,"grab score grows with a sustained hold");
++            ledger.SampleGrab(ArcadeGrab.Compact,1f);
+             Check(ledger.Preview(0,0,0).Points==capped,"hold stays active but scoring remains capped");
+             return count;
+         }
+diff --git a/Assets/Editor/SkiStationArcadeFreestyleChecks254.cs b/Assets/Editor/SkiStationArcadeFreestyleChecks254.cs
+index 6ce5471..297e679 100644
+--- a/Assets/Editor/SkiStationArcadeFreestyleChecks254.cs
++++ b/Assets/Editor/SkiStationArcadeFreestyleChecks254.cs
+@@ -75,10 +75,10 @@ public static class SkiStationArcadeFreestyleChecks254
+         for(int i=0;i<8;i++){state.SampleGrab(ArcadeGrab.Compact,.05f);state.SampleGrab(ArcadeGrab.None,.01f);}
+         Check(state.Preview(0,0,0).Mask==0,"Courtes pressions additionnees en vrai grab.");
+         state.SampleGrab(ArcadeGrab.Traverse,.4f);int before=state.Preview(0,0,0).Points;
+-        for(int i=0;i<100;i++)state.SampleGrab(ArcadeGrab.Traverse,1f);
++        for(int i=0;i<600;i++)state.SampleGrab(ArcadeGrab.Traverse,1f);
+         int capped=state.Preview(0,0,0).Points;
+         state.SampleGrab(ArcadeGrab.Traverse,100f);
+-        Check(capped>=before && capped==state.Preview(0,0,0).Points,"Grab non plafonne.");
++        Check(capped>before && capped==state.Preview(0,0,0).Points,"Progression ou plafond du score de grab incorrect.");
+         Check(ArcadeFreestyleRules.SaturatingAdd(int.MaxValue-2,50)==int.MaxValue,"Overflow score.");
+     }
+     static void TransactionsAndChains()
+diff --git a/Assets/SkiStation/Scripts/Lifts/LiftLineGeometry.cs b/Assets/SkiStation/Scripts/Lifts/LiftLineGeometry.cs
+index 80b2014..4abf914 100644
+--- a/Assets/SkiStation/Scripts/Lifts/LiftLineGeometry.cs
++++ b/Assets/SkiStation/Scripts/Lifts/LiftLineGeometry.cs
+@@ -205,34 +205,23 @@ namespace SkiStation
+                     for(int i=0;i<g.Spans.Count;i++)
+                     {
+                         var span=g.Spans[i];
+-                        bool fullWidth=ValAlpin.ValAlpinChairTerrainPreview.Applies(tech.Source);
+-                        bool sampleEnds=fullWidth||crossingHeight!=null;
+-                        int n=Mathf.Clamp(Mathf.CeilToInt(Vector3.Distance(g.Supports[i].cable,g.Supports[i+1].cable)/(sampleEnds?1.5f:2f)),8,sampleEnds?1024:512);
++                        int n=Mathf.Clamp(Mathf.CeilToInt(Vector3.Distance(g.Supports[i].cable,g.Supports[i+1].cable)/1.5f),8,1024);
+                         if(crossingHeight!=null)n=Mathf.Max(n,span.SegmentCount(0));
+                         float deficit=0;
+-                        for(int k=sampleEnds?0:1;k<(sampleEnds?n+1:n);k++)
++                        for(int k=0;k<=n;k++)
+                         {
+                             var p=span.Sample(k/(float)n);
+                             if(crossingHeight!=null)deficit=Mathf.Max(deficit,crossingHeight(p)-p.y);
+                             bool stationZone=Vector3.Distance(p,g.Supports[0].cable)<8||Vector3.Distance(p,g.Supports[g.Supports.Count-1].cable)<8;
+-                            if(fullWidth)
++                            // Match the final clearance check before raising generated supports.
++                            var tangent=span.Sample(Mathf.Min(1,(k+1f)/n))-span.Sample(Mathf.Max(0,(k-1f)/n));
++                            var side=Vector3.Cross(Vector3.up,tangent).normalized;
++                            float radius=vehicleEnvelope.halfWidth+g.StrandOffset;
++                            float needed=vehicleEnvelope.belowCable+(stationZone?0:vehicleEnvelope.motionMargin+vehicleEnvelope.minimumGroundGap);
++                            for(int edge=-1;edge<=1;edge++)
+                             {
+-                                // Same samples, envelope and station rule as the final validator.
+-                                // Raise real generated pylons; never waive a failed clearance.
+-                                var tangent=span.Sample(Mathf.Min(1,(k+1f)/n))-span.Sample(Mathf.Max(0,(k-1f)/n));
+-                                var side=Vector3.Cross(Vector3.up,tangent).normalized;
+-                                float radius=vehicleEnvelope.halfWidth+g.StrandOffset;
+-                                float needed=vehicleEnvelope.belowCable+(stationZone?0:vehicleEnvelope.motionMargin+vehicleEnvelope.minimumGroundGap);
+-                                for(int edge=-1;edge<=1;edge++)
+-                                {
+-                                    var q=p+side*radius*edge;
+-                                    if(query(q,out var edgeGround))deficit=Mathf.Max(deficit,needed-(q.y-edgeGround.y));
+-                                }
+-                            }
+-                            else if(query(p,out var centerGround))
+-                            {
+-                                float needed=vehicleEnvelope.belowCable+vehicleEnvelope.motionMargin+(stationZone?0:vehicleEnvelope.minimumGroundGap);
+-                                deficit=Mathf.Max(deficit,needed-(p.y-centerGround.y));
++                                var q=p+side*radius*edge;
++                                if(query(q,out var edgeGround))deficit=Mathf.Max(deficit,needed-(q.y-edgeGround.y));
+                             }
+                         }
+                         if(deficit<.01f)continue;
+diff --git a/Assets/SkiStation/Scripts/Lifts/LiftVehicleRuntime.cs b/Assets/SkiStation/Scripts/Lifts/LiftVehicleRuntime.cs
+index 6304295..8f3ef9b 100644
+--- a/Assets/SkiStation/Scripts/Lifts/LiftVehicleRuntime.cs
++++ b/Assets/SkiStation/Scripts/Lifts/LiftVehicleRuntime.cs
+@@ -143,6 +143,7 @@ namespace SkiStation
+             simulationSessions.RemoveAt(index);
+             if(player!=null)seatSlots391.Remove(player);
+             if (player != null) player.SetParent(null, true);
++            RefreshClosedLiftSpeed();
+         }
+ 
+         public bool TryBoard(SkierRuntime skier)
+@@ -191,7 +192,12 @@ namespace SkiStation
+                 simulationSessions.Clear();
+             }
+ 
+-            if (occupants.Count == 0){seatSlots391.Clear();return;}
++            if (occupants.Count == 0)
++            {
++                seatSlots391.Clear();
++                RefreshClosedLiftSpeed();
++                return;
++            }
+             var slotBuilder = lift != null ? lift.GetComponent<LiftStationSlotBuilder>() : null;
+             var unloadSlots = slotBuilder != null
+                 ? slotBuilder.GetSlots(LiftStationSlotType.Unloading, LiftStationEndpointKind.Top)
+@@ -231,6 +237,12 @@ namespace SkiStation
+             }
+             if(!valAlpinHandoff)occupants.Clear();
+             if(occupants.Count==0)seatSlots391.Clear();
++            RefreshClosedLiftSpeed();
++        }
++
++        private void RefreshClosedLiftSpeed()
++        {
++            if (lift != null && !lift.Open) lift.RefreshPerformance();
+         }
+ 
+         private void Update()
+diff --git a/ProjectSettings/ProjectSettings.asset b/ProjectSettings/ProjectSettings.asset
+index afa2ff9..d42e001 100644
+--- a/ProjectSettings/ProjectSettings.asset
++++ b/ProjectSettings/ProjectSettings.asset
+@@ -595,7 +595,7 @@ PlayerSettings:
+     PS4: UNITY_POST_PROCESSING_STACK_V2
+     PS5: UNITY_POST_PROCESSING_STACK_V2
+     QNX: UNITY_POST_PROCESSING_STACK_V2
+-    Standalone: UNITY_POST_PROCESSING_STACK_V2
++    Standalone: UNITY_POST_PROCESSING_STACK_V2;URP_COMPATIBILITY_MODE
+     VisionOS: UNITY_POST_PROCESSING_STACK_V2
+     WebGL: UNITY_POST_PROCESSING_STACK_V2
+     XboxOne: UNITY_POST_PROCESSING_STACK_V2

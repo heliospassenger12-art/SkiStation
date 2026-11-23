@@ -1,0 +1,30 @@
+{
+  "unity": "6000.3.7f1",
+  "urp": "17.3.0",
+  "base": "Copie Unity SkiStation Alpine Empires Avant Première de la recette locale du 23 novembre 2026",
+  "normalisation": "UTF-8 sans BOM, LF",
+  "origine_empreintes_avant": "Référence des fichiers reconstruite avant les corrections de recette",
+  "patch_sha256": "a43e202287ca8359d4a51b1f9779d7a3c3fb788142c0b341b1d404b894e3a392",
+  "files": {
+    "Assets/Editor/HybridAirChecks26315.cs": {
+      "after": "adead03823bce040a2303f33b13972b27e0ae1f85b812e7e1dcb3b3cb5acf678",
+      "before": "5e319f790eb53a7131999006e30be6529cff7030de7acb3da94eebeb756f346b"
+    },
+    "Assets/Editor/SkiStationArcadeFreestyleChecks254.cs": {
+      "after": "e127221e8f72e26616415a54fa0afae499d07d8fc09b88f1cda4330ef033e1f0",
+      "before": "ece25e251e793cd5f1321a968189f1f3ba53152d8b11869c701d9c3db45d1ed9"
+    },
+    "Assets/SkiStation/Scripts/Lifts/LiftLineGeometry.cs": {
+      "after": "2d2d44446b3749bea30ad682021b2887970d91ca74b1ca5d84a6a26970eccb8d",
+      "before": "d01cb41b224247df9c01b8d7d9bc435521933be366660d06089ce2a60c2ab190"
+    },
+    "Assets/SkiStation/Scripts/Lifts/LiftVehicleRuntime.cs": {
+      "after": "88ad8ce07c079f143c22c2a58e5e291e7e30c1eb82848e1e3e6f01cd72d27547",
+      "before": "d7493deee36f9bfa38e7cddc35794eed159ad43004782d7d0f82c9df7cdcff53"
+    },
+    "ProjectSettings/ProjectSettings.asset": {
+      "after": "3d1880e1efbd0c62afe6eef0ce344dd06143e6f7f5776d7fe1a95b3843c1b6ce",
+      "before": "adea65a0139534679dc0a671bfc5646c6657ccab4aaa1164e16f95fd72fb2b0c"
+    }
+  }
+}
